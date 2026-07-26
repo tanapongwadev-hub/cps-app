@@ -5,7 +5,7 @@ backend at `http://localhost:3001`.
 
 ## Status
 
-**15/15 passing** in ~50s. Stable across runs (no flakiness, no retries needed).
+**18/18 passing** in ~1.3m. Stable across runs (no flakiness, no retries needed).
 
 The suite covers the four most-fragile integration points: auth, navigation,
 auto-refresh, and page-level data binding against the real backend.
@@ -37,7 +37,7 @@ cd /path/to/backend && pnpm start:dev
 Then in this repo:
 
 ```bash
-pnpm test:e2e              # headless run (~50s)
+pnpm test:e2e              # headless run (~1.3m)
 pnpm test:e2e:headed       # watch the browser
 pnpm test:e2e:ui           # interactive UI mode
 pnpm test:e2e:debug        # step-by-step with inspector
@@ -51,9 +51,9 @@ pnpm test:all              # unit + e2e
 | `auth.spec.ts`    | 5     | login, wrong password, logout, protected-route redirect, session-expired redirect               |
 | `menus.spec.ts`   | 4     | sidebar 8 menus from real backend, click navigation, search filter, permissions page           |
 | `refresh.spec.ts` | 1     | corrupted access token → auto-refresh interceptor recovers → /auth/me returns 200                |
-| `pages.spec.ts`   | 5     | smoke tests: departments / roles / users / sessions / menu-management pages render + load data  |
+| `pages.spec.ts`   | 8     | smoke tests: dashboard / departments / roles / users / sessions / menu-management + 2 regression (login form + menu create) |
 
-Total: **15 tests in 4 files**, runs in parallel with 2 workers.
+Total: **18 tests in 4 files**, runs in parallel with 2 workers.
 
 ## Why these tests?
 

@@ -238,11 +238,10 @@ function PermissionCatalog() {
 function PermissionRow({ permission }: { permission: Permission }) {
   const sep = permission.code.includes(".") ? "." : "_";
   const moduleName = permission.module ?? permission.code.split(sep)[0] ?? "—";
-  const action =
-    permission.action ??
-    permission.actionRef?.code ??
-    permission.code.split(sep).slice(1).join(".") ??
-    "—";
+  // Backend shape: { id, code, nameTh, nameEn } — `action` may be a string
+  // (legacy) or an action-ref object. Handle both.
+  const actionCode = readActionCode(permission.action) ?? readActionCode(permission.actionRef);
+  const action = actionCode ?? permission.code.split(sep).slice(1).join(".") ?? "—";
   const menuName =
     permission.menu?.nameTh ?? permission.menu?.nameEn ?? permission.menu?.code ?? "—";
   const isActive = permission.isActive ?? true;
@@ -272,6 +271,15 @@ function PermissionRow({ permission }: { permission: Permission }) {
       </td>
     </tr>
   );
+}
+
+/** Safely extract a string from a value that may be a string, a {code, ...} ref, or anything else. */
+function readActionCode(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "code" in value && typeof value.code === "string") {
+    return value.code;
+  }
+  return null;
 }
 
 // Helper to keep imports clean

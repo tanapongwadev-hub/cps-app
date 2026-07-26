@@ -342,3 +342,145 @@ body {
   background-color: hsl(var(--primary) / 0.2);
   color: hsl(var(--foreground));
 }
+
+/* ==========================================================================
+   Layout-specific gradients & animations
+   ========================================================================== */
+
+/* Subtle vertical gradient for the sidebar — gives a sense of depth without
+   being heavy. Uses the dark sidebar palette. */
+.sidebar-gradient {
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--sidebar-background)) 0%,
+    hsl(222 47% 9%) 100%
+  );
+}
+
+.dark .sidebar-gradient {
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--sidebar-background)) 0%,
+    hsl(222 47% 5%) 100%
+  );
+}
+
+/* Subtle gradient for the top nav — light at the top, slightly transparent
+   so the page content shows through faintly. */
+.topnav-gradient {
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--background) / 0.95) 0%,
+    hsl(var(--background) / 0.85) 100%
+  );
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+}
+
+.dark .topnav-gradient {
+  background-image: linear-gradient(
+    180deg,
+    hsl(var(--background) / 0.9) 0%,
+    hsl(var(--background) / 0.75) 100%
+  );
+}
+
+/* "Glass" effect for cards on the top nav (search, action area). */
+.glass-surface {
+  background-color: hsl(var(--background) / 0.6);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
+}
+
+/* Active-item glow — used on the active sidebar item. Subtle, not loud. */
+.active-glow {
+  box-shadow:
+    inset 0 1px 0 0 hsl(var(--sidebar-primary) / 0.2),
+    inset 2px 0 0 0 hsl(var(--sidebar-primary));
+}
+
+/* Sliding active-indicator animation (left bar). */
+@keyframes slideInLeft {
+  from {
+    transform: scaleY(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.active-indicator {
+  animation: slideInLeft 0.18s ease-out;
+  transform-origin: center;
+}
+
+/* Top-nav "tab" feel — for the current-page badge in the breadcrumb area. */
+.nav-tab {
+  position: relative;
+  isolation: isolate;
+}
+.nav-tab::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background-image: linear-gradient(
+    90deg,
+    hsl(var(--primary)) 0%,
+    hsl(var(--primary) / 0.6) 100%
+  );
+  transform-origin: left;
+  animation: navTabIn 0.2s ease-out;
+}
+
+@keyframes navTabIn {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+/* Subtle shimmer for loading placeholders in the sidebar. */
+@keyframes sidebarShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.sidebar-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--sidebar-accent)) 0%,
+    hsl(var(--sidebar-accent) / 0.4) 50%,
+    hsl(var(--sidebar-accent)) 100%
+  );
+  background-size: 200% 100%;
+  animation: sidebarShimmer 1.6s ease-in-out infinite;
+}
+
+/* Page-transition fade for tab bar / sidebar. */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.18s ease-out;
+}

@@ -41,7 +41,7 @@ export async function setupMenuMocks(
       parentId: (data.parentId as string | null) ?? null,
       sortOrder: (data.sortOrder as number) ?? 99,
       status: (data.status as "active" | "inactive") ?? "active",
-      menuType: (data.menuType as "MAIN" | "SUB" | "GROUP" | "EXTERNAL") ?? "MAIN",
+      menuType: (data.menuType as "MAIN" | "MENU" | "BUTTON") ?? "MAIN",
       requiredPermissions: (data.requiredPermissions as string[]) ?? [],
       permissions: (data.permissions as string[]) ?? [],
       externalUrl: data.externalUrl as string | undefined,

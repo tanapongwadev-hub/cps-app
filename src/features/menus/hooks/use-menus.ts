@@ -8,12 +8,24 @@ import { showToast } from "@/lib/toast";
 
 export const MENUS_QUERY_KEY = "menus";
 
-/** Fetch the full menu tree (used by /system/menu-management) */
+/** Fetch the full menu tree (used by sidebar — the real backend filters
+ *  out isVisible=false, which is exactly what the sidebar wants) */
 export function useMenuTree(enabled = true) {
   return useQuery({
     queryKey: [MENUS_QUERY_KEY, "tree"],
     queryFn: () => menusApi.tree(),
     enabled,
+    staleTime: 30 * 1000,
+  });
+}
+
+/** Fetch a paginated list of all menus (including hidden/inactive).
+ *  Used by /system/menu-management where the admin needs to see — and
+ *  toggle — every menu, even ones the sidebar wouldn't show. */
+export function useMenusList(params: { page?: number; pageSize?: number; search?: string } = {}) {
+  return useQuery({
+    queryKey: [MENUS_QUERY_KEY, "list", params],
+    queryFn: () => menusApi.list({ page: 1, pageSize: 100, ...params }),
     staleTime: 30 * 1000,
   });
 }

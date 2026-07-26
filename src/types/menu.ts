@@ -12,8 +12,16 @@
  */
 import type { Status } from "@/types/common";
 
-/** Backend menu type discriminator */
-export type MenuType = "MAIN" | "SUB" | "GROUP" | "EXTERNAL";
+/**
+ * Backend menu type discriminator.
+ * Aligned with the real NestJS backend which only accepts
+ * `MAIN | MENU | BUTTON`. Anything else returns 400 VALIDATION_ERROR.
+ *
+ *   MAIN   — top-level menu (a sidebar item, may have children)
+ *   MENU   — sub menu / child of a MAIN (shown as a nested item)
+ *   BUTTON — an action button (no path, used for triggering flows)
+ */
+export type MenuType = "MAIN" | "MENU" | "BUTTON";
 
 /** Minimal parent reference (included in /menus/:id and /menus/tree responses) */
 export interface MenuParentRef {
@@ -27,8 +35,14 @@ export interface MenuParentRef {
 /** A single menu record as returned by the real backend */
 export interface MenuItem {
   id: string;
-  /** Direct parent id (null for top-level) */
-  parentId: string | null;
+  /**
+   * Direct parent id. The /menus (list) endpoint serialises this as
+   * `undefined` and includes a populated {@link parent} object instead —
+   * the tree endpoint and the /menus/:id endpoint return the real id.
+   * Marked optional so callers can fall back to `parent?.id` when list
+   * is the source.
+   */
+  parentId?: string | null;
   code: string;
   /** Thai name (real backend field) */
   nameTh: string;

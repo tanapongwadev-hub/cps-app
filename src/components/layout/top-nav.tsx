@@ -1,8 +1,23 @@
+/**
+ * Top Navigation — v2 (modern tab-bar aesthetic)
+ *
+ * Visual style:
+ *   - Subtle vertical gradient (translucent) with backdrop blur
+ *   - Soft shadow at the bottom for depth (separates from content)
+ *   - Current-page indicator in the breadcrumb area styled as an "active tab"
+ *     with a thin gradient underline
+ *   - Search bar uses a softer, "segmented" surface feel
+ *   - Action buttons grouped on the right with consistent spacing
+ *   - Theme toggle expanded into a dropdown with the 3 options
+ *
+ * Layout (left → right):
+ *   [Sidebar toggle]  [Current page tab]  ...  [Search]  [Actions: theme, lang, notif, user]
+ */
 "use client";
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   Building2,
@@ -19,6 +34,9 @@ import {
   Sun,
   User as UserIcon,
   Monitor,
+  Home,
+  ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/stores/auth-store";
@@ -51,7 +69,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getInitials } from "@/utils/format";
 import { SUPPORTED_LANGUAGES } from "@/constants/app";
-import { useIsMobile } from "@/hooks/use-media-query";
+import { useIsMobile, useIsTablet } from "@/hooks/use-media-query";
 import { showToast } from "@/lib/toast";
 import type { Notification } from "@/types/notification";
 
@@ -93,70 +111,176 @@ const mockNotifications: Notification[] = [
   },
 ];
 
-function ThemeMenu() {
-  const { setTheme, theme } = useTheme();
+/* ----------------------------------------------------------------
+   Current-page "tab" indicator
+   ---------------------------------------------------------------- */
+
+const PAGE_TITLES: Record<string, string> = {
+  "/dashboard": "หน้าหลัก",
+  "/user-management": "จัดการผู้ใช้งาน",
+  "/user-management/users": "รายการผู้ใช้งาน",
+  "/user-management/roles": "จัดการบทบาท",
+  "/user-management/departments": "จัดการแผนก",
+  "/permissions": "จัดการสิทธิ์",
+  "/sessions": "จัดการเซสชัน",
+  "/system": "ระบบ",
+  "/system/menu-management": "จัดการเมนู",
+  "/system/settings": "ตั้งค่า",
+  "/system/activity-logs": "บันทึกการใช้งาน",
+  "/profile": "โปรไฟล์",
+  "/materials": "จัดการอะไหล่",
+};
+
+function getPageTitle(pathname: string): { title: string; parent: string | null } {
+  if (PAGE_TITLES[pathname]) {
+    return { title: PAGE_TITLES[pathname], parent: null };
+  }
+  // Try parent path
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length > 1) {
+    const parent = "/" + parts.slice(0, -1).join("/");
+    if (PAGE_TITLES[parent]) {
+      return { title: parts[parts.length - 1] ?? "หน้าหลัก", parent: PAGE_TITLES[parent] };
+    }
+  }
+  return { title: parts[parts.length - 1] ?? "หน้าหลัก", parent: null };
+}
+
+function CurrentPageTab() {
+  const pathname = usePathname();
+  const { title, parent } = getPageTitle(pathname);
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <Sun className="h-4 w-4" />
-        <span>ธีม</span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent>
-          <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v)}>
-            <DropdownMenuRadioItem value="light">
-              <Sun className="h-4 w-4" />
-              Light
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="dark">
-              <Moon className="h-4 w-4" />
-              Dark
-            </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="system">
-              <Monitor className="h-4 w-4" />
-              System
-            </DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
-    </DropdownMenuSub>
+    <nav
+      aria-label="Current page"
+      className="hidden md:flex items-center gap-1.5 min-w-0 text-sm"
+    >
+      <Link
+        href="/dashboard"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/80 hover:text-foreground"
+        aria-label="กลับไปหน้าหลัก"
+      >
+        <Home className="h-3.5 w-3.5" />
+      </Link>
+      {parent && (
+        <>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+          <span className="truncate text-muted-foreground">{parent}</span>
+        </>
+      )}
+      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+      <span
+        key={pathname}
+        className="nav-tab relative truncate rounded-md px-2 py-0.5 text-sm font-semibold text-foreground"
+      >
+        {title}
+      </span>
+    </nav>
   );
 }
+
+/* ----------------------------------------------------------------
+   Theme dropdown
+   ---------------------------------------------------------------- */
+
+function ThemeMenu() {
+  const { theme, setTheme } = useTheme();
+  const items = [
+    { value: "light", label: "สว่าง", Icon: Sun },
+    { value: "dark", label: "มืด", Icon: Moon },
+    { value: "system", label: "ตามระบบ", Icon: Monitor },
+  ] as const;
+  const current = items.find((i) => i.value === (theme ?? "system"));
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`ธีม: ${current?.label ?? "ตามระบบ"}`}
+          title={`ธีม: ${current?.label ?? "ตามระบบ"}`}
+        >
+          <ThemeIcon />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuLabel className="text-xs text-muted-foreground">
+          เลือกธีม
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map(({ value, label, Icon }) => (
+          <DropdownMenuItem
+            key={value}
+            onClick={() => setTheme(value)}
+            className="cursor-pointer"
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+            {(theme ?? "system") === value && (
+              <Check className="ml-auto h-4 w-4 text-primary" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ThemeIcon() {
+  const { theme } = useTheme();
+  if (theme === "dark") return <Moon className="h-4 w-4" />;
+  if (theme === "system") return <Monitor className="h-4 w-4" />;
+  return <Sun className="h-4 w-4" />;
+}
+
+/* ----------------------------------------------------------------
+   Language menu
+   ---------------------------------------------------------------- */
 
 function LanguageMenu() {
   const language = useUIStore((s) => s.language);
   const setLanguage = useUIStore((s) => s.setLanguage);
+  const current = SUPPORTED_LANGUAGES.find((l) => l.code === language);
   return (
-    <DropdownMenuSub>
-      <DropdownMenuSubTrigger>
-        <Globe className="h-4 w-4" />
-        <span>ภาษา</span>
-      </DropdownMenuSubTrigger>
-      <DropdownMenuPortal>
-        <DropdownMenuSubContent>
-          <DropdownMenuRadioGroup
-            value={language}
-            onValueChange={(v) => setLanguage(v as "th" | "en")}
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" aria-label="เปลี่ยนภาษา">
+          <span className="text-base leading-none">{current?.flag ?? "🌐"}</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>เลือกภาษา</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {SUPPORTED_LANGUAGES.map((lang) => (
+          <DropdownMenuItem
+            key={lang.code}
+            onClick={() => setLanguage(lang.code)}
+            className="cursor-pointer"
           >
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <DropdownMenuRadioItem key={lang.code} value={lang.code}>
-                <span className="mr-1">{lang.flag}</span>
-                {lang.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuPortal>
-    </DropdownMenuSub>
+            <span className="mr-2 text-base leading-none">{lang.flag}</span>
+            {lang.label}
+            {language === lang.code && <Check className="ml-auto h-4 w-4 text-primary" />}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
+
+/* ----------------------------------------------------------------
+   Notifications popover
+   ---------------------------------------------------------------- */
 
 function NotificationsMenu() {
   const unread = mockNotifications.filter((n) => !n.read).length;
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="การแจ้งเตือน" className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="การแจ้งเตือน"
+          className="relative"
+        >
           <Bell className="h-4 w-4" />
           {unread > 0 && (
             <Badge
@@ -184,7 +308,9 @@ function NotificationsMenu() {
         </div>
         <ScrollArea className="max-h-96">
           {mockNotifications.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">ไม่มีการแจ้งเตือน</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">
+              ไม่มีการแจ้งเตือน
+            </div>
           ) : (
             <ul className="divide-y">
               {mockNotifications.map((n) => {
@@ -193,7 +319,7 @@ function NotificationsMenu() {
                     {n.link ? (
                       <Link
                         href={n.link}
-                        className="block px-4 py-3 hover:bg-accent transition-colors"
+                        className="block px-4 py-3 transition-colors hover:bg-accent"
                       >
                         <NotificationContent n={n} />
                       </Link>
@@ -221,6 +347,10 @@ function NotificationsMenu() {
   );
 }
 
+/* ----------------------------------------------------------------
+   User menu
+   ---------------------------------------------------------------- */
+
 function UserMenu() {
   const user = useAuthStore((s) => s.user);
   const currentDepartmentRole = useAuthStore((s) => s.currentDepartmentRole);
@@ -234,7 +364,7 @@ function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-2 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex items-center gap-2 rounded-full transition-all hover:ring-2 hover:ring-ring/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="เมนูผู้ใช้งาน"
         >
           <Avatar size="sm">
@@ -247,9 +377,9 @@ function UserMenu() {
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium">{user?.fullName}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+            <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
             {currentDepartmentRole && (
-              <div className="flex items-center gap-1 mt-1">
+              <div className="mt-1 flex items-center gap-1">
                 <Building2 className="h-3 w-3 text-muted-foreground" />
                 <p className="text-xs text-muted-foreground">
                   {currentDepartmentRole.departmentName} · {currentDepartmentRole.roleName}
@@ -260,7 +390,6 @@ function UserMenu() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {/* Switch Department / Role */}
         {userDepartmentRoles.length > 1 && (
           <>
             <DropdownMenuSub>
@@ -283,9 +412,9 @@ function UserMenu() {
                         className="cursor-pointer"
                       >
                         <Building2 className="h-4 w-4" />
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <p className="truncate">{udr.departmentName}</p>
-                          <p className="text-xs text-muted-foreground truncate">
+                          <p className="truncate text-xs text-muted-foreground">
                             {udr.roleName} {udr.isPrimary && "· หลัก"}
                           </p>
                         </div>
@@ -316,7 +445,7 @@ function UserMenu() {
         <DropdownMenuItem
           onClick={() => logout.mutate()}
           disabled={logout.isPending}
-          className="text-danger focus:text-danger cursor-pointer"
+          className="cursor-pointer text-danger focus:text-danger"
         >
           <LogOut className="h-4 w-4" />
           ออกจากระบบ
@@ -326,26 +455,114 @@ function UserMenu() {
   );
 }
 
+/* ----------------------------------------------------------------
+   Search bar (segmented feel)
+   ---------------------------------------------------------------- */
+
+function GlobalSearch() {
+  const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
+  return (
+    <button
+      type="button"
+      onClick={() => setCommandPaletteOpen(true)}
+      className={cn(
+        "group/search relative hidden h-8 w-full max-w-md items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 text-left text-sm transition-all",
+        "hover:border-border hover:bg-muted/50",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30",
+      )}
+      aria-label="เปิด quick switcher (กด ⌘K)"
+    >
+      <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover/search:text-foreground" />
+      <span className="flex-1 truncate text-muted-foreground">
+        ค้นหาเมนู หน้าเว็บ หรือคำสั่ง...
+      </span>
+      <span className="hidden items-center gap-1 sm:flex">
+        <Sparkles className="h-3 w-3 text-muted-foreground/60" />
+        <kbd className="flex h-5 items-center gap-0.5 rounded border border-border/60 bg-background/60 px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+          ⌘K
+        </kbd>
+      </span>
+    </button>
+  );
+}
+
+/* ----------------------------------------------------------------
+   Notification row content
+   ---------------------------------------------------------------- */
+
+function NotificationContent({ n }: { n: Notification }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span
+        className={cn(
+          "mt-0.5 h-2 w-2 shrink-0 rounded-full",
+          n.type === "success" && "bg-success",
+          n.type === "warning" && "bg-warning",
+          n.type === "danger" && "bg-danger",
+          n.type === "info" && "bg-info",
+        )}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-medium">{n.title}</p>
+          {!n.read && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />}
+        </div>
+        <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.message}</p>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------------------------------------------
+   Top Nav root
+   ---------------------------------------------------------------- */
+
 export function TopNav() {
   const collapsed = useUIStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUIStore((s) => s.toggleSidebar);
+  const mobileOpen = useUIStore((s) => s.sidebarMobileOpen);
   const setMobileOpen = useUIStore((s) => s.setSidebarMobileOpen);
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   return (
-    <header className="sticky top-0 z-30 flex h-[var(--topnav-height)] items-center gap-2 border-b bg-background/95 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:gap-4 sm:px-4">
-      {/* Sidebar toggle (mobile + desktop) */}
+    <header
+      className={cn(
+        "topnav-gradient sticky top-0 z-30 flex h-[var(--topnav-height)] items-center gap-2 border-b border-border/60",
+        "px-3 sm:gap-3 sm:px-4",
+        "shadow-[0_1px_0_0_hsl(var(--border)/0.6),0_2px_8px_-2px_rgb(0_0_0/0.04)]",
+      )}
+    >
+      {/* Sidebar toggle (mobile drawer / tablet overlay / desktop collapse) */}
       <Button
         variant="ghost"
         size="icon"
         onClick={() => {
           if (isMobile) setMobileOpen(true);
+          else if (isTablet) setMobileOpen(!mobileOpen);
           else toggleSidebar();
         }}
-        aria-label={isMobile ? "เปิดเมนู" : collapsed ? "ขยาย Sidebar" : "ย่อ Sidebar"}
+        aria-label={
+          isMobile
+            ? "เปิดเมนู"
+            : isTablet
+              ? mobileOpen
+                ? "ปิดเมนู"
+                : "ขยาย Sidebar"
+              : collapsed
+                ? "ขยาย Sidebar"
+                : "ย่อ Sidebar"
+        }
+        className="shrink-0"
       >
         {isMobile ? (
           <Menu className="h-4 w-4" />
+        ) : isTablet ? (
+          mobileOpen ? (
+            <ChevronsLeft className="h-4 w-4" />
+          ) : (
+            <ChevronsRight className="h-4 w-4" />
+          )
         ) : collapsed ? (
           <ChevronsRight className="h-4 w-4" />
         ) : (
@@ -353,108 +570,27 @@ export function TopNav() {
         )}
       </Button>
 
+      {/* Current page tab — gives the top nav its "tab bar" feel */}
+      <CurrentPageTab />
+
+      {/* Spacer on mobile */}
+      <div className="flex-1 md:hidden" />
+
       {/* Global search */}
-      <div className="relative hidden md:flex flex-1 max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          placeholder="ค้นหาทั่วระบบ..."
-          className="h-9 pl-9 pr-12 bg-muted/30"
-          aria-label="ค้นหาทั่วระบบ"
-        />
-        <kbd className="pointer-events-none absolute right-3 top-1/2 hidden h-5 -translate-y-1/2 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground sm:flex">
-          ⌘K
-        </kbd>
+      <div className="hidden flex-1 md:flex md:justify-center">
+        <GlobalSearch />
       </div>
 
       <div className="flex-1 md:hidden" />
 
-      <div className="flex items-center gap-1">
-        <ThemeMenu_Button />
-        <LanguageMenu_Button />
+      {/* Right-side action cluster */}
+      <div className="flex shrink-0 items-center gap-0.5 rounded-lg border border-border/60 bg-background/40 p-0.5 backdrop-blur-sm">
+        <ThemeMenu />
+        <LanguageMenu />
         <NotificationsMenu />
+        <div className="mx-1 h-5 w-px bg-border/60" />
         <UserMenu />
       </div>
     </header>
-  );
-}
-
-// Standalone buttons (icon-only) to fit top nav
-function ThemeMenu_Button() {
-  const { theme, setTheme } = useTheme();
-  const cycle = () => {
-    if (theme === "light") setTheme("dark");
-    else if (theme === "dark") setTheme("system");
-    else setTheme("light");
-  };
-  return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={cycle}
-      aria-label={`ธีม: ${theme ?? "system"}`}
-      title={`ธีม: ${theme ?? "system"}`}
-    >
-      <ThemeIcon />
-    </Button>
-  );
-}
-
-function ThemeIcon() {
-  const { theme } = useTheme();
-  if (theme === "dark") return <Moon className="h-4 w-4" />;
-  if (theme === "system") return <Monitor className="h-4 w-4" />;
-  return <Sun className="h-4 w-4" />;
-}
-
-function LanguageMenu_Button() {
-  const language = useUIStore((s) => s.language);
-  const setLanguage = useUIStore((s) => s.setLanguage);
-  const current = SUPPORTED_LANGUAGES.find((l) => l.code === language);
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="เปลี่ยนภาษา">
-          <span className="text-base">{current?.flag ?? "🌐"}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>เลือกภาษา</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {SUPPORTED_LANGUAGES.map((lang) => (
-          <DropdownMenuItem
-            key={lang.code}
-            onClick={() => setLanguage(lang.code)}
-            className="cursor-pointer"
-          >
-            <span className="mr-2">{lang.flag}</span>
-            {lang.label}
-            {language === lang.code && <Check className="ml-auto h-4 w-4 text-primary" />}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function NotificationContent({ n }: { n: Notification }) {
-  return (
-    <div className="flex items-start gap-3">
-      <span
-        className={cn(
-          "mt-0.5 h-2 w-2 rounded-full shrink-0",
-          n.type === "success" && "bg-success",
-          n.type === "warning" && "bg-warning",
-          n.type === "danger" && "bg-danger",
-          n.type === "info" && "bg-info",
-        )}
-      />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-medium truncate">{n.title}</p>
-          {!n.read && <span className="h-2 w-2 rounded-full bg-primary shrink-0" />}
-        </div>
-        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{n.message}</p>
-      </div>
-    </div>
   );
 }

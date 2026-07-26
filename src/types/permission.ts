@@ -26,7 +26,12 @@ export interface PermissionActionRef {
 export interface Permission extends BaseEntity {
   code: string;
   module?: string;
-  action?: string;
+  /**
+   * Action reference. The real NestJS backend returns this as a
+   * {@link PermissionActionRef} object (e.g. `{ id, code: "view", nameTh, nameEn }`).
+   * Older / alternate backends may return a plain string — we accept both.
+   */
+  action?: string | PermissionActionRef;
   name?: string;
   nameTh?: string;
   nameEn?: string;
@@ -34,6 +39,11 @@ export interface Permission extends BaseEntity {
   isSystem?: boolean;
   isActive?: boolean;
   menu?: PermissionMenuRef;
+  /**
+   * Alias of {@link action} kept for callers that used the explicit name.
+   * Most backends only return `action` — `actionRef` is preserved here so
+   * existing code that reads `actionRef` doesn't break.
+   */
   actionRef?: PermissionActionRef;
 }
 

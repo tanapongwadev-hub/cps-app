@@ -1,13 +1,19 @@
 /**
  * Sidebar — main admin navigation
  *
+ * Visual style (v2):
+ *   - Subtle vertical gradient background for depth
+ *   - Animated left-bar active indicator (slides in on active item)
+ *   - "Glass" effect on hover for menu items
+ *   - Section headers with subtle divider line
+ *   - Compact footer with better tooltip
+ *
  * Sections (top → bottom, expanded mode):
  *   1. Header — logo + REAL/MOCK badge
  *   2. Search / Cmd+K trigger
  *   3. Pinned — menus the user has starred (from sidebarStore.pinnedMenuIds)
- *   4. Recent — last 5 paths the user has visited (from sidebarStore.recentPaths)
- *   5. Main menu — all menus from accessControl
- *   6. Footer — theme + collapse + super-admin badge
+ *   4. Main menu — all menus from accessControl
+ *   5. Footer — theme + collapse + super-admin badge
  *
  * Collapsed mode hides everything except the icon rail + footer.
  */
@@ -25,7 +31,6 @@ import {
   Server,
   FlaskConical,
   Star,
-  Clock,
   Pin,
   X,
   Sun,
@@ -33,12 +38,13 @@ import {
   Monitor,
   Settings,
   Command as CommandIcon,
+  Sparkles,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUIStore } from "@/stores/ui-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { useIsMobile } from "@/hooks/use-media-query";
+import { useIsMobile, useIsTablet } from "@/hooks/use-media-query";
 import { usePermission } from "@/hooks/use-permission";
 import { isMockMode } from "@/config/env";
 import { resolveMenuPath, isComingSoonPath } from "@/config/menu-overrides";
@@ -79,9 +85,9 @@ function PinnedRow({ item, onUnpin }: { item: MenuItem; onUnpin: () => void }) {
       href={path}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "group/pin relative flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+        "group/pin relative flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-200",
+        "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+        isActive && "bg-gradient-to-r from-sidebar-primary/20 to-sidebar-accent text-sidebar-accent-foreground active-glow",
       )}
     >
       <Icon name={item.icon} className="h-3.5 w-3.5 shrink-0" />
@@ -109,52 +115,6 @@ function PinnedRow({ item, onUnpin }: { item: MenuItem; onUnpin: () => void }) {
       </button>
     </Link>
   );
-}
-
-/* ---------------------------------------------------------------- recent row */
-
-function RecentRow({ path, onForget }: { path: string; onForget: () => void }) {
-  const pathname = usePathname();
-  const isActive = pathname === path || pathname.startsWith(`${path}/`);
-  return (
-    <Link
-      href={path}
-      aria-current={isActive ? "page" : undefined}
-      className={cn(
-        "group/rec relative flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm transition-colors",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
-      )}
-    >
-      <Clock className="h-3.5 w-3.5 shrink-0 opacity-70" />
-      <span className="flex-1 truncate text-xs">{prettyRecentPath(path)}</span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onForget();
-        }}
-        aria-label={`ลบ ${path} ออกจากรายการล่าสุด`}
-        className={cn(
-          "rounded p-0.5 text-sidebar-muted-foreground opacity-0 transition-opacity",
-          "hover:bg-sidebar-background/50 hover:text-foreground",
-          "group-hover/rec:opacity-100",
-        )}
-      >
-        <X className="h-3 w-3" />
-      </button>
-    </Link>
-  );
-}
-
-/** "/user-management/users" → "user-management / users" */
-function prettyRecentPath(path: string): string {
-  return path
-    .split("/")
-    .filter(Boolean)
-    .slice(-2)
-    .join(" / ");
 }
 
 /* ---------------------------------------------------------------- main menu item */
@@ -196,11 +156,13 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
       <div className="space-y-1">
         <div
           className={cn(
-            "px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground",
+            "flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground/80",
             level > 0 && "pl-6",
           )}
         >
-          {pickMenuName(item)}
+          <span className="h-px flex-1 bg-sidebar-border/40" />
+          <span>{pickMenuName(item)}</span>
+          <span className="h-px flex-1 bg-sidebar-border/40" />
         </div>
         <div className="space-y-1">
           {item.children?.map((child) => (
@@ -231,11 +193,12 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
     <div
       className={cn(
         "group/menu relative flex items-center gap-3 rounded-md text-sm font-medium transition-all duration-200",
-        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        // Active state with subtle gradient + primary left bar
+        "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+        // Active state: gradient bg + animated left bar
         isActive && [
-          "bg-gradient-to-r from-sidebar-primary/15 to-sidebar-accent text-sidebar-accent-foreground",
-          "shadow-[inset_2px_0_0_0_hsl(var(--sidebar-primary))]",
+          "bg-gradient-to-r from-sidebar-primary/20 via-sidebar-primary/10 to-transparent",
+          "text-sidebar-accent-foreground",
+          "active-glow",
         ],
         collapsed ? "h-10 w-10 justify-center mx-auto" : "h-9 px-3 py-1",
         level > 0 && !collapsed && "ml-4 w-[calc(100%-1rem)]",
@@ -244,8 +207,8 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
       <Icon
         name={item.icon}
         className={cn(
-          "h-4 w-4 shrink-0 transition-colors",
-          isActive && "text-sidebar-primary",
+          "h-4 w-4 shrink-0 transition-all duration-200",
+          isActive && "text-sidebar-primary drop-shadow-[0_0_6px_hsl(var(--sidebar-primary)/0.4)]",
         )}
       />
       {!collapsed && (
@@ -287,7 +250,7 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
           {hasChildren && (
             <ChevronRight
               className={cn(
-                "h-4 w-4 shrink-0 text-sidebar-muted-foreground transition-transform",
+                "h-4 w-4 shrink-0 text-sidebar-muted-foreground transition-transform duration-200",
                 open && "rotate-90",
               )}
             />
@@ -340,7 +303,7 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
         {content}
       </button>
       {open && hasChildren && (
-        <div className="mt-1 space-y-1">
+        <div className="mt-1 space-y-1 fade-in-up">
           {item.children?.map((child) => (
             <SidebarMenuItem
               key={child.id}
@@ -369,12 +332,11 @@ export function Sidebar() {
   const setMobileOpen = useUIStore((s) => s.setSidebarMobileOpen);
   const setCommandPaletteOpen = useUIStore((s) => s.setCommandPaletteOpen);
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
 
   // Sidebar customisation store
   const pinnedIds = useSidebarStore((s) => s.pinnedMenuIds);
-  const recentPaths = useSidebarStore((s) => s.recentPaths);
   const unpin = useSidebarStore((s) => s.unpin);
-  const forgetPath = useSidebarStore((s) => s.forgetPath);
 
   const { theme, setTheme } = useTheme();
 
@@ -407,16 +369,7 @@ export function Sidebar() {
     [pinnedIds, menuById],
   );
 
-  // Recents — show the path only if it matches a known menu (others are noise)
-  const recentMenuItems = React.useMemo(
-    () =>
-      recentPaths
-        .map((p) => flatMenu.find((m) => resolveMenuPath(m.code, m.path) === p))
-        .filter((m): m is MenuItem => !!m),
-    [recentPaths, flatMenu],
-  );
-
-  // Filter the main menu (also matches pinned/recent paths so the user can search anything)
+  // Filter the main menu (also matches pinned paths so the user can search anything)
   const filteredMenu = React.useMemo(() => {
     if (!search.trim()) return menuFromAccessControl;
     const q = search.toLowerCase();
@@ -434,19 +387,32 @@ export function Sidebar() {
   }, [menuFromAccessControl, search]);
 
   const showingSearch = search.trim().length > 0;
-  const showingPinnedOrRecent = !showingSearch && (pinnedItems.length > 0 || recentMenuItems.length > 0);
+  const showingPinnedOnly = !showingSearch && pinnedItems.length > 0;
 
-  const content = (
+  // Tablet/compact layout: respect the user-defined collapsed state on
+  // desktop, but force-collapsed on tablet so the sidebar defaults to the
+  // icon-rail (the same shape a user gets when they collapse it on desktop).
+  const effectiveCollapsed = collapsed; // desktop & mobile use the store
+
+  const content = (opts?: { forceCollapsed?: boolean; forceExpanded?: boolean; onNavigate?: () => void }) => {
+    const isForcedCollapsed = opts?.forceCollapsed ?? false;
+    const isForcedExpanded = opts?.forceExpanded ?? false;
+    // The width the sidebar should occupy (icon rail vs full)
+    const isCollapsedView = isForcedExpanded ? false : isForcedCollapsed || effectiveCollapsed;
+    // Shadow the store's `collapsed` with the effective one so the rest of
+    // the JSX can keep using `collapsed` unchanged.
+    const collapsed = isCollapsedView;
+    return (
     <div
       className={cn(
-        "flex h-full flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-300",
-        collapsed ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width)]",
+        "sidebar-gradient flex h-full flex-col text-sidebar-foreground transition-[width] duration-300",
+        isCollapsedView ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width)]",
       )}
     >
       {/* Header — logo + backend indicator */}
       <div
         className={cn(
-          "flex h-[var(--header-height)] items-center border-b border-sidebar-border",
+          "relative flex h-[var(--header-height)] items-center border-b border-sidebar-border/60",
           collapsed ? "justify-center px-2" : "gap-3 px-4",
         )}
       >
@@ -455,8 +421,9 @@ export function Sidebar() {
           className="flex flex-1 items-center gap-2 overflow-hidden"
           aria-label="กลับไปหน้าแดชบอร์ด"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-sidebar-primary to-sidebar-primary/70 text-sidebar-primary-foreground font-bold text-sm shadow-sm">
-            A
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sidebar-primary via-sidebar-primary/80 to-purple-500/70 text-sidebar-primary-foreground font-bold text-sm shadow-lg shadow-sidebar-primary/20">
+            <span className="relative z-10">A</span>
+            <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-white/0 via-white/10 to-white/0" />
           </div>
           {!collapsed && (
             <div className="flex flex-col truncate">
@@ -470,7 +437,7 @@ export function Sidebar() {
             <TooltipTrigger asChild>
               <span
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium",
+                  "inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
                   isMockMode
                     ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                     : "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
@@ -492,27 +459,27 @@ export function Sidebar() {
 
       {/* Search + Cmd+K trigger */}
       {!collapsed && (
-        <div className="px-3 py-2 space-y-1.5">
+        <div className="space-y-1.5 px-3 py-2.5">
           {/* Quick filter — narrows the visible menu in-place. */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sidebar-muted-foreground" />
+          <div className="group/search relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sidebar-muted-foreground transition-colors group-focus-within/search:text-sidebar-primary" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="ค้นหาเมนู..."
-              className="h-8 border-sidebar-border bg-sidebar-accent/30 pl-8 pr-8 text-sidebar-foreground placeholder:text-sidebar-muted-foreground focus-visible:ring-sidebar-ring"
+              className="h-8 border-sidebar-border/60 bg-sidebar-accent/30 pl-8 pr-8 text-sidebar-foreground placeholder:text-sidebar-muted-foreground/70 transition-all focus-visible:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring"
               aria-label="กรองเมนู"
             />
-            {search && (
+            {search ? (
               <button
                 type="button"
                 onClick={() => setSearch("")}
                 aria-label="ล้างการค้นหา"
-                className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
               >
                 <X className="h-3 w-3" />
               </button>
-            )}
+            ) : null}
           </div>
           {/* ⌘K trigger — opens the global command palette for fuzzy search across
               pinned + recent + all menus. */}
@@ -520,13 +487,14 @@ export function Sidebar() {
             type="button"
             onClick={() => setCommandPaletteOpen(true)}
             className={cn(
-              "group/kbd flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[11px]",
-              "text-sidebar-muted-foreground hover:text-sidebar-accent-foreground transition-colors",
+              "group/kbd flex w-full items-center gap-2 rounded-md border border-transparent px-2 py-1 text-left text-[11px] transition-all",
+              "text-sidebar-muted-foreground hover:border-sidebar-border/60 hover:bg-sidebar-accent/40 hover:text-sidebar-accent-foreground",
             )}
             aria-label="เปิด quick switcher (global search)"
           >
-            <span className="flex-1 truncate">ค้นหาขั้นสูง</span>
-            <kbd className="flex items-center gap-0.5 rounded border border-sidebar-border bg-sidebar-background/40 px-1 font-mono text-[10px]">
+            <Sparkles className="h-3 w-3 opacity-70 transition-opacity group-hover/kbd:opacity-100" />
+            <span className="flex-1 truncate">Quick switcher</span>
+            <kbd className="flex items-center gap-0.5 rounded border border-sidebar-border/80 bg-sidebar-background/50 px-1 font-mono text-[10px] text-sidebar-muted-foreground">
               <CommandIcon className="h-2.5 w-2.5" />K
             </kbd>
           </button>
@@ -553,31 +521,14 @@ export function Sidebar() {
             </Section>
           )}
 
-          {/* RECENT */}
-          {!collapsed && !showingSearch && recentMenuItems.length > 0 && (
-            <Section
-              icon={<Clock className="h-3 w-3" />}
-              label="ล่าสุด"
-              count={recentMenuItems.length}
-            >
-              {recentMenuItems.map((item) => {
-                const path = resolveMenuPath(item.code, item.path);
-                if (!path) return null;
-                return (
-                  <RecentRow
-                    key={`rec-${path}`}
-                    path={path}
-                    onForget={() => forgetPath(path)}
-                  />
-                );
-              })}
-            </Section>
-          )}
+          {/* RECENT section removed — "ล่าสุด" no longer shown in sidebar.
+              (recentPaths is still tracked by useRecentPaths in case we want
+              to surface it elsewhere — e.g. an admin/analytics view.) */}
 
           {/* MAIN MENU */}
           <Section
-            label={showingPinnedOrRecent ? "เมนูทั้งหมด" : "เมนูหลัก"}
-            icon={showingPinnedOrRecent ? undefined : <CommandIcon className="h-3 w-3" />}
+            label={showingPinnedOnly ? "เมนูทั้งหมด" : "เมนูหลัก"}
+            icon={showingPinnedOnly ? undefined : <CommandIcon className="h-3 w-3" />}
           >
             {filteredMenu.length === 0 ? (
               <EmptyState
@@ -596,18 +547,19 @@ export function Sidebar() {
 
       {/* Footer */}
       {!isMobile && (
-        <div className="border-t border-sidebar-border p-2 space-y-1">
+        <div className="space-y-1 border-t border-sidebar-border/60 p-2">
           {!collapsed && superAdmin.isSuperAdmin() && (
-            <div className="flex items-center gap-1.5 rounded-md bg-sidebar-accent/40 px-2 py-1 text-[10px] font-medium text-sidebar-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+            <div className="flex items-center gap-1.5 rounded-md bg-gradient-to-r from-emerald-500/10 to-transparent px-2 py-1 text-[10px] font-medium text-sidebar-muted-foreground">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500/60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.6)]" />
+              </span>
               SUPER ADMIN · {superAdmin.permissions.length} permissions
             </div>
           )}
           <div className={cn("flex items-center gap-1", collapsed && "flex-col")}>
             {/* Theme toggle */}
-            {!collapsed && (
-              <ThemeToggle theme={theme} setTheme={setTheme} />
-            )}
+            {!collapsed && <ThemeToggle theme={theme} setTheme={setTheme} />}
             {/* Settings link */}
             {!collapsed && (
               <Tooltip>
@@ -615,7 +567,7 @@ export function Sidebar() {
                   <Link
                     href="/system/settings"
                     aria-label="ตั้งค่า"
-                    className="flex flex-1 items-center justify-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
                   >
                     <Settings className="h-3.5 w-3.5" />
                     <span>ตั้งค่า</span>
@@ -631,8 +583,8 @@ export function Sidebar() {
                   type="button"
                   onClick={toggleSidebar}
                   className={cn(
-                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors",
-                    !collapsed && "flex-shrink-0",
+                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
+                    !collapsed && "shrink-0",
                     collapsed && "w-full justify-center",
                   )}
                   aria-label={collapsed ? "ขยาย Sidebar" : "ย่อ Sidebar"}
@@ -654,7 +606,10 @@ export function Sidebar() {
       )}
     </div>
   );
+  };
 
+  // Mobile (< 768px): sidebar is a full overlay drawer that slides in from
+  // the left. Default closed — the user opens it with the hamburger button.
   if (isMobile) {
     if (!mobileOpen) return null;
     return (
@@ -665,13 +620,52 @@ export function Sidebar() {
           aria-hidden
         />
         <aside className="fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] animate-in slide-in-from-left duration-200">
-          {content}
+          {content({ onNavigate: () => setMobileOpen(false) })}
         </aside>
       </>
     );
   }
 
-  return <aside className="sticky top-0 hidden h-screen md:block">{content}</aside>;
+  // Tablet (768-1023px): sidebar is always visible as a fixed-width icon rail
+  // (collapsed) on the left. The user can click the hamburger in the top nav
+  // to temporarily open the full sidebar as an overlay (the rail stays
+  // collapsed underneath so the overlay covers the content cleanly).
+  if (isTablet) {
+    return (
+      <>
+        {mobileOpen && (
+          <>
+            <div
+              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+              aria-hidden
+            />
+            <aside
+              className={cn(
+                "fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] animate-in slide-in-from-left duration-200",
+                // Push the overlay to the right of the icon rail
+                "left-[var(--sidebar-width-collapsed)]",
+              )}
+            >
+              {content({ forceExpanded: true, onNavigate: () => setMobileOpen(false) })}
+            </aside>
+          </>
+        )}
+        <aside
+          className={cn(
+            "sticky top-0 hidden h-screen md:block",
+            "w-[var(--sidebar-width-collapsed)]",
+            "transition-[width] duration-300",
+          )}
+        >
+          {content({ forceCollapsed: true, onNavigate: () => setMobileOpen(false) })}
+        </aside>
+      </>
+    );
+  }
+
+  // Desktop (≥ 1024px): regular sticky aside with full collapse/expand.
+  return <aside className="sticky top-0 hidden h-screen md:block">{content()}</aside>;
 }
 
 /* ---------------------------------------------------------------- section header */
@@ -688,14 +682,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-1">
-      <div className="flex items-center justify-between gap-2 px-2 pb-1">
-        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground">
+    <section className="space-y-1.5">
+      <div className="flex items-center justify-between gap-2 px-2">
+        <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground/80">
           {icon}
           <span>{label}</span>
         </div>
         {typeof count === "number" && count > 0 && (
-          <span className="rounded-full bg-sidebar-accent px-1.5 py-0.5 text-[9px] font-medium text-sidebar-muted-foreground tabular-nums">
+          <span className="rounded-full bg-sidebar-accent/60 px-1.5 py-0.5 text-[9px] font-medium text-sidebar-muted-foreground tabular-nums">
             {count}
           </span>
         )}
@@ -746,7 +740,7 @@ function ThemeToggle({
           type="button"
           onClick={() => setTheme(next)}
           aria-label={`ธีม: ${label}`}
-          className="flex flex-1 items-center justify-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+          className="flex flex-1 items-center justify-center gap-2 rounded-md px-2 py-1.5 text-xs text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
         >
           <Icon className="h-3.5 w-3.5" />
           <span>ธีม: {label}</span>
@@ -756,3 +750,6 @@ function ThemeToggle({
     </Tooltip>
   );
 }
+
+// Re-export to silence unused warnings
+void SESSION_STORAGE_KEYS;

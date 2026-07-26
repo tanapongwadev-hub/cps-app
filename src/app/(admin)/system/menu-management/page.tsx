@@ -45,6 +45,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
+import { IconPicker } from "@/components/forms/icon-picker";
 import {
   Select,
   SelectContent,
@@ -53,13 +54,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  useMenuTree,
+  useMenusList,
   useCreateMenu,
   useUpdateMenu,
   useDeleteMenu,
   useReorderMenus,
 } from "@/features/menus/hooks/use-menus";
-import type { MenuItem, MenuFormData, MenuReorderItem } from "@/types/menu";
+import type { MenuItem, MenuFormData } from "@/types/menu";
 import { cn } from "@/utils/cn";
 
 const EMPTY_FORM: MenuFormData = {
@@ -79,11 +80,42 @@ const EMPTY_FORM: MenuFormData = {
 };
 
 export default function MenuManagementPage() {
-  const { data: tree, isLoading, isError, error } = useMenuTree();
+  // Use the LIST endpoint (not /tree) so we can see menus that have been
+  // hidden or deactivated — the real /menus/tree endpoint filters out
+  // isVisible=false, which would make them impossible to unhide.
+  const { data: listData, isLoading, isError, error } = useMenusList();
   const createMenu = useCreateMenu();
   const updateMenu = useUpdateMenu();
   const deleteMenu = useDeleteMenu();
   const reorderMenus = useReorderMenus();
+
+  const flatMenus = React.useMemo<MenuItem[]>(
+    () => (listData?.items ?? []) as MenuItem[],
+    [listData],
+  );
+
+  // Build a tree from the flat list so the UI still shows parent/child
+  // hierarchy. The /menus (list) endpoint returns `parentId` as undefined
+  // for children — fall back to `parent.id` in that case. Items whose
+  // parent isn't in the list (e.g. deleted parent) are treated as roots.
+  // Sort each level by sortOrder so the tree matches the backend tree.
+  const tree = React.useMemo<MenuItem[]>(() => {
+    const sorted = [...flatMenus].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const map = new Map<string, MenuItem>();
+    for (const m of sorted) map.set(m.id, { ...m, children: [] });
+    const roots: MenuItem[] = [];
+    for (const m of sorted) {
+      const node = map.get(m.id);
+      if (!node) continue;
+      const parentId = m.parentId ?? m.parent?.id ?? null;
+      if (parentId && map.has(parentId)) {
+        map.get(parentId)!.children!.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+    return roots;
+  }, [flatMenus]);
 
   const [editing, setEditing] = React.useState<MenuItem | null>(null);
   const [creating, setCreating] = React.useState(false);
@@ -107,14 +139,14 @@ export default function MenuManagementPage() {
   };
 
   // Flatten the tree for drag-drop tracking
-  const flatMenus = React.useMemo(() => flattenTree(tree ?? []), [tree]);
+  // (flatMenus is declared above from useMenusList — same data, no need to re-flatten)
 
   const handleReorder = async (draggedId: string, targetId: string, position: "before" | "after" | "inside") => {
     if (!tree) return;
     const target = findInTree(tree, targetId);
     if (!target) return;
     let newSort = target.sortOrder;
-    let newParent: string | null = target.parentId;
+    let newParent: string | null = target.parentId ?? null;
     if (position === "inside") {
       newSort = 0; // first child
       newParent = target.id;
@@ -357,9 +389,14 @@ function MenuNode({
             {menu.nameEn && (
               <span className="text-[10px] text-muted-foreground">· {menu.nameEn}</span>
             )}
-            {menu.menuType === "GROUP" && (
+            {menu.menuType === "MENU" && (
               <Badge variant="info" className="text-[10px]">
-                Group
+                Sub
+              </Badge>
+            )}
+            {menu.menuType === "BUTTON" && (
+              <Badge variant="warning" className="text-[10px]">
+                Action
               </Badge>
             )}
             {!menu.isVisible && (
@@ -585,10 +622,9 @@ function MenuFormDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MAIN">MAIN</SelectItem>
-                  <SelectItem value="SUB">SUB</SelectItem>
-                  <SelectItem value="GROUP">GROUP</SelectItem>
-                  <SelectItem value="EXTERNAL">EXTERNAL</SelectItem>
+                  <SelectItem value="MAIN">MAIN — เมนูหลัก (top-level)</SelectItem>
+                  <SelectItem value="MENU">MENU — เมนูย่อย (child)</SelectItem>
+                  <SelectItem value="BUTTON">BUTTON — ปุ่ม action</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
@@ -605,7 +641,7 @@ function MenuFormDialog({
                 <SelectContent>
                   <SelectItem value="_root">(ไม่มี — top level)</SelectItem>
                   {allMenus
-                    .filter((m) => m.menuType !== "SUB")
+                    .filter((m) => m.menuType !== "MENU")
                     .map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.nameTh} ({m.code})
@@ -625,11 +661,11 @@ function MenuFormDialog({
               />
             </Field>
             <Field label="Icon" htmlFor={iconId}>
-              <Input
+              <IconPicker
                 id={iconId}
                 value={form.icon}
-                onChange={(e) => setForm({ ...form, icon: e.target.value })}
-                placeholder="menu, building, file-text..."
+                onChange={(v) => setForm({ ...form, icon: v })}
+                placeholder="เลือก icon..."
               />
             </Field>
           </div>
@@ -697,7 +733,7 @@ function menuToForm(m: MenuItem): MenuFormData {
     code: m.code,
     nameTh: m.nameTh,
     nameEn: m.nameEn,
-    parentId: m.parentId,
+    parentId: m.parentId ?? null,
     menuType: m.menuType,
     path: m.path ?? "",
     icon: m.icon ?? "",

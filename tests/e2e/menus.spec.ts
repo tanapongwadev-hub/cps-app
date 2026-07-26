@@ -63,6 +63,33 @@ test.describe("Sidebar / menu navigation", () => {
     await expect(page.getByText("SUPER ADMIN").first()).toBeVisible();
   });
 
+  test("permission catalog renders without React error (action is an object)", async ({
+    page,
+    loginAsSuperAdmin,
+  }) => {
+    // Regression: the backend returns `action` as `{ id, code, nameTh, nameEn }`,
+    // not as a string. The catalog row used to render the whole object as a
+    // React child, throwing "Objects are not valid as a React child".
+    await loginAsSuperAdmin();
+    await page.goto("/permissions");
+    await page.getByRole("tab", { name: /แคตตาล็อกสิทธิ์/ }).click();
+    // The table headers should be visible
+    await expect(page.getByRole("columnheader", { name: "Code" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole("columnheader", { name: "Action" })).toBeVisible();
+    // Wait for at least one row to render — if the action object was rendered
+    // directly, React would throw before any row appears.
+    const firstRow = page.locator("tbody tr").first();
+    await expect(firstRow).toBeVisible({ timeout: 10_000 });
+    // The action cell should be a short string (e.g. "READ"), not "[object Object]"
+    const actionCell = firstRow.locator("td").nth(2);
+    await expect(actionCell).toBeVisible();
+    const actionText = (await actionCell.innerText()).trim();
+    expect(actionText.length, `action cell should be short: got "${actionText}"`).toBeLessThan(30);
+    expect(actionText, `action cell should not be "[object Object]"`).not.toBe("[object Object]");
+  });
+
   test("search filter narrows the menu list", async ({ page, loginAsSuperAdmin }) => {
     await loginAsSuperAdmin();
     const nav = page.getByRole("navigation");
