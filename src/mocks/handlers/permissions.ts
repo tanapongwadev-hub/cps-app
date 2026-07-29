@@ -7,11 +7,57 @@ import { mockDb } from "../db";
 import { ok, fail, getBody, paginate, generateId, simulateLatency, type ListQuery } from "./helpers";
 import type { Permission } from "@/types/permission";
 
+const MOCK_ACTIONS = [
+  { id: "action-create", code: "CREATE", nameTh: "สร้าง", nameEn: "Create" },
+  { id: "action-read", code: "READ", nameTh: "อ่าน", nameEn: "Read" },
+  { id: "action-update", code: "UPDATE", nameTh: "แก้ไข", nameEn: "Update" },
+  { id: "action-delete", code: "DELETE", nameTh: "ลบ", nameEn: "Delete" },
+];
+
 export async function setupPermissionMocks(
   path: string,
   method: string,
   body: unknown,
 ): Promise<Response | null> {
+  // GET /permissions/options — menus + actions สำหรับ dropdown
+  if (path === "/permissions/options" && method === "GET") {
+    await simulateLatency(100);
+    return ok({
+      menus: mockDb.menus.map((m) => ({
+        id: m.id,
+        code: m.code,
+        nameTh: m.nameTh,
+        nameEn: m.nameEn,
+      })),
+      actions: MOCK_ACTIONS,
+    });
+  }
+
+  // POST /permissions
+  if (path === "/permissions" && method === "POST") {
+    await simulateLatency();
+    const data = (await getBody(body)) as Record<string, unknown>;
+    if (mockDb.permissions.some((p) => p.code === data.code)) {
+      return fail("code นี้มีอยู่ในระบบแล้ว", 409, "PERMISSION_CODE_EXISTS");
+    }
+    const menu = mockDb.menus.find((m) => String(m.id) === String(data.menuId));
+    const action = MOCK_ACTIONS.find((a) => String(a.id) === String(data.actionId));
+    const newPerm = {
+      id: generateId("perm"),
+      code: data.code as string,
+      description: data.description as string | undefined,
+      isActive: (data.isActive as boolean | undefined) ?? true,
+      menu: menu
+        ? { id: menu.id, code: menu.code, nameTh: menu.nameTh, nameEn: menu.nameEn }
+        : undefined,
+      action: action ? { ...action } : undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockDb.permissions.push(newPerm as unknown as Permission);
+    return ok(newPerm, "สร้างสิทธิ์เรียบร้อย", 201);
+  }
+
   // GET /permissions
   if (path === "/permissions" && method === "GET") {
     await simulateLatency();
@@ -41,10 +87,42 @@ export async function setupPermissionMocks(
       if (!perm) return fail("ไม่พบ permission", 404, "PERMISSION_NOT_FOUND");
       return ok(perm);
     }
+
+    if (method === "PATCH" || method === "PUT") {
+      await simulateLatency();
+      const idx = mockDb.permissions.findIndex((p) => p.id === id);
+      if (idx === -1) return fail("ไม่พบ permission", 404, "PERMISSION_NOT_FOUND");
+      const data = (await getBody(body)) as Record<string, unknown>;
+      const existing = mockDb.permissions[idx];
+      if (!existing) return fail("ไม่พบ permission", 404, "PERMISSION_NOT_FOUND");
+      if (data.code && data.code !== existing.code) {
+        if (mockDb.permissions.some((p) => p.code === data.code)) {
+          return fail("code นี้มีอยู่ในระบบแล้ว", 409, "PERMISSION_CODE_EXISTS");
+        }
+      }
+      const { menuId, actionId, ...rest } = data;
+      const menu = mockDb.menus.find((m) => String(m.id) === String(menuId));
+      const action = MOCK_ACTIONS.find((a) => String(a.id) === String(actionId));
+      mockDb.permissions[idx] = {
+        ...existing,
+        ...rest,
+        ...(menu
+          ? { menu: { id: menu.id, code: menu.code, nameTh: menu.nameTh, nameEn: menu.nameEn } }
+          : {}),
+        ...(action ? { action: { ...action } } : {}),
+        updatedAt: new Date().toISOString(),
+      } as typeof existing;
+      return ok(mockDb.permissions[idx], "บันทึกสิทธิ์เรียบร้อย");
+    }
+
+    if (method === "DELETE") {
+      await simulateLatency();
+      const idx = mockDb.permissions.findIndex((p) => p.id === id);
+      if (idx === -1) return fail("ไม่พบ permission", 404, "PERMISSION_NOT_FOUND");
+      mockDb.permissions.splice(idx, 1);
+      return ok({ success: true }, "ลบสิทธิ์เรียบร้อย");
+    }
   }
 
   return null;
 }
-
-// Keep generateId available for future handlers
-void generateId;

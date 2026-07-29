@@ -8,16 +8,20 @@
 "use client";
 
 import * as React from "react";
-import { Key, Search, ShieldCheck, ShieldX, Loader2 } from "lucide-react";
+import { Key, Search, ShieldCheck, ShieldX, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { PageHeader, PageContainer } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActionMenu } from "@/components/tables/action-menu";
+import { ConfirmDeleteDialog } from "@/components/forms/confirm-dialog";
 import { useAuthStore } from "@/stores/auth-store";
 import { usePermission } from "@/hooks/use-permission";
-import { usePermissions } from "@/features/permissions/hooks/use-permissions";
+import { usePermissions, useDeletePermission } from "@/features/permissions/hooks/use-permissions";
+import { PermissionFormDialog } from "@/features/permissions/components/permission-form-dialog";
 import { cn } from "@/utils/cn";
 import type { Permission } from "@/types/permission";
 
@@ -156,6 +160,10 @@ function MyPermissionsCard({
 function PermissionCatalog() {
   const [search, setSearch] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<Permission | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const deleteMutation = useDeletePermission();
 
   React.useEffect(() => {
     const id = setTimeout(() => setDebouncedSearch(search), 300);
@@ -181,14 +189,26 @@ function PermissionCatalog() {
               สิทธิ์ทั้งหมดที่ backend ลงทะเบียนไว้ ({totalItems} รายการ)
             </CardDescription>
           </div>
-          <div className="relative sm:w-64">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="ค้นหา code, module..."
-              className="h-8 pl-8 text-sm"
-            />
+          <div className="flex items-center gap-2">
+            <div className="relative sm:w-64">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="ค้นหา code, module..."
+                className="h-8 pl-8 text-sm"
+              />
+            </div>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              เพิ่มสิทธิ์
+            </Button>
           </div>
         </div>
       </CardHeader>
@@ -220,22 +240,62 @@ function PermissionCatalog() {
                   <th className="px-3 py-2 text-left font-medium">Action</th>
                   <th className="px-3 py-2 text-left font-medium">Menu</th>
                   <th className="px-3 py-2 text-center font-medium">Status</th>
+                  <th className="px-3 py-2 text-right font-medium w-12"></th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((p) => (
-                  <PermissionRow key={p.id} permission={p} />
+                  <PermissionRow
+                    key={p.id}
+                    permission={p}
+                    onEdit={() => {
+                      setEditing(p);
+                      setFormOpen(true);
+                    }}
+                    onDelete={() => setDeletingId(p.id)}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         )}
       </CardContent>
+
+      <PermissionFormDialog
+        open={formOpen}
+        onOpenChange={(o) => {
+          setFormOpen(o);
+          if (!o) setEditing(null);
+        }}
+        permission={editing}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!deletingId}
+        onOpenChange={(o) => !o && setDeletingId(null)}
+        itemName="สิทธิ์"
+        loading={deleteMutation.isPending}
+        onConfirm={async () => {
+          if (deletingId) {
+            await deleteMutation.mutateAsync(deletingId);
+            setDeletingId(null);
+          }
+        }}
+        warning="Role ที่อ้างถึงสิทธิ์นี้อาจเสียการเข้าถึงเมนูที่เกี่ยวข้อง"
+      />
     </Card>
   );
 }
 
-function PermissionRow({ permission }: { permission: Permission }) {
+function PermissionRow({
+  permission,
+  onEdit,
+  onDelete,
+}: {
+  permission: Permission;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const sep = permission.code.includes(".") ? "." : "_";
   const moduleName = permission.module ?? permission.code.split(sep)[0] ?? "—";
   // Backend shape: { id, code, nameTh, nameEn } — `action` may be a string
@@ -268,6 +328,24 @@ function PermissionRow({ permission }: { permission: Permission }) {
             ปิด
           </Badge>
         )}
+      </td>
+      <td className="px-3 py-2 text-right">
+        <ActionMenu
+          label={`เมนู ${permission.code}`}
+          items={[
+            {
+              label: "แก้ไข",
+              icon: <Pencil className="h-3.5 w-3.5" />,
+              onClick: onEdit,
+            },
+            {
+              label: "ลบ",
+              icon: <Trash2 className="h-3.5 w-3.5" />,
+              variant: "danger",
+              onClick: onDelete,
+            },
+          ]}
+        />
       </td>
     </tr>
   );

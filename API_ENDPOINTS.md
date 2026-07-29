@@ -65,7 +65,11 @@
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
 | GET | `/permissions` | Bearer + SUPER_ADMIN | รายการ permission (รองรับ `page`, `limit`, `search`) |
+| GET | `/permissions/options` | Bearer + SUPER_ADMIN | รายการ menus + actions สำหรับ dropdown ในฟอร์ม |
 | GET | `/permissions/:id` | Bearer + SUPER_ADMIN | ข้อมูล permission |
+| POST | `/permissions` | Bearer + SUPER_ADMIN | สร้าง permission (`menuId`, `actionId`, `code`) |
+| PATCH | `/permissions/:id` | Bearer + SUPER_ADMIN | แก้ไข permission |
+| DELETE | `/permissions/:id` | Bearer + SUPER_ADMIN | ลบ permission |
 
 ## Sessions (ต้องเป็น SUPER_ADMIN)
 

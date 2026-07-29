@@ -21,4 +21,21 @@ export const permissionsApi = {
 
   /** Get a single permission */
   get: (id: string) => apiClient.get<Permission>(`/permissions/${id}`),
+
+  /** menus + actions สำหรับ dropdown ในฟอร์ม */
+  options: () =>
+    apiClient.get<{
+      menus: { id: string; code: string; nameTh?: string; nameEn?: string }[];
+      actions: { id: string; code: string; nameTh?: string; nameEn?: string }[];
+    }>("/permissions/options"),
+
+  /** Create a permission */
+  create: (data: Partial<Permission>) => apiClient.post<Permission>("/permissions", data),
+
+  /** Update a permission */
+  update: (id: string, data: Partial<Permission>) =>
+    apiClient.patch<Permission>(`/permissions/${id}`, data),
+
+  /** Delete a permission */
+  remove: (id: string) => apiClient.delete<{ message?: string }>(`/permissions/${id}`),
 };
