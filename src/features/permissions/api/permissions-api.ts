@@ -2,8 +2,12 @@
  * Permissions API
  */
 import { apiClient } from "@/services/api-client";
-import type { Permission } from "@/types/permission";
+import type { Permission, PermissionDepartmentRef } from "@/types/permission";
 import type { PaginatedList, PageQuery } from "@/types/paginated";
+
+export interface UpdatePermissionDepartmentsPayload {
+  departmentIds: string[];
+}
 
 export const permissionsApi = {
   /** List permissions (paginated). The real backend returns { items, meta: { page, limit, totalItems, totalPages } }. */
@@ -35,6 +39,16 @@ export const permissionsApi = {
   /** Update a permission */
   update: (id: string, data: Partial<Permission>) =>
     apiClient.patch<Permission>(`/permissions/${id}`, data),
+
+  /** Replace the active department restrictions for a permission. */
+  updateDepartments: (id: string, data: UpdatePermissionDepartmentsPayload) =>
+    apiClient.put<Permission>(`/permissions/${id}/departments`, data),
+
+  /** Department choices for the restriction dialog. */
+  departments: () =>
+    apiClient.get<PaginatedList<PermissionDepartmentRef>>("/departments", {
+      params: { page: 1, limit: 1000 },
+    }),
 
   /** Delete a permission */
   remove: (id: string) => apiClient.delete<{ message?: string }>(`/permissions/${id}`),

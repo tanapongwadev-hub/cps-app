@@ -56,6 +56,35 @@ export function useUpdatePermission() {
   });
 }
 
+export function usePermissionDepartments(enabled = true) {
+  return useQuery({
+    queryKey: [PERMISSIONS_QUERY_KEY, "departments"],
+    queryFn: () => permissionsApi.departments(),
+    enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpdatePermissionDepartments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      departmentIds,
+    }: {
+      id: string;
+      departmentIds: string[];
+    }) => permissionsApi.updateDepartments(id, { departmentIds }),
+    onSuccess: () => {
+      showToast.success("กำหนดแผนกสำหรับสิทธิ์เรียบร้อย");
+      qc.invalidateQueries({ queryKey: [PERMISSIONS_QUERY_KEY] });
+    },
+    onError: (err: Error) => {
+      showToast.error("ไม่สามารถกำหนดแผนกสำหรับสิทธิ์ได้", err.message);
+    },
+  });
+}
+
 export function useDeletePermission() {
   const qc = useQueryClient();
   return useMutation({

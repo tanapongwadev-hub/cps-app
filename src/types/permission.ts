@@ -23,6 +23,15 @@ export interface PermissionActionRef {
   name?: string;
 }
 
+export interface PermissionDepartmentRef {
+  id: string;
+  code: string;
+  nameTh?: string;
+  nameEn?: string;
+  name?: string;
+  isActive?: boolean;
+}
+
 export interface Permission extends BaseEntity {
   code: string;
   module?: string;
@@ -45,6 +54,11 @@ export interface Permission extends BaseEntity {
    * existing code that reads `actionRef` doesn't break.
    */
   actionRef?: PermissionActionRef;
+  /**
+   * Active department restrictions. An empty or omitted array means the
+   * permission is available to every department.
+   */
+  departments?: PermissionDepartmentRef[];
 }
 
 /** Computed shape used by the matrix UI — derived from the user's permission list */

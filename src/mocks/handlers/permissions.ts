@@ -51,6 +51,7 @@ export async function setupPermissionMocks(
         ? { id: menu.id, code: menu.code, nameTh: menu.nameTh, nameEn: menu.nameEn }
         : undefined,
       action: action ? { ...action } : undefined,
+      departments: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -73,6 +74,48 @@ export async function setupPermissionMocks(
       });
     }
     return ok(paginate(items, params));
+  }
+
+  // PUT /permissions/:id/departments
+  const departmentsMatch = path.match(
+    /^\/permissions\/([\w-]+)\/departments$/,
+  );
+  if (departmentsMatch && method === "PUT") {
+    await simulateLatency();
+    const id = departmentsMatch[1];
+    const permission = mockDb.permissions.find((item) => item.id === id);
+    if (!permission) {
+      return fail("ไม่พบ permission", 404, "PERMISSION_NOT_FOUND");
+    }
+    const data = (await getBody(body)) as { departmentIds?: unknown };
+    const departmentIds = Array.isArray(data.departmentIds)
+      ? data.departmentIds.filter((value): value is string => typeof value === "string")
+      : [];
+    const departments = departmentIds.map((departmentId) =>
+      mockDb.departments.find((department) => department.id === departmentId),
+    );
+    const missingIds = departmentIds.filter(
+      (_, index) => departments[index] === undefined,
+    );
+    if (missingIds.length > 0) {
+      return fail(
+        `ไม่พบแผนก: ${missingIds.join(", ")}`,
+        400,
+        "DEPARTMENT_NOT_FOUND",
+      );
+    }
+    permission.departments = departments
+      .filter((department): department is NonNullable<typeof department> => Boolean(department))
+      .map((department) => ({
+        id: department.id,
+        code: department.code,
+        name: department.name,
+        nameTh: department.nameTh ?? department.name,
+        nameEn: department.nameEn ?? department.name,
+        isActive: department.isActive ?? department.status === "active",
+      }));
+    permission.updatedAt = new Date().toISOString();
+    return ok(permission, "กำหนดแผนกสำหรับสิทธิ์เรียบร้อย");
   }
 
   // GET /permissions/:id

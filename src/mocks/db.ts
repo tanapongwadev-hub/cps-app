@@ -1204,6 +1204,7 @@ const seedPermissions: Permission[] = (() => {
       name: a.name,
       description: a.desc,
       isSystem: true,
+      departments: [],
       createdAt: NOW,
       updatedAt: NOW,
     })),
