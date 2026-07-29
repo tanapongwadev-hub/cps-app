@@ -51,6 +51,13 @@ export interface UpdateUserPayload {
   lastName: string;
   email: string;
   telephone?: string;
+  assignments?: UpdateUserAssignmentPayload[];
+}
+
+export interface UpdateUserAssignmentPayload {
+  id?: string;
+  departmentId: string | null;
+  roleId: string;
 }
 
 export interface UpdateUserStatusPayload {

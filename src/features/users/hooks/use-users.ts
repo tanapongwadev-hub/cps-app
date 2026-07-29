@@ -48,6 +48,9 @@ export function useUpdateUser() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.DETAIL(vars.id) });
+      qc.invalidateQueries({
+        queryKey: [...QUERY_KEYS.USERS.ALL, "assignments", vars.id],
+      });
       showToast.success("แก้ไขข้อมูลผู้ใช้งานเรียบร้อย");
     },
     onError: (err: Error) => {
