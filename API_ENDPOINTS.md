@@ -43,7 +43,7 @@
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| GET | `/roles` | Bearer + SUPER_ADMIN | รายการบทบาท (รองรับ `page`, `limit`, `search`) |
+| GET | `/roles` | Bearer + SUPER_ADMIN | รายการบทบาท (รองรับ `page`, `limit`, `search`, `status` = `active`/`inactive`) |
 | GET | `/roles/:id` | Bearer + SUPER_ADMIN | ข้อมูลบทบาท |
 | POST | `/roles` | Bearer + SUPER_ADMIN | สร้างบทบาท |
 | PATCH | `/roles/:id` | Bearer + SUPER_ADMIN | แก้ไขบทบาท |

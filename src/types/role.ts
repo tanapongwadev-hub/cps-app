@@ -18,5 +18,9 @@ export interface Role extends BaseEntity {
   isActive?: boolean;
   isSystem?: boolean;
   permissions?: string[];
+  /** Action codes จาก role_actions ของ backend จริง (CREATE/READ/UPDATE/DELETE) */
+  actionCodes?: string[];
+  /** จำนวนสิทธิ์จาก backend จริง */
+  permissionCount?: number;
   userCount?: number;
 }

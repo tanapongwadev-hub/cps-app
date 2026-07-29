@@ -16,6 +16,44 @@ export interface ListRolesParams {
   [key: string]: string | number | boolean | undefined;
 }
 
+/** map permission code ของ frontend ("user.view") เป็น action code ของ backend ("READ") */
+const PERMISSION_ACTION_MAP: Record<string, string> = {
+  view: "READ",
+  create: "CREATE",
+  update: "UPDATE",
+  delete: "DELETE",
+};
+
+function toActionCodes(permissions: string[]): string[] {
+  const codes = new Set<string>();
+  for (const p of permissions) {
+    const action = p.split(".").pop()?.toLowerCase() ?? "";
+    const mapped = PERMISSION_ACTION_MAP[action];
+    if (mapped) codes.add(mapped);
+  }
+  return [...codes];
+}
+
+/** แปลงข้อมูลจากฟอร์ม (name/status/permissions) เป็น shape ของ backend จริง (nameTh/nameEn/isActive/actionCodes) */
+function toRolePayload(data: Partial<Role>): Record<string, unknown> {
+  const payload: Record<string, unknown> = {};
+  if (data.code !== undefined) payload.code = data.code;
+  const name = data.name ?? data.nameTh ?? data.nameEn;
+  if (name !== undefined) {
+    payload.nameTh = data.nameTh ?? name;
+    payload.nameEn = data.nameEn ?? name;
+  }
+  if (data.description !== undefined) payload.description = data.description;
+  if (data.scopeType !== undefined) payload.scopeType = data.scopeType;
+  if (data.status !== undefined || data.isActive !== undefined) {
+    payload.isActive = data.isActive ?? data.status === "active";
+  }
+  if (data.permissions !== undefined) {
+    payload.actionCodes = toActionCodes(data.permissions);
+  }
+  return payload;
+}
+
 const rolesApi = {
   /** List roles. The real backend returns { items, meta: { page, limit, totalItems, totalPages } }. */
   list: (params: ListRolesParams) =>
@@ -29,10 +67,21 @@ const rolesApi = {
       },
     }),
   get: (id: string) => apiClient.get<Role>(`/roles/${id}`),
-  create: (data: Partial<Role>) => apiClient.post<Role>("/roles", data),
-  update: (id: string, data: Partial<Role>) => apiClient.patch<Role>(`/roles/${id}`, data),
+  create: (data: Partial<Role>) => apiClient.post<Role>("/roles", toRolePayload(data)),
+  update: (id: string, data: Partial<Role>) =>
+    apiClient.patch<Role>(`/roles/${id}`, toRolePayload(data)),
   delete: (id: string) => apiClient.delete<{ success: boolean }>(`/roles/${id}`),
-  clone: (id: string) => apiClient.post<Role>(`/roles/${id}/clone`, {}),
+  // Real backend ไม่มี POST /roles/:id/clone — ทำ clone ด้วย GET + POST ตาม API จริง
+  clone: async (id: string) => {
+    const detail = await rolesApi.get(id);
+    const name = detail.nameTh ?? detail.name ?? detail.code;
+    return rolesApi.create({
+      code: `${detail.code}_COPY`,
+      name: `${name} (สำเนา)`,
+      description: detail.description ?? undefined,
+      scopeType: detail.scopeType,
+    });
+  },
 };
 
 export function useRoles(params: ListRolesParams) {

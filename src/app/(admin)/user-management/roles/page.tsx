@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, Pencil, Trash2, Copy, Shield, Users, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, Shield, Users, Search, Eye } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,12 +13,14 @@ import { ConfirmDeleteDialog } from "@/components/forms/confirm-dialog";
 import { PermissionGuard } from "@/components/ui/permission-guard";
 import { TextField } from "@/components/forms/form-field";
 import { useDebounce } from "@/hooks/use-debounce";
+import { usePermission } from "@/hooks/use-permission";
 import {
   useRoles,
   useDeleteRole,
   useCloneRole,
 } from "@/features/roles/hooks/use-roles";
 import { RoleFormDialog } from "@/features/roles/components/role-form-dialog";
+import { RoleDetailDialog } from "@/features/roles/components/role-detail-dialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { showToast } from "@/lib/toast";
 import type { Role } from "@/types/auth";
@@ -35,6 +37,9 @@ export default function RolesPage() {
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Role | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [viewingId, setViewingId] = React.useState<string | null>(null);
+
+  const { isSuperAdmin } = usePermission();
 
   const rolesQuery = useRoles({
     page,
@@ -58,7 +63,7 @@ export default function RolesPage() {
                 <Shield className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{r.name}</p>
+                <p className="text-sm font-medium truncate">{r.nameTh ?? r.nameEn ?? r.name}</p>
                 <p className="text-xs text-muted-foreground truncate">{r.code}</p>
               </div>
             </div>
@@ -78,7 +83,9 @@ export default function RolesPage() {
         id: "permissions",
         header: "สิทธิ์",
         cell: ({ row }) => (
-          <Badge variant="muted">{(row.original.permissions ?? []).length} สิทธิ์</Badge>
+          <Badge variant="muted">
+            {row.original.permissionCount ?? (row.original.permissions ?? []).length} สิทธิ์
+          </Badge>
         ),
       },
       {
@@ -105,8 +112,12 @@ export default function RolesPage() {
         id: "status",
         header: "สถานะ",
         cell: ({ row }) => (
-          <Badge variant={row.original.status === "active" ? "success" : "muted"}>
-            {row.original.status === "active" ? "ใช้งาน" : "ระงับ"}
+          <Badge
+            variant={
+              (row.original.isActive ?? row.original.status === "active") ? "success" : "muted"
+            }
+          >
+            {(row.original.isActive ?? row.original.status === "active") ? "ใช้งาน" : "ระงับ"}
           </Badge>
         ),
       },
@@ -131,6 +142,11 @@ export default function RolesPage() {
               label={`เมนู ${r.name}`}
               items={[
                 {
+                  label: "ดูรายละเอียด",
+                  icon: <Eye className="h-3.5 w-3.5" />,
+                  onClick: () => setViewingId(r.id),
+                },
+                {
                   label: "แก้ไข",
                   icon: <Pencil className="h-3.5 w-3.5" />,
                   onClick: () => {
@@ -149,7 +165,7 @@ export default function RolesPage() {
                   icon: <Trash2 className="h-3.5 w-3.5" />,
                   variant: "danger",
                   onClick: () => setDeletingId(r.id),
-                  hidden: r.isSystem,
+                  hidden: r.isSystem && !isSuperAdmin(),
                 },
               ]}
             />
@@ -157,7 +173,7 @@ export default function RolesPage() {
         },
       },
     ],
-    [cloneMutation],
+    [cloneMutation, isSuperAdmin],
   );
 
   return (
@@ -260,6 +276,11 @@ export default function RolesPage() {
           if (!o) setEditing(null);
         }}
         role={editing}
+      />
+
+      <RoleDetailDialog
+        roleId={viewingId}
+        onOpenChange={(o) => !o && setViewingId(null)}
       />
 
       <ConfirmDeleteDialog

@@ -27,14 +27,19 @@ export async function setupRoleMocks(
     if (mockDb.roles.some((r) => r.code === data.code)) {
       return fail("รหัส Role นี้มีอยู่ในระบบแล้ว", 409, "ROLE_CODE_EXISTS");
     }
+    const isActive = (data.isActive as boolean | undefined) ?? true;
     const newRole = {
       id: generateId("role"),
       code: data.code as string,
-      name: data.name as string,
+      name: (data.nameTh ?? data.name ?? data.nameEn) as string,
+      nameTh: data.nameTh as string | undefined,
+      nameEn: data.nameEn as string | undefined,
       description: data.description as string | undefined,
-      status: (data.status as "active" | "inactive") ?? "active",
+      status: (isActive ? "active" : "inactive") as "active" | "inactive",
+      isActive,
       isSystem: false,
       permissions: (data.permissions as string[]) ?? [],
+      actionCodes: (data.actionCodes as string[]) ?? [],
       userCount: 0,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -62,13 +67,14 @@ export async function setupRoleMocks(
       const data = (await getBody(body)) as Record<string, unknown>;
       const existing = mockDb.roles[idx];
       if (!existing) return fail("Not found", 404);
-      if (existing.isSystem && data.permissions) {
-        // System role: don't allow permission changes
-        return fail("ไม่สามารถแก้ไขสิทธิ์ของ System Role ได้", 403, "SYSTEM_ROLE");
-      }
+      const patchIsActive = data.isActive as boolean | undefined;
       mockDb.roles[idx] = {
         ...existing,
         ...data,
+        name: (data.nameTh ?? data.name ?? existing.name) as string,
+        ...(patchIsActive !== undefined
+          ? { status: patchIsActive ? "active" : "inactive" }
+          : {}),
         updatedAt: new Date().toISOString(),
       } as typeof existing;
       return ok(mockDb.roles[idx], "แก้ไข Role เรียบร้อย");
@@ -80,7 +86,6 @@ export async function setupRoleMocks(
       if (idx === -1) return fail("ไม่พบ Role", 404, "ROLE_NOT_FOUND");
       const role = mockDb.roles[idx];
       if (!role) return fail("Not found", 404);
-      if (role.isSystem) return fail("ไม่สามารถลบ System Role ได้", 403, "SYSTEM_ROLE");
       if ((role.userCount ?? 0) > 0) {
         return fail("Role นี้ยังมีผู้ใช้งานอยู่ ไม่สามารถลบได้", 409, "ROLE_IN_USE");
       }

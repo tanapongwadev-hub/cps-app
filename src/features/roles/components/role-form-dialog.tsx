@@ -23,8 +23,27 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PERMISSION_GROUPS } from "@/constants/permissions";
 import { useCreateRole, useUpdateRole } from "../hooks/use-roles";
+import { usePermission } from "@/hooks/use-permission";
 import { showToast } from "@/lib/toast";
 import type { Role } from "@/types/auth";
+
+/** map action code ของ backend กลับเป็น permission codes ของฟอร์ม (เช็คทุก module ที่มี action นั้น) */
+const ACTION_TO_PERMISSION_KEY: Record<string, string> = {
+  READ: "view",
+  CREATE: "create",
+  UPDATE: "update",
+  DELETE: "delete",
+};
+
+function permissionsFromActionCodes(actionCodes?: string[]): string[] {
+  if (!actionCodes?.length) return [];
+  const keys = new Set(
+    actionCodes.map((c) => ACTION_TO_PERMISSION_KEY[c]).filter(Boolean),
+  );
+  return PERMISSION_GROUPS.flatMap((g) =>
+    g.permissions.filter((p) => keys.has(p.key)).map((p) => p.code),
+  );
+}
 
 const schema = z.object({
   code: z
@@ -52,16 +71,30 @@ export function RoleFormDialog({
   const isEdit = !!role;
   const create = useCreateRole();
   const update = useUpdateRole();
+  const { isSuperAdmin } = usePermission();
+  // SUPER_ADMIN มี full access — แก้ไข System Role ได้ ไม่ถูก lock
+  const lockSystemRole = isEdit && !!role?.isSystem && !isSuperAdmin();
   const [search, setSearch] = React.useState("");
+
+  const roleName = role?.nameTh ?? role?.nameEn ?? role?.name ?? "";
+  const roleStatus = role
+    ? (role.isActive ?? role.status === "active")
+      ? "active"
+      : "inactive"
+    : "active";
+  const rolePermissions =
+    role?.permissions?.length
+      ? role.permissions
+      : permissionsFromActionCodes(role?.actionCodes);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       code: role?.code ?? "",
-      name: role?.name ?? "",
+      name: roleName,
       description: role?.description ?? "",
-      status: role?.status ?? "active",
-      permissions: role?.permissions ?? [],
+      status: roleStatus,
+      permissions: rolePermissions,
     },
   });
 
@@ -69,10 +102,10 @@ export function RoleFormDialog({
     if (open) {
       form.reset({
         code: role?.code ?? "",
-        name: role?.name ?? "",
+        name: roleName,
         description: role?.description ?? "",
-        status: role?.status ?? "active",
-        permissions: role?.permissions ?? [],
+        status: roleStatus,
+        permissions: rolePermissions,
       });
       setSearch("");
     }
@@ -133,7 +166,15 @@ export function RoleFormDialog({
 
   const onSubmit = async (values: FormValues) => {
     if (isEdit && role) {
-      await update.mutateAsync({ id: role.id, data: values as Partial<Role> });
+      // ส่งเฉพาะ field ที่เปลี่ยนจริง — กัน validation error จาก field ที่ backend ไม่รับ
+      const changes: Partial<Role> = {};
+      if (values.code !== role.code) changes.code = values.code;
+      if (values.name !== roleName) changes.name = values.name;
+      if ((values.description ?? "") !== (role.description ?? ""))
+        changes.description = values.description;
+      if (values.status !== roleStatus) changes.status = values.status;
+      changes.permissions = values.permissions;
+      await update.mutateAsync({ id: role.id, data: changes });
     } else {
       await create.mutateAsync(values as Partial<Role>);
     }
@@ -146,7 +187,7 @@ export function RoleFormDialog({
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
-            {isEdit ? `แก้ไข Role: ${role?.name}` : "สร้าง Role ใหม่"}
+            {isEdit ? `แก้ไข Role: ${roleName}` : "สร้าง Role ใหม่"}
           </SheetTitle>
           <SheetDescription>
             {isEdit
@@ -167,7 +208,7 @@ export function RoleFormDialog({
                 required
                 description="ใช้ตัวพิมพ์ใหญ่และ _ เท่านั้น"
                 error={form.formState.errors.code?.message}
-                disabled={isEdit && role?.isSystem}
+                disabled={lockSystemRole}
                 {...form.register("code")}
               />
               <TextField
@@ -198,7 +239,7 @@ export function RoleFormDialog({
             title="สิทธิ์การใช้งาน"
             description={`เลือกสิทธิ์ที่ Role นี้จะได้รับ (เลือกแล้ว ${permissions.length} สิทธิ์)`}
           >
-            {isEdit && role?.isSystem && (
+            {lockSystemRole && (
               <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
                 ⚠️ นี่คือ System Role ไม่สามารถแก้ไขสิทธิ์ได้
               </div>
@@ -219,7 +260,7 @@ export function RoleFormDialog({
                 variant="outline"
                 size="sm"
                 onClick={selectAll}
-                disabled={isEdit && role?.isSystem}
+                disabled={lockSystemRole}
               >
                 <Check className="h-3.5 w-3.5" />
                 เลือกทั้งหมด
@@ -229,7 +270,7 @@ export function RoleFormDialog({
                 variant="outline"
                 size="sm"
                 onClick={clearAll}
-                disabled={isEdit && role?.isSystem}
+                disabled={lockSystemRole}
               >
                 <X className="h-3.5 w-3.5" />
                 ล้างทั้งหมด
@@ -248,7 +289,7 @@ export function RoleFormDialog({
                           <Checkbox
                             checked={allSelected || (someSelected && "indeterminate")}
                             onCheckedChange={() => toggleGroup(group.module)}
-                            disabled={isEdit && role?.isSystem}
+                            disabled={lockSystemRole}
                             id={`group-${group.module}`}
                           />
                           <label
@@ -271,7 +312,7 @@ export function RoleFormDialog({
                             <Checkbox
                               checked={permissions.includes(p.code)}
                               onCheckedChange={() => togglePermission(p.code)}
-                              disabled={isEdit && role?.isSystem}
+                              disabled={lockSystemRole}
                               id={p.code}
                             />
                             <span>{p.label}</span>
