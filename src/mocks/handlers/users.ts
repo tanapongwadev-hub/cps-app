@@ -98,22 +98,163 @@ export async function setupUserMocks(
       const data = (await getBody(body)) as Record<string, unknown>;
       const existing = mockDb.users[idx];
       if (!existing) return fail("Not found", 404);
+      const {
+        assignments: rawAssignments,
+        permissionVersion: _ignoredPermissionVersion,
+        ...profileData
+      } = data;
+      void _ignoredPermissionVersion;
+
+      let nextAssignments: UserDepartmentRole[] | undefined;
+      let assignmentsChanged = false;
+      if (rawAssignments !== undefined) {
+        if (!Array.isArray(rawAssignments) || rawAssignments.length === 0) {
+          return fail(
+            "ผู้ใช้ต้องมีอย่างน้อย 1 Assignment",
+            400,
+            "ASSIGNMENT_REQUIRED",
+          );
+        }
+
+        const requested = rawAssignments as {
+          id?: string;
+          departmentId: string | null;
+          roleId: string;
+        }[];
+        const pairKeys = requested.map(
+          (assignment) =>
+            `${assignment.departmentId ?? "SYSTEM"}:${assignment.roleId}`,
+        );
+        if (new Set(pairKeys).size !== pairKeys.length) {
+          return fail(
+            "ไม่สามารถเพิ่มแผนกและบทบาทซ้ำกันได้",
+            409,
+            "DUPLICATE_ASSIGNMENT",
+          );
+        }
+
+        const currentAssignments = mockDb.userDepartmentRoles.filter(
+          (assignment) => assignment.userId === id,
+        );
+        const currentById = new Map(
+          currentAssignments.map((assignment) => [assignment.id, assignment]),
+        );
+        const now = new Date().toISOString();
+        nextAssignments = [];
+
+        for (const assignment of requested) {
+          const retained = assignment.id
+            ? currentById.get(assignment.id)
+            : undefined;
+          if (assignment.id && !retained) {
+            return fail(
+              "Assignment ไม่ได้เป็นของผู้ใช้นี้",
+              400,
+              "INVALID_ASSIGNMENT_ID",
+            );
+          }
+
+          const role = mockDb.roles.find(
+            (candidate) => candidate.id === assignment.roleId,
+          );
+          if (!role) {
+            return fail("ไม่พบบทบาท", 404, "ROLE_NOT_FOUND");
+          }
+          const isSystemRole = role.scopeType === "SYSTEM";
+          if (isSystemRole !== (assignment.departmentId === null)) {
+            return fail(
+              isSystemRole
+                ? "System Role ต้องใช้ทุกแผนก"
+                : "Department Role ต้องระบุแผนก",
+              400,
+              "INVALID_ASSIGNMENT_SCOPE",
+            );
+          }
+
+          const department =
+            assignment.departmentId === null
+              ? undefined
+              : mockDb.departments.find(
+                  (candidate) => candidate.id === assignment.departmentId,
+                );
+          if (assignment.departmentId !== null && !department) {
+            return fail("ไม่พบแผนก", 404, "DEPARTMENT_NOT_FOUND");
+          }
+
+          nextAssignments.push({
+            id: retained?.id ?? generateId("udr"),
+            userId: id,
+            departmentId: assignment.departmentId,
+            departmentName: department?.name ?? "",
+            departmentCode: department?.code ?? "",
+            roleId: role.id,
+            roleName: role.name,
+            roleCode: role.code,
+            isPrimary: retained?.isPrimary ?? false,
+            isActive: retained?.isActive ?? true,
+            createdAt: retained?.createdAt ?? now,
+            updatedAt: now,
+          });
+        }
+
+        const assignmentSignature = (assignments: UserDepartmentRole[]) =>
+          assignments
+            .map(
+              (assignment) =>
+                `${assignment.id}:${assignment.departmentId ?? "SYSTEM"}:${assignment.roleId}`,
+            )
+            .sort()
+            .join("|");
+        assignmentsChanged =
+          assignmentSignature(currentAssignments) !==
+          assignmentSignature(nextAssignments);
+      }
+
+      const effectiveAssignments =
+        nextAssignments ??
+        mockDb.userDepartmentRoles.filter(
+          (assignment) => assignment.userId === id,
+        );
+      const roleIds = Array.from(
+        new Set(effectiveAssignments.map((assignment) => assignment.roleId)),
+      );
+      const primaryDepartment = effectiveAssignments.find(
+        (assignment) => assignment.departmentId !== null,
+      );
       const updated = {
         ...existing,
-        ...data,
-        fullName: `${data.firstName ?? existing.firstName} ${data.lastName ?? existing.lastName}`,
+        ...profileData,
+        fullName: `${profileData.firstName ?? existing.firstName} ${profileData.lastName ?? existing.lastName}`,
+        departmentId: primaryDepartment?.departmentId ?? undefined,
+        departmentName: primaryDepartment?.departmentName || undefined,
+        roleIds,
         roleNames: mockDb.roles
-          .filter((r) => ((data.roleIds as string[]) ?? existing.roleIds).includes(r.id))
+          .filter((role) => roleIds.includes(role.id))
           .map((r) => r.name),
         permissions: Array.from(
           new Set(
             mockDb.roles
-              .filter((r) => ((data.roleIds as string[]) ?? existing.roleIds).includes(r.id))
+              .filter((role) => roleIds.includes(role.id))
               .flatMap((r) => r.permissions),
           ),
         ).filter((p): p is string => typeof p === "string"),
+        permissionVersion: assignmentsChanged
+          ? (existing.permissionVersion ?? 0) + 1
+          : existing.permissionVersion,
         updatedAt: new Date().toISOString(),
       };
+
+      if (nextAssignments) {
+        const otherAssignments = mockDb.userDepartmentRoles.filter(
+          (assignment) => assignment.userId !== id,
+        );
+        mockDb.userDepartmentRoles.splice(
+          0,
+          mockDb.userDepartmentRoles.length,
+          ...otherAssignments,
+          ...nextAssignments,
+        );
+      }
       mockDb.users[idx] = updated;
       return ok(updated, "แก้ไขข้อมูลผู้ใช้งานเรียบร้อย");
     }
@@ -189,6 +330,8 @@ export async function setupUserMocks(
                 name: role.name,
                 nameTh: role.nameTh,
                 nameEn: role.nameEn,
+                scopeType:
+                  role.scopeType === "SYSTEM" ? "SYSTEM" : "DEPARTMENT",
               }
             : undefined,
         };

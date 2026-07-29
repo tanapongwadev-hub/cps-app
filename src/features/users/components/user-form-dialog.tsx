@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   useFieldArray,
   useForm,
@@ -10,14 +11,7 @@ import {
   type FieldPath,
 } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  Plus,
-  Trash2,
-  User as UserIcon,
-  Save,
-  Building2,
-  ShieldCheck,
-} from "lucide-react";
+import { Plus, Trash2, User as UserIcon, Save } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -37,10 +31,8 @@ import { getInitials } from "@/utils/format";
 import {
   createUserSchema,
   updateUserSchema,
-  addUserAssignmentSchema,
   type CreateUserFormValues,
   type UpdateUserFormValues,
-  type AddUserAssignmentValues,
 } from "../schemas/user-schema";
 import { useRoles } from "@/features/roles/hooks/use-roles";
 import { useDepartments } from "@/features/users/hooks/use-departments";
@@ -48,10 +40,10 @@ import {
   useCreateUser,
   useUpdateUser,
   useUserAssignments,
-  useAddUserAssignment,
 } from "../hooks/use-users";
-import { showToast } from "@/lib/toast";
+import { useAuthStore } from "@/stores/auth-store";
 import type { User } from "@/types/auth";
+import { EditUserAssignments } from "./edit-user-assignments";
 
 interface UserFormDialogProps {
   open: boolean;
@@ -78,9 +70,11 @@ interface RoleOption {
 }
 
 export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps) {
+  const router = useRouter();
   const isEdit = !!user;
   const create = useCreateUser();
   const update = useUpdateUser();
+  const assignmentsQuery = useUserAssignments(isEdit ? user?.id ?? null : null);
   const { data: rolesData, isLoading: rolesLoading } = useRoles({ page: 1, pageSize: 100 });
   const { data: deptData, isLoading: deptsLoading } = useDepartments();
 
@@ -107,17 +101,28 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       lastName: user?.lastName ?? "",
       email: user?.email ?? "",
       telephone: user?.telephone ?? "",
+      assignments: [],
     },
   });
 
   // Reset form when user changes
   React.useEffect(() => {
-    if (isEdit && user) {
+    if (isEdit && user && !assignmentsQuery.isLoading) {
       formUpdate.reset({
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
         telephone: user.telephone ?? "",
+        assignments: (assignmentsQuery.data ?? []).map((assignment) => ({
+          id: assignment.id,
+          departmentId: assignment.departmentId,
+          roleId: assignment.roleId,
+          roleScopeType:
+            assignment.role?.scopeType === "SYSTEM" ||
+            assignment.departmentId === null
+              ? "SYSTEM"
+              : "DEPARTMENT",
+        })),
       });
     }
     if (!isEdit) {
@@ -133,7 +138,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isEdit, open]);
+  }, [user, isEdit, open, assignmentsQuery.data, assignmentsQuery.isLoading]);
 
   const onSubmitCreate = async (values: CreateUserFormValues) => {
     const { confirmPassword: _cp, telephone, assignments, ...rest } = values;
@@ -160,14 +165,26 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
 
   const onSubmitUpdate = async (values: UpdateUserFormValues) => {
     if (!user) return;
-    const { telephone, ...rest } = values;
+    const { telephone, assignments, ...rest } = values;
     const payload = {
       ...rest,
       telephone: telephone && telephone.length > 0 ? telephone : undefined,
+      assignments: assignments.map(({ roleScopeType: _scope, ...assignment }) => {
+        void _scope;
+        return assignment;
+      }),
     };
     try {
-      await update.mutateAsync({ id: user.id, data: payload });
+      const editingSelf = useAuthStore.getState().user?.id === user.id;
+      const updatedUser = await update.mutateAsync({ id: user.id, data: payload });
       onOpenChange(false);
+      if (
+        editingSelf &&
+        updatedUser.permissionVersion !== user.permissionVersion
+      ) {
+        useAuthStore.getState().logout();
+        router.replace("/login");
+      }
     } catch {
       // toast handled
     }
@@ -259,7 +276,18 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                 </TabsContent>
 
                 <TabsContent value="assignments" className="space-y-4 mt-0">
-                  <AssignmentsTab userId={user.id} />
+                  <FormSection title="Assignments ปัจจุบัน">
+                    {assignmentsQuery.isLoading || rolesLoading || deptsLoading ? (
+                      <Skeleton className="h-32" />
+                    ) : (
+                      <EditUserAssignments
+                        form={formUpdate}
+                        departments={deptData?.items ?? []}
+                        roles={rolesData?.items ?? []}
+                        disabled={update.isPending}
+                      />
+                    )}
+                  </FormSection>
                 </TabsContent>
 
                 <SheetFooter className="px-0">
@@ -464,109 +492,6 @@ function CreateAssignmentsField({
             "กรุณากรอกข้อมูลให้ครบถ้วน"}
         </p>
       )}
-    </div>
-  );
-}
-
-// ---------- update-mode assignments tab ----------
-
-function AssignmentsTab({ userId }: { userId: string }) {
-  const { data: assignments, isLoading } = useUserAssignments(userId);
-  const { data: deptData } = useDepartments();
-  const { data: rolesData } = useRoles({ page: 1, pageSize: 100 });
-  const addAssignment = useAddUserAssignment();
-  const [draft, setDraft] = React.useState<AddUserAssignmentValues>({
-    departmentId: "",
-    roleId: "",
-  });
-
-  const handleAdd = async () => {
-    const parsed = addUserAssignmentSchema.safeParse(draft);
-    if (!parsed.success) {
-      showToast.error("ข้อมูลไม่ครบ", parsed.error.issues[0]?.message ?? "");
-      return;
-    }
-    try {
-      await addAssignment.mutateAsync({ userId, payload: parsed.data });
-      setDraft({ departmentId: "", roleId: "" });
-    } catch {
-      // toast handled
-    }
-  };
-
-  return (
-    <div className="space-y-4">
-      <FormSection title="Assignments ปัจจุบัน">
-        {isLoading ? (
-          <Skeleton className="h-16" />
-        ) : (assignments ?? []).length === 0 ? (
-          <p className="text-sm text-muted-foreground">ยังไม่มี assignment</p>
-        ) : (
-          <div className="space-y-2">
-            {(assignments ?? []).map((a) => (
-              <div
-                key={a.id}
-                className="flex items-center justify-between gap-3 rounded-md border bg-card p-3"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm font-medium">
-                    {a.department?.nameTh ?? a.department?.name ?? a.departmentId}
-                  </span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="truncate text-sm">
-                    {a.role?.nameTh ?? a.role?.nameEn ?? a.role?.name ?? a.roleId}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {a.isActive ? (
-                    <Badge variant="success" className="text-[10px]">ใช้งาน</Badge>
-                  ) : (
-                    <Badge variant="muted" className="text-[10px]">ระงับ</Badge>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </FormSection>
-
-      <FormSection title="เพิ่ม Assignment">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
-          <SelectField
-            label="แผนก"
-            value={draft.departmentId}
-            onValueChange={(v) => setDraft({ ...draft, departmentId: v })}
-            options={[
-              { value: "", label: "เลือกแผนก..." },
-              ...(deptData?.items ?? []).map((d) => ({
-                value: d.id,
-                label: d.nameTh || d.name || d.code || d.id,
-              })),
-            ]}
-          />
-          <SelectField
-            label="บทบาท"
-            value={draft.roleId}
-            onValueChange={(v) => setDraft({ ...draft, roleId: v })}
-            options={[
-              { value: "", label: "เลือกบทบาท..." },
-              ...(rolesData?.items ?? []).map((r) => ({
-                value: r.id,
-                label: r.nameTh || r.nameEn || r.name || r.code,
-              })),
-            ]}
-          />
-          <Button type="button" onClick={handleAdd} loading={addAssignment.isPending}>
-            <Plus className="h-4 w-4" />
-            เพิ่ม
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          การลบ assignment ทำได้โดยลบผู้ใช้แล้วสร้างใหม่ (API ยังไม่รองรับ DELETE /users/:id/assignments/:id)
-        </p>
-      </FormSection>
     </div>
   );
 }
