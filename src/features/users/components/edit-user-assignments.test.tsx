@@ -10,7 +10,10 @@ import {
   type EditUserAssignmentValues,
   type UpdateUserFormValues,
 } from "../schemas/user-schema";
-import { EditUserAssignments } from "./edit-user-assignments";
+import {
+  EditUserAssignments,
+  resolveRoleScope,
+} from "./edit-user-assignments";
 
 const departments: Department[] = [
   {
@@ -41,6 +44,17 @@ const roles: Role[] = [
     name: "Super Admin",
     nameTh: "ผู้ดูแลระบบ",
     scopeType: "SYSTEM",
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "role-built-in",
+    code: "USER",
+    name: "User",
+    nameTh: "ผู้ใช้งาน",
+    scopeType: "DEPARTMENT",
+    isSystem: true,
     status: "active",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
@@ -132,5 +146,9 @@ describe("EditUserAssignments", () => {
     );
 
     expect(screen.getByText("ทุกแผนก (System)")).toBeInTheDocument();
+  });
+
+  it("keeps a built-in department role department-scoped", () => {
+    expect(resolveRoleScope(roles[2])).toBe("DEPARTMENT");
   });
 });

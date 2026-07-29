@@ -26,8 +26,10 @@ function roleLabel(role: Role) {
   return role.nameTh ?? role.nameEn ?? role.name ?? role.code;
 }
 
-function roleScope(role: Role | undefined): "SYSTEM" | "DEPARTMENT" {
-  return role?.scopeType === "SYSTEM" || role?.isSystem ? "SYSTEM" : "DEPARTMENT";
+export function resolveRoleScope(
+  role: Role | undefined,
+): "SYSTEM" | "DEPARTMENT" {
+  return role?.scopeType === "SYSTEM" ? "SYSTEM" : "DEPARTMENT";
 }
 
 export function EditUserAssignments({
@@ -142,7 +144,7 @@ export function EditUserAssignments({
                   value={assignment?.roleId ?? ""}
                   onValueChange={(roleId) => {
                     const selected = roles.find((role) => role.id === roleId);
-                    const scope = roleScope(selected);
+                    const scope = resolveRoleScope(selected);
                     form.setValue(`assignments.${index}.roleId`, roleId, {
                       shouldDirty: true,
                       shouldValidate: true,
