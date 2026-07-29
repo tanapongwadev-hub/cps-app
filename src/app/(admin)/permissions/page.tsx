@@ -8,7 +8,17 @@
 "use client";
 
 import * as React from "react";
-import { Key, Search, ShieldCheck, ShieldX, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  Building2,
+  Key,
+  Search,
+  ShieldCheck,
+  ShieldX,
+  Loader2,
+  Plus,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { PageHeader, PageContainer } from "@/components/layout/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -22,6 +32,8 @@ import { useAuthStore } from "@/stores/auth-store";
 import { usePermission } from "@/hooks/use-permission";
 import { usePermissions, useDeletePermission } from "@/features/permissions/hooks/use-permissions";
 import { PermissionFormDialog } from "@/features/permissions/components/permission-form-dialog";
+import { DepartmentPermissionDialog } from "@/features/permissions/components/department-permission-dialog";
+import { PermissionDepartmentSummary } from "./permission-department-summary";
 import { cn } from "@/utils/cn";
 import type { Permission } from "@/types/permission";
 
@@ -47,10 +59,12 @@ export default function PermissionsPage() {
             <ShieldCheck className="h-3.5 w-3.5" />
             สิทธิ์ของฉัน ({superAdmin.permissions.length})
           </TabsTrigger>
-          <TabsTrigger value="catalog" className="gap-1.5">
-            <Key className="h-3.5 w-3.5" />
-            แคตตาล็อกสิทธิ์
-          </TabsTrigger>
+          {superAdmin.isSuperAdmin() && (
+            <TabsTrigger value="catalog" className="gap-1.5">
+              <Key className="h-3.5 w-3.5" />
+              แคตตาล็อกสิทธิ์
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="mine" className="mt-4 space-y-4">
@@ -61,9 +75,11 @@ export default function PermissionsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="catalog" className="mt-4">
-          <PermissionCatalog />
-        </TabsContent>
+        {superAdmin.isSuperAdmin() && (
+          <TabsContent value="catalog" className="mt-4">
+            <PermissionCatalog />
+          </TabsContent>
+        )}
       </Tabs>
     </PageContainer>
   );
@@ -162,6 +178,8 @@ function PermissionCatalog() {
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Permission | null>(null);
+  const [departmentPermission, setDepartmentPermission] =
+    React.useState<Permission | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const deleteMutation = useDeletePermission();
 
@@ -239,8 +257,9 @@ function PermissionCatalog() {
                   <th className="px-3 py-2 text-left font-medium">Module</th>
                   <th className="px-3 py-2 text-left font-medium">Action</th>
                   <th className="px-3 py-2 text-left font-medium">Menu</th>
+                  <th className="px-3 py-2 text-left font-medium">แผนกที่ใช้งานได้</th>
                   <th className="px-3 py-2 text-center font-medium">Status</th>
-                  <th className="px-3 py-2 text-right font-medium w-12"></th>
+                  <th className="w-44 px-3 py-2 text-right font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -253,6 +272,7 @@ function PermissionCatalog() {
                       setFormOpen(true);
                     }}
                     onDelete={() => setDeletingId(p.id)}
+                    onManageDepartments={() => setDepartmentPermission(p)}
                   />
                 ))}
               </tbody>
@@ -268,6 +288,14 @@ function PermissionCatalog() {
           if (!o) setEditing(null);
         }}
         permission={editing}
+      />
+
+      <DepartmentPermissionDialog
+        open={!!departmentPermission}
+        onOpenChange={(open) => {
+          if (!open) setDepartmentPermission(null);
+        }}
+        permission={departmentPermission}
       />
 
       <ConfirmDeleteDialog
@@ -291,10 +319,12 @@ function PermissionRow({
   permission,
   onEdit,
   onDelete,
+  onManageDepartments,
 }: {
   permission: Permission;
   onEdit: () => void;
   onDelete: () => void;
+  onManageDepartments: () => void;
 }) {
   const sep = permission.code.includes(".") ? "." : "_";
   const moduleName = permission.module ?? permission.code.split(sep)[0] ?? "—";
@@ -316,6 +346,9 @@ function PermissionRow({
         </Badge>
       </td>
       <td className="px-3 py-2 text-muted-foreground">{menuName}</td>
+      <td className="px-3 py-2">
+        <PermissionDepartmentSummary departments={permission.departments ?? []} />
+      </td>
       <td className="px-3 py-2 text-center">
         {isActive ? (
           <Badge variant="success" className="gap-1 text-[10px]">
@@ -330,22 +363,28 @@ function PermissionRow({
         )}
       </td>
       <td className="px-3 py-2 text-right">
-        <ActionMenu
-          label={`เมนู ${permission.code}`}
-          items={[
-            {
-              label: "แก้ไข",
-              icon: <Pencil className="h-3.5 w-3.5" />,
-              onClick: onEdit,
-            },
-            {
-              label: "ลบ",
-              icon: <Trash2 className="h-3.5 w-3.5" />,
-              variant: "danger",
-              onClick: onDelete,
-            },
-          ]}
-        />
+        <div className="flex items-center justify-end gap-1">
+          <Button size="sm" variant="outline" onClick={onManageDepartments}>
+            <Building2 className="h-3.5 w-3.5" />
+            กำหนดแผนก
+          </Button>
+          <ActionMenu
+            label={`เมนู ${permission.code}`}
+            items={[
+              {
+                label: "แก้ไข",
+                icon: <Pencil className="h-3.5 w-3.5" />,
+                onClick: onEdit,
+              },
+              {
+                label: "ลบ",
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+                variant: "danger",
+                onClick: onDelete,
+              },
+            ]}
+          />
+        </div>
       </td>
     </tr>
   );
