@@ -1,10 +1,15 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { usersApi, type ListUsersParams } from "../api/users-api";
+import {
+  usersApi,
+  type ListUsersParams,
+  type CreateUserPayload,
+  type UpdateUserPayload,
+  type AddUserAssignmentPayload,
+} from "../api/users-api";
 import { showToast } from "@/lib/toast";
 import { QUERY_KEYS } from "@/constants/app";
-import type { User } from "@/types/auth";
 
 export function useUsers(params: ListUsersParams) {
   return useQuery({
@@ -24,8 +29,7 @@ export function useUser(id: string) {
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<User> & { password?: string; roleIds: string[] }) =>
-      usersApi.create(data),
+    mutationFn: (data: CreateUserPayload) => usersApi.create(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
       showToast.success("สร้างผู้ใช้งานเรียบร้อย");
@@ -39,7 +43,7 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<User> }) =>
+    mutationFn: ({ id, data }: { id: string; data: UpdateUserPayload }) =>
       usersApi.update(id, data),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
@@ -66,11 +70,17 @@ export function useDeleteUser() {
   });
 }
 
+/**
+ * Toggle the user's `isActive` flag.
+ * Callers should pass the desired boolean directly.
+ * (The UI derives "active"/"inactive" from `user.isActive` and passes the
+ *  opposite boolean here.)
+ */
 export function useUpdateUserStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: User["status"] }) =>
-      usersApi.updateStatus(id, status),
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      usersApi.updateStatus(id, { isActive }),
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.DETAIL(vars.id) });
@@ -90,6 +100,37 @@ export function useResetPassword() {
     },
     onError: (err: Error) => {
       showToast.error("ไม่สามารถรีเซ็ตรหัสผ่านได้", err.message);
+    },
+  });
+}
+
+export function useUserAssignments(userId: string | null | undefined) {
+  return useQuery({
+    queryKey: [...QUERY_KEYS.USERS.ALL, "assignments", userId],
+    queryFn: () => usersApi.listAssignments(userId as string),
+    enabled: !!userId,
+  });
+}
+
+export function useAddUserAssignment() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      payload,
+    }: {
+      userId: string;
+      payload: AddUserAssignmentPayload;
+    }) => usersApi.addAssignment(userId, payload),
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
+      qc.invalidateQueries({
+        queryKey: [...QUERY_KEYS.USERS.ALL, "assignments", vars.userId],
+      });
+      showToast.success("เพิ่ม Assignment เรียบร้อย");
+    },
+    onError: (err: Error) => {
+      showToast.error("ไม่สามารถเพิ่ม Assignment ได้", err.message);
     },
   });
 }

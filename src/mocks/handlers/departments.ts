@@ -32,7 +32,7 @@ export async function setupDepartmentMocks(
     const build = (parentId: string | null): typeof mockDb.departments => {
       return mockDb.departments
         .filter((d) => d.parentId === parentId)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
         .map((d) => ({ ...d, children: build(d.id) }) as (typeof mockDb.departments)[number]);
     };
     return ok(build(null));

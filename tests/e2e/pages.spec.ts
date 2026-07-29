@@ -50,6 +50,106 @@ test.describe("Data pages render with real backend data", () => {
     });
   });
 
+  test("users page supports full CRUD against real backend (create + status + delete)", async ({
+    page,
+    loginAsSuperAdmin,
+  }) => {
+    // Regression: the user-management form used to send `phone`, `roleIds[]`
+    // and `departmentId` at the top level. The real NestJS backend rejects
+    // those with 400 VALIDATION_ERROR and demands:
+    //   POST /users           { assignments: [{departmentId, roleId}] }
+    //   PATCH /users/:id      { firstName, lastName, email, telephone }
+    //   PATCH /users/:id/status { isActive: boolean }
+    //
+    // This test creates a user via the form, toggles its status, then deletes
+    // it — making sure the form sends the correct payloads end-to-end.
+    await loginAsSuperAdmin();
+    await page.goto("/user-management/users");
+    await expect(page.getByRole("heading", { name: "ผู้ใช้งาน", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Track failed network responses (4xx/5xx) to catch any wrong payloads
+    const failed: Array<{ url: string; status: number }> = [];
+    page.on("response", (r) => {
+      if (r.status() >= 400 && r.url().includes("/api/")) {
+        failed.push({ url: r.url(), status: r.status() });
+      }
+    });
+
+    // 1) Open create dialog
+    await page.getByRole("button", { name: /เพิ่มผู้ใช้งาน/ }).first().click();
+    await expect(page.getByRole("heading", { name: "เพิ่มผู้ใช้งานใหม่" })).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // 2) Fill form
+    const stamp = Date.now();
+    const username = `e2e_${stamp}`;
+    await page.getByLabel("ชื่อผู้ใช้งาน", { exact: true }).fill(username);
+    await page.getByLabel("รหัสผ่าน", { exact: true }).fill("Test1234");
+    await page.getByLabel("ยืนยันรหัสผ่าน", { exact: true }).fill("Test1234");
+    await page.getByLabel("ชื่อ", { exact: true }).first().fill("E2E");
+    await page.getByLabel("นามสกุล", { exact: true }).fill("Tester");
+    await page.getByLabel("อีเมล", { exact: true }).fill(`e2e_${stamp}@test.local`);
+
+    // 3) Wait for the assignment selects to be populated, then pick the
+    // first dept + first role available.
+    const deptSelect = page.getByLabel("แผนก", { exact: true }).first();
+    await deptSelect.click();
+    await page.getByRole("option").first().click();
+    const roleSelect = page.getByLabel("บทบาท", { exact: true }).first();
+    await roleSelect.click();
+    await page.getByRole("option").first().click();
+
+    // 4) Submit and wait for the create response
+    const createResp = page.waitForResponse(
+      (r) => r.url().includes("/users") && r.request().method() === "POST",
+      { timeout: 10_000 },
+    );
+    await page.getByRole("button", { name: /สร้างผู้ใช้งาน/ }).click();
+    const r = await createResp;
+    expect(r.status(), "POST /users should succeed").toBeLessThan(400);
+
+    // Dialog closes on success
+    await expect(page.getByRole("heading", { name: "เพิ่มผู้ใช้งานใหม่" })).not.toBeVisible({
+      timeout: 5_000,
+    });
+
+    // 5) Toggle the new user's status (ระงับ / เปิดใช้งาน) via the row's
+    // action menu. The status mutation uses {isActive: boolean} so we
+    // verify the request body doesn't contain `status` (legacy string).
+    const statusResp = page.waitForResponse(
+      (r) => /\/users\/[\w-]+\/status$/.test(r.url()) && r.request().method() === "PATCH",
+      { timeout: 10_000 },
+    );
+    // The new user is at the top of the list
+    const firstRow = page.locator("table tbody tr").first();
+    await firstRow.getByRole("button", { name: /เมนู / }).click();
+    await page.getByRole("menuitem", { name: /ระงับการใช้งาน/ }).click();
+    const sr = await statusResp;
+    expect(sr.status()).toBeLessThan(400);
+    // Verify the request body uses the new shape
+    const statusBody = sr.request().postDataJSON() as { isActive?: boolean } | null;
+    expect(statusBody?.isActive, "PATCH /status must use {isActive: boolean}").toBe(false);
+
+    // 6) Delete (cleanup)
+    page.on("dialog", (d) => d.accept().catch(() => {}));
+    const delResp = page.waitForResponse(
+      (r) => /\/users\/[\w-]+$/.test(r.url()) && r.request().method() === "DELETE",
+      { timeout: 10_000 },
+    );
+    await firstRow.getByRole("button", { name: /เมนู / }).click();
+    await page.getByRole("menuitem", { name: /ลบ/ }).click();
+    // Confirm dialog
+    await page.getByRole("button", { name: /^ลบ/ }).click();
+    const dr = await delResp;
+    expect(dr.status()).toBeLessThan(400);
+
+    // 7) Make sure no 4xx/5xx on any /api/ call during the run
+    expect(failed, "no /api/ request should have failed").toEqual([]);
+  });
+
   test("sessions page loads with stat cards", async ({ page, loginAsSuperAdmin }) => {
     await loginAsSuperAdmin();
     await page.goto("/sessions");

@@ -364,7 +364,7 @@ export default function DashboardPage() {
         title: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.username,
         description: `เข้าสู่ระบบ · ${u.email ?? ""}`,
         timestamp: u.lastLoginAt ?? u.createdAt ?? new Date().toISOString(),
-        status: u.status === "active" ? "success" : "info",
+        status: u.isActive ? "success" : "info",
         user: u.username,
         avatar: u.avatarUrl,
       });
@@ -581,7 +581,7 @@ export default function DashboardPage() {
                 ))
               ) : users.data?.items?.length ? (
                 users.data.items.map((u) => {
-                  const status = u.status === "active" ? "success" : u.status === "pending" ? "warning" : "muted";
+                  const status = u.isActive ? "success" : "muted";
                   return (
                     <Link
                       key={u.id}

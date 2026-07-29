@@ -10,7 +10,6 @@ import type {
   AccessControl,
   AuthSession,
   LoginResponse,
-  LoginSuccessResponse,
   LoginRequiresDepartmentSelectionResponse,
   SelectDepartmentResponse,
 } from "@/types/auth";
@@ -33,12 +32,54 @@ export const isSuperAdminUser = (user: User | null, permissions: string[]): bool
 };
 
 /**
- * State เก็บไว้ใน client
+ * Decide whether a logged-in user must pick a department before they can
+ * enter the app.
+ *
+ * Triggered when:
+ *   - The user has more than one department assigned (`user.departments.length > 1`)
+ *   - They are not a super admin (superadmins have empty `departments`)
+ *
+ * Used by:
+ *   - `useLogin` to redirect to `/select-department` after 1-step login
+ *   - `admin-shell` to enforce the gate on app load
+ *   - `buildAuthSessionFromLogin` to populate `needsDepartmentSelection`
  */
+export const userNeedsDepartmentSelection = (user: User | null): boolean => {
+  if (!user) return false;
+  if (user.isSuperAdmin === true) return false;
+  const deptCount = user.departments?.length ?? 0;
+  return deptCount > 1;
+};
+
+/**
+ * State เก็บไว้ใน client
+ *
+ * Two flavors of "waiting for department selection":
+ *
+ *   - `"select"` — spec-style 2-step login: backend returns a temporary
+ *     `departmentSelectionToken`; client must POST /auth/select-department
+ *     with `userDepartmentRoleId` to get the real tokens + session.
+ *
+ *   - `"switch"` — 1-step login (real backend) but the user is assigned to
+ *     >1 department. We already have a valid session; the user just needs
+ *     to pick which (department, role) tuple to "switch into" via
+ *     POST /auth/switch-department.
+ */
+export type PendingSelectionMode = "select" | "switch";
+
 export interface PendingDepartmentSelection {
-  departmentSelectionToken: string;
-  user: User;
-  options: LoginRequiresDepartmentSelectionResponse["userDepartmentRoles"];
+  /** Which flow to use when the user picks a department */
+  mode: PendingSelectionMode;
+  /** Required when mode === "select"; ignored for "switch" */
+  departmentSelectionToken?: string;
+  /**
+   * User object — optional because the real 2-step login response may
+   * not include it. When missing, the page falls back to the username
+   * stashed in `window.__lastLoginUsername` (set by the login form).
+   */
+  user?: User;
+  /** Pre-computed options for the "select" flow (2-step spec) */
+  options?: LoginRequiresDepartmentSelectionResponse["userDepartmentRoles"];
 }
 
 interface AuthState {
@@ -54,6 +95,11 @@ interface AuthState {
   expiresAt: number | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /**
+   * True after 1-step login when the user has more than one department.
+   * Admin shell uses this to gate access and force /select-department.
+   */
+  needsDepartmentSelection: boolean;
 
   // 2-step login state
   pendingSelection: PendingDepartmentSelection | null;
@@ -64,6 +110,10 @@ interface AuthState {
   expireSession: () => void;
   setLoading: (loading: boolean) => void;
   setPendingSelection: (data: PendingDepartmentSelection | null) => void;
+  /**
+   * Switch into a (department, role) tuple. Updates the current context
+   * and clears the `needsDepartmentSelection` flag.
+   */
   switchDepartmentRole: (udr: UserDepartmentRole, accessControl: AccessControl) => void;
   logout: () => void;
 
@@ -89,6 +139,7 @@ export const useAuthStore = create<AuthState>()(
       expiresAt: null,
       isAuthenticated: false,
       isLoading: false,
+      needsDepartmentSelection: false,
       pendingSelection: null,
 
       setSession: (session) =>
@@ -103,6 +154,14 @@ export const useAuthStore = create<AuthState>()(
           expiresAt: session.expiresAt,
           isAuthenticated: true,
           isLoading: false,
+          // When the session is being replaced (login, select-dept, /auth/me
+          // sync), only treat dept selection as "done" if the user actually
+          // has a `currentDepartmentRole` *and* doesn't need to pick. The
+          // `useLogin` hook sets this explicitly via the helper below.
+          needsDepartmentSelection:
+            !!session.user && !session.currentDepartmentRole
+              ? userNeedsDepartmentSelection(session.user)
+              : false,
           pendingSelection: null,
         }),
 
@@ -139,6 +198,9 @@ export const useAuthStore = create<AuthState>()(
           accessControl,
           permissions: accessControl.permissions,
           menu: accessControl.menus,
+          // Once a user has switched into a real (dept, role) context the
+          // gate is satisfied — they're no longer "waiting" for selection.
+          needsDepartmentSelection: false,
         }),
 
       logout: () =>
@@ -154,6 +216,7 @@ export const useAuthStore = create<AuthState>()(
           expiresAt: null,
           isAuthenticated: false,
           isLoading: false,
+          needsDepartmentSelection: false,
           pendingSelection: null,
         }),
 
@@ -200,6 +263,7 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: state.refreshToken,
         expiresAt: state.expiresAt,
         isAuthenticated: state.isAuthenticated,
+        needsDepartmentSelection: state.needsDepartmentSelection,
       }),
     },
   ),
@@ -231,10 +295,18 @@ const parseExpiresInMs = (raw: number | string | undefined, fallbackSeconds = 36
 /**
  * Helper: build AuthSession from the real backend's LoginResponse (1-step).
  * currentDepartmentRole is optional (superadmin has no department context).
+ *
+ * For users with more than one department we deliberately return
+ * `currentDepartmentRole: undefined` so the admin shell can gate them at
+ * `/select-department` and force them to pick a context.
  */
-export const buildAuthSessionFromLogin = (login: LoginResponse): AuthSession => {
+export const buildAuthSessionFromLogin = (
+  login: Extract<LoginResponse, { authentication: unknown }>,
+): AuthSession => {
   const { authentication, user, accessControl } = login;
-  const primaryAssignment = deriveCurrentDepartmentRole(user);
+  const primaryAssignment = userNeedsDepartmentSelection(user)
+    ? undefined
+    : deriveCurrentDepartmentRole(user);
   return {
     user,
     currentDepartmentRole: primaryAssignment,
@@ -248,8 +320,13 @@ export const buildAuthSessionFromLogin = (login: LoginResponse): AuthSession => 
 /**
  * Try to derive a UserDepartmentRole from the user object (departments + roles arrays).
  * For superadmin (no departments) this returns undefined and the session skips it.
+ *
+ * For users with more than one department, returns undefined too — the
+ * caller (`buildAuthSessionFromLogin`) will route them to
+ * `/select-department` first.
  */
 const deriveCurrentDepartmentRole = (user: User): UserDepartmentRole | undefined => {
+  if (userNeedsDepartmentSelection(user)) return undefined;
   const dept = user.departments?.[0];
   const role = user.roles?.[0];
   if (!dept || !role) return undefined;
@@ -275,7 +352,7 @@ const deriveCurrentDepartmentRole = (user: User): UserDepartmentRole | undefined
  * Kept for the mock 2-step path; not used by the real backend.
  */
 export const buildAuthSession = (
-  login: LoginSuccessResponse | SelectDepartmentResponse,
+  login: SelectDepartmentResponse,
   accessControl: AccessControl,
 ): AuthSession => ({
   user: login.user,

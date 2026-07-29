@@ -88,8 +88,8 @@ export default function ProfilePage() {
               </div>
               <div className="w-full pt-3 border-t space-y-2 text-left text-sm">
                 <InfoRow icon={<Mail className="h-3.5 w-3.5" />} label="อีเมล" value={user.email} />
-                {user.phone && (
-                  <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="โทรศัพท์" value={user.phone} />
+                {(user.telephone ?? user.phone) && (
+                  <InfoRow icon={<Phone className="h-3.5 w-3.5" />} label="โทรศัพท์" value={user.telephone ?? user.phone ?? ""} />
                 )}
                 {user.departmentName && (
                   <InfoRow

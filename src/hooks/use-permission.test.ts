@@ -79,6 +79,7 @@ describe("isSuperAdminUser", () => {
     firstName: "T",
     lastName: "E",
     fullName: "T E",
+    isActive: true,
     status: "active",
     emailVerified: true,
     phoneVerified: true,

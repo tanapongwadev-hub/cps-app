@@ -20,6 +20,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -421,14 +422,20 @@ export function Sidebar() {
           className="flex flex-1 items-center gap-2 overflow-hidden"
           aria-label="กลับไปหน้าแดชบอร์ด"
         >
-          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-sidebar-primary via-sidebar-primary/80 to-purple-500/70 text-sidebar-primary-foreground font-bold text-sm shadow-lg shadow-sidebar-primary/20">
-            <span className="relative z-10">A</span>
-            <div className="absolute inset-0 rounded-lg bg-gradient-to-tr from-white/0 via-white/10 to-white/0" />
-          </div>
+          <Image
+            src="/cci_logo.png"
+            alt="CCI Logo"
+            width={36}
+            height={36}
+            className="h-9 w-9 shrink-0 object-contain"
+            priority
+          />
           {!collapsed && (
             <div className="flex flex-col truncate">
-              <span className="text-sm font-semibold leading-tight">Admin Template</span>
-              <span className="text-[10px] text-sidebar-muted-foreground">Enterprise</span>
+              
+              <span className="text-[20px] text-sidebar-muted-foreground">
+                CPS
+              </span>
             </div>
           )}
         </Link>

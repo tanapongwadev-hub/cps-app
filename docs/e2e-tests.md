@@ -5,10 +5,10 @@ backend at `http://localhost:3001`.
 
 ## Status
 
-**18/18 passing** in ~1.3m. Stable across runs (no flakiness, no retries needed).
+**24/24 passing** in ~1.5m. Stable across runs (no flakiness, no retries needed).
 
 The suite covers the four most-fragile integration points: auth, navigation,
-auto-refresh, and page-level data binding against the real backend.
+auto-refresh, page-level data binding, and multi-department login flow.
 
 ## Setup
 

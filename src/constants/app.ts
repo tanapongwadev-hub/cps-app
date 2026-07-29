@@ -2,9 +2,9 @@
  * App-wide constants
  */
 
-export const APP_NAME = "Admin Template";
+export const APP_NAME = "CPS";
 export const APP_VERSION = "1.0.0";
-export const APP_DESCRIPTION = "Enterprise Admin Template built with Next.js";
+export const APP_DESCRIPTION = "CPS Production Management System";
 
 export const DEFAULT_PAGE_SIZE = 10;
 export const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;

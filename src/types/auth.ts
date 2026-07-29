@@ -25,24 +25,57 @@ export interface UserDepartment {
   id: string;
   code: string;
   name: string;
+  /** Thai name — present in some endpoint responses */
+  nameTh?: string;
+  /** English name — present in some endpoint responses */
+  nameEn?: string;
 }
 
+/**
+ * Real backend User shape (returned by GET /users, GET /users/:id, POST /users, PATCH /users/:id).
+ *
+ *  {
+ *    "id", "username", "firstName", "lastName", "email",
+ *    "telephone", "isActive", "isLocked",
+ *    "failedLoginAttempts", "lockedUntil", "lastLoginAt",
+ *    "permissionVersion", "createdAt", "updatedAt"
+ *  }
+ *
+ * Many fields used by the UI (fullName, status, roleNames, departmentName, …)
+ * are *derived* client-side from this base shape and from /users/:id/assignments.
+ */
 export interface User extends BaseEntity {
+  id: string;
   username: string;
   email: string;
   firstName: string;
   lastName: string;
-  /** Computed/display full name (used by UI) */
-  fullName: string;
+  /** Computed/display full name (used by UI). Backend doesn't return this directly. */
+  fullName?: string;
   /** Backend-provided display name (optional, may differ from fullName) */
   displayName?: string;
+  /**
+   * Phone number. Real backend uses `telephone` — we keep both names so legacy
+   * UI code keeps working; the form sends `telephone` to the backend.
+   */
+  telephone?: string | null;
   phone?: string;
+
+  // ---- Real backend fields ----
+  isActive: boolean;
+  isLocked?: boolean;
+  failedLoginAttempts?: number;
+  lockedUntil?: string | null;
+  lastLoginAt?: string | null;
+  lastLoginIp?: string | null;
+  permissionVersion?: number;
+
+  // ---- Legacy / derived UI fields (optional) ----
+  /** Computed from `isActive` for backwards compatibility. */
+  status?: Status;
   avatarUrl?: string;
-  status: Status;
-  emailVerified: boolean;
-  phoneVerified: boolean;
-  lastLoginAt?: string;
-  lastLoginIp?: string;
+  emailVerified?: boolean;
+  phoneVerified?: boolean;
   language?: string;
   timezone?: string;
   twoFactorEnabled?: boolean;
@@ -55,15 +88,34 @@ export interface User extends BaseEntity {
   /** Departments assigned to the user (subset returned by /auth/login) */
   departments?: UserDepartment[];
 
-  // Convenience fields - populated from /auth/me or from UserDepartmentRole
-  /** Derived from currentDepartmentRole */
+  // ---- Convenience fields - derived from /users/:id/assignments or currentDepartmentRole ----
   departmentId?: string;
   departmentName?: string;
-  /** Derived from currentDepartmentRole */
   roleIds?: string[];
   roleNames?: string[];
-  /** Derived from accessControl */
   permissions?: string[];
+  /** Full assignment records (department + role + isActive) — populated by detail/assignments calls */
+  assignments?: UserAssignment[];
+}
+
+/**
+ * A single (user, department, role) tuple — exactly what
+ * GET/POST /users/:id/assignments returns.
+ */
+export interface UserAssignment {
+  id: string;
+  userId: string;
+  departmentId: string;
+  roleId: string;
+  isActive: boolean;
+  assignedAt?: string;
+  assignedBy?: string | null;
+  expiredAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  /** Populated by GET /users/:id/assignments */
+  department?: UserDepartment;
+  role?: UserRole & { nameTh?: string; nameEn?: string };
 }
 
 /**
@@ -106,6 +158,19 @@ export interface DepartmentRoleOption {
 }
 
 /**
+ * Real backend's flat shape for a single (department, role) option in the
+ * 2-step login `departments[]` array. Different from `DepartmentRoleOption`
+ * (which is the spec/nested shape used by the UI internally).
+ */
+export interface BackendDepartmentOption {
+  userDepartmentRoleId: string;
+  departmentId: string;
+  departmentCode: string;
+  departmentName: string;
+  roleCode: string;
+}
+
+/**
  * AccessControl - สิทธิ์และเมนูที่ user มี
  * ดึงมาจาก /auth/login (data.accessControl) และ /auth/me
  */
@@ -120,19 +185,39 @@ export interface AccessControl {
 
 /**
  * Response จาก /auth/login (the inner `data` object after apiClient unwraps the envelope)
- * 1-step flow — the real backend returns tokens + user + accessControl in one shot.
+ *
+ * 1-step flow (superadmin or user with 1 dept): the real backend returns
+ * tokens + user + accessControl in one shot.
+ *
+ * 2-step flow (user with >1 dept): backend returns
+ * `{ requiresDepartmentSelection, departmentSelectionToken, departments }`
+ * and the client must POST /auth/select-department to get the real session.
  */
-export interface LoginResponse {
-  authentication: {
-    accessToken: string;
-    refreshToken: string;
-    tokenType: "Bearer";
-    /** Backend may send number (seconds) or string ("15m"). We normalize to seconds in the client. */
-    expiresIn: number | string;
-  };
-  user: User;
-  accessControl: AccessControl;
-}
+export type LoginResponse =
+  | {
+      authentication: {
+        accessToken: string;
+        refreshToken: string;
+        tokenType: "Bearer";
+        /** Backend may send number (seconds) or string ("15m"). We normalize to seconds in the client. */
+        expiresIn: number | string;
+      };
+      user: User;
+      accessControl: AccessControl;
+    }
+  | BackendLoginRequiresDepartmentSelection;
+
+/** Type guard for the 1-step login response (has `authentication`). */
+export const isLoginSuccessResponse = (
+  payload: LoginResponse,
+): payload is Extract<LoginResponse, { authentication: unknown }> => {
+  return (
+    typeof payload === "object" &&
+    payload !== null &&
+    "authentication" in payload &&
+    !!(payload as { authentication?: unknown }).authentication
+  );
+};
 
 /**
  * Response จาก /auth/me
@@ -145,18 +230,47 @@ export interface AuthMeResponse {
   accessControl: AccessControl;
 }
 
-// ---------- 2-step flow (spec / future) ----------
+// ---------- 2-step flow (spec + real backend) ----------
 
-export interface LoginSuccessResponse {
-  status: "authenticated";
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: "Bearer";
-  user: User;
-  currentDepartmentRole: UserDepartmentRole;
+/**
+ * The real backend's 2-step login response shape.
+ *
+ * When a user is assigned to more than one department, POST /auth/login
+ * returns this instead of the immediate `LoginResponse`:
+ *
+ *   {
+ *     requiresDepartmentSelection: true,
+ *     departmentSelectionToken: "<jwt>",
+ *     departments: [
+ *       { userDepartmentRoleId, departmentId, departmentCode,
+ *         departmentName, roleCode },
+ *       ...
+ *     ]
+ *   }
+ *
+ * The client must then POST /auth/select-department with the
+ * `departmentSelectionToken` and the chosen `userDepartmentRoleId` to
+ * receive the real session.
+ */
+export interface BackendLoginRequiresDepartmentSelection {
+  requiresDepartmentSelection: true;
+  departmentSelectionToken: string;
+  /** Pre-computed (dept, role) options for the user to pick from. */
+  departments: BackendDepartmentOption[];
+  /** Optional — not all backends return this. */
+  user?: User;
 }
 
+/** Type guard: is the login payload a 2-step "needs department" response? */
+export const isLoginRequiresDepartmentSelection = (
+  payload: unknown,
+): payload is BackendLoginRequiresDepartmentSelection => {
+  if (!payload || typeof payload !== "object") return false;
+  const obj = payload as Record<string, unknown>;
+  return obj.requiresDepartmentSelection === true && typeof obj.departmentSelectionToken === "string";
+};
+
+/** Spec-style 2-step shape (mock-only, kept for compat). */
 export interface LoginRequiresDepartmentSelectionResponse {
   status: "department_selection_required";
   departmentSelectionToken: string;

@@ -4,16 +4,23 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { authApi } from "../api/auth-api";
-import { useAuthStore, buildAuthSession, buildAuthSessionFromLogin } from "@/stores/auth-store";
+import {
+  useAuthStore,
+  buildAuthSession,
+  buildAuthSessionFromLogin,
+  userNeedsDepartmentSelection,
+} from "@/stores/auth-store";
 import { showToast } from "@/lib/toast";
 import { QUERY_KEYS } from "@/constants/app";
-import type {
-  LoginRequest,
-  SelectDepartmentRequest,
-  SwitchDepartmentRequest,
-  LoginResponse,
-  AuthMeResponse,
-  AccessControl,
+import {
+  isLoginRequiresDepartmentSelection,
+  isLoginSuccessResponse,
+  type LoginRequest,
+  type SelectDepartmentRequest,
+  type SwitchDepartmentRequest,
+  type LoginResponse,
+  type AuthMeResponse,
+  type AccessControl,
 } from "@/types/auth";
 import { apiClient } from "@/services/api-client";
 
@@ -46,8 +53,14 @@ export function useAuthMeUnsafe() {
 
 /**
  * Login mutation
- * Real backend returns 1-step: { authentication, user, accessControl }.
- * Build the session directly — no extra /auth/me roundtrip.
+ *
+ * The real backend may return either:
+ *   1) 1-step: { authentication, user, accessControl }
+ *      — build the session directly and proceed to the dashboard
+ *   2) 2-step: { requiresDepartmentSelection: true, departmentSelectionToken, departments }
+ *      — the user is assigned to >1 department; gate them at
+ *        `/select-department` and POST /auth/select-department with the
+ *        chosen `userDepartmentRoleId` to receive the real session.
  */
 export function useLogin() {
   const setSession = useAuthStore((s) => s.setSession);
@@ -59,13 +72,35 @@ export function useLogin() {
       return authApi.login(data);
     },
     onSuccess: (response) => {
-      // Real backend: response has authentication + user + accessControl (1-step).
-      if (
-        response &&
-        typeof response === "object" &&
-        "authentication" in response &&
-        response.authentication
-      ) {
+      // Path 1: native 2-step "requires department selection" response.
+      // Backend returns this when the user is assigned to >1 department.
+      if (isLoginRequiresDepartmentSelection(response)) {
+        setPendingSelection({
+          mode: "select",
+          departmentSelectionToken: response.departmentSelectionToken,
+          user: response.user, // may be undefined — UI shows username from form
+          // Map the real backend's flat `departments[]` to the spec-style
+          // `userDepartmentRoles[]` shape used by the UI.
+          options: response.departments.map((d) => ({
+            userDepartmentRoleId: d.userDepartmentRoleId,
+            department: {
+              id: d.departmentId,
+              code: d.departmentCode,
+              name: d.departmentName,
+            },
+            role: {
+              id: d.roleCode, // best-effort fallback
+              code: d.roleCode,
+              name: d.roleCode,
+            },
+            isPrimary: false,
+          })),
+        });
+        return;
+      }
+
+      // Path 2: 1-step login (authentication + user + accessControl).
+      if (isLoginSuccessResponse(response)) {
         const session = buildAuthSessionFromLogin(response);
         setSession(session);
         const name =
@@ -74,13 +109,27 @@ export function useLogin() {
           `${response.user.firstName ?? ""} ${response.user.lastName ?? ""}`.trim() ||
           response.user.username;
         showToast.success("เข้าสู่ระบบสำเร็จ", `ยินดีต้อนรับ ${name}`);
+
+        // Post-login check (defensive — the backend usually returns 2-step
+        // for multi-dept users, but we also catch it client-side in case
+        // a 1-step response sneaks through with >1 dept in `user.departments`).
+        if (userNeedsDepartmentSelection(response.user)) {
+          setPendingSelection({
+            mode: "switch",
+            user: response.user,
+          });
+          router.push("/select-department");
+          return;
+        }
+
         const redirect =
           new URLSearchParams(window.location.search).get("redirect") ?? "/dashboard";
         router.push(redirect);
         return;
       }
 
-      // Fallback: spec-style discriminated union (mock 2-step path)
+      // Path 3: legacy/mock 2-step spec shape (status discriminator).
+      // Kept so mock 2-step flows still work in dev.
       const anyResponse = response as unknown as {
         status?: "authenticated" | "department_selection_required";
         departmentSelectionToken?: string;
@@ -89,6 +138,7 @@ export function useLogin() {
       };
       if (anyResponse?.status === "department_selection_required") {
         setPendingSelection({
+          mode: "select",
           departmentSelectionToken: anyResponse.departmentSelectionToken ?? "",
           user: anyResponse.user as never,
           options: (anyResponse.userDepartmentRoles ?? []) as never,

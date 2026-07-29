@@ -2,12 +2,13 @@
 
 import * as React from "react";
 import { Suspense } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { LogIn, ShieldCheck, KeyRound, Sparkles, Building2, Users } from "lucide-react";
+import { LogIn, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { TextField } from "@/components/forms/form-field";
@@ -63,6 +64,12 @@ function LoginContent() {
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
+      // Stash the username on `window` so the /select-department page can
+      // show a "logged in as @username" hint when the 2-step response
+      // doesn't include the full User object.
+      if (typeof window !== "undefined") {
+        (window as { __lastLoginUsername?: string }).__lastLoginUsername = values.username;
+      }
       // `remember` is a UI-only concern (mock flows). The real NestJS backend
       // does not accept it in /auth/login (returns 400 VALIDATION_ERROR), so we
       // strip it before sending.
@@ -75,18 +82,93 @@ function LoginContent() {
     }
   };
 
+  // If the login just kicked off the 2-step flow, also push the username
+  // into the pendingSelection so the /select-department page can show a
+  // "logged in as @username" hint (the 2-step response itself doesn't
+  // include the full User object on the real backend).
+  React.useEffect(() => {
+    if (pendingSelection && !pendingSelection.user && typeof window !== "undefined") {
+      const lastUsername = (window as { __lastLoginUsername?: string }).__lastLoginUsername;
+      if (lastUsername) {
+        const synthetic = {
+          id: "",
+          username: lastUsername,
+          email: "",
+          firstName: lastUsername,
+          lastName: "",
+          fullName: lastUsername,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as const;
+        useAuthStore.getState().setPendingSelection({
+          ...pendingSelection,
+          user: synthetic,
+        });
+      }
+    }
+  }, [pendingSelection]);
+
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Left side - Form */}
-      <div className="flex items-center justify-center p-6 sm:p-10">
-        <div className="w-full max-w-sm space-y-6">
+    <div className="grid min-h-screen lg:grid-cols-[1.2fr_1fr]">
+      {/* Left side - Branding */}
+      <div className="relative hidden overflow-hidden bg-[#0a1628] lg:flex lg:flex-col lg:justify-between p-10 text-white">
+        <Image
+          src="/cps-factory-background.png"
+          alt="CPS Factory Background"
+          fill
+          className="object-cover"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#0a1628]/95 via-[#0d2242]/85 to-[#123258]/80" />
+
+        <div className="relative z-10 flex items-center gap-4">
+          <Image
+            src="/cci_logo.png"
+            alt="CCI Logo"
+            width={72}
+            height={72}
+            className="h-16 w-16 object-contain"
+          />
+          <div>
+            <p className="text-2xl font-bold tracking-wide">CPS</p>
+            <p className="text-xs text-slate-300">Production Management System</p>
+          </div>
+        </div>
+
+        <div className="relative z-10 space-y-5 max-w-lg">
+          <h2 className="text-4xl font-bold leading-tight xl:text-5xl">
+            Access Control
+            <br />
+            Portal
+          </h2>
+          <p className="text-sm text-slate-300">
+            Secure role-based workspace for your operational team.
+          </p>
+          <div className="flex items-center gap-2 text-xs text-emerald-400">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+            </span>
+            System ready
+          </div>
+        </div>
+
+        <div className="relative z-10 text-[10px] font-medium tracking-[0.2em] text-slate-400">
+          AUTHENTICATED ACCESS / CPS
+        </div>
+      </div>
+
+      {/* Right side - Form */}
+      <div className="flex items-center justify-center bg-[#f7f9fb] p-6 sm:p-10">
+        <div className="w-full max-w-sm space-y-6 rounded-2xl border border-slate-200 bg-white p-8 shadow-lg">
           <div className="space-y-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="text-base font-bold">A</span>
-            </div>
-            <h1 className="text-2xl font-semibold tracking-tight">เข้าสู่ระบบ</h1>
-            <p className="text-sm text-muted-foreground">
-              กรอกชื่อผู้ใช้งานและรหัสผ่านเพื่อเข้าสู่ระบบ
+            <p className="text-[11px] font-semibold tracking-[0.2em] text-primary">
+              CPS / ACCESS CONTROL
+            </p>
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Welcome back</h1>
+            <p className="text-sm text-slate-500">
+              Sign in to continue to your workspace.
             </p>
           </div>
 
@@ -100,20 +182,22 @@ function LoginContent() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <TextField
-              label="ชื่อผู้ใช้งาน / อีเมล"
-              placeholder="admin"
+              label="Username"
+              placeholder="Enter your username"
               autoComplete="username"
               required
               error={errors.username?.message}
+              className="rounded-lg border border-slate-300 bg-white shadow-sm focus-visible:border-primary"
               {...register("username")}
             />
             <TextField
-              label="รหัสผ่าน"
+              label="Password"
               type="password"
-              placeholder="••••••••"
+              placeholder="Enter your password"
               autoComplete="current-password"
               required
               error={errors.password?.message}
+              className="rounded-lg border border-slate-300 bg-white shadow-sm focus-visible:border-primary"
               {...register("password")}
             />
 
@@ -135,13 +219,17 @@ function LoginContent() {
 
             <Button
               type="submit"
-              className="w-full"
+              className="w-full rounded-lg"
               size="lg"
               loading={login.isPending}
             >
               <LogIn className="h-4 w-4" />
-              เข้าสู่ระบบ
+              Sign in
             </Button>
+
+            <p className="text-center text-[11px] text-slate-400">
+              Your session is protected with secure, httpOnly cookies.
+            </p>
           </form>
 
           {isMockMode && (
@@ -168,85 +256,13 @@ function LoginContent() {
             </Alert>
           )}
 
-          <p className="text-center text-xs text-muted-foreground">
-            © 2024 Admin Template ·{" "}
+          <p className="text-center text-xs text-slate-400">
+            © 2024 CPS ·{" "}
             <Link href="/maintenance" className="hover:underline">
               สถานะระบบ
             </Link>
           </p>
         </div>
-      </div>
-
-      {/* Right side - Branding + Available Menus Preview */}
-      <div className="relative hidden bg-sidebar lg:flex lg:flex-col lg:justify-between p-10 text-sidebar-foreground">
-        <div className="absolute inset-0 bg-gradient-to-br from-sidebar via-sidebar to-sidebar-accent opacity-90" />
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 text-lg font-semibold">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <span>A</span>
-            </div>
-            <span>Admin Template</span>
-          </div>
-        </div>
-
-        <div className="relative z-10 space-y-6 max-w-md">
-          <h2 className="text-3xl font-semibold leading-tight">
-            ระบบจัดการองค์กร
-            <br />
-            ที่ทันสมัยและปลอดภัย
-          </h2>
-          <p className="text-sidebar-muted-foreground">
-            ออกแบบมาเพื่อรองรับการใช้งานในระดับองค์กร พร้อมระบบจัดการสิทธิ์ ผู้ใช้งาน และการดำเนินงาน
-            ครบวงจร
-          </p>
-
-          <div className="space-y-3">
-            <FeatureItem
-              icon={<ShieldCheck className="h-5 w-5" />}
-              title="Role-Based Access Control"
-              description="ควบคุมสิทธิ์ตามบทบาทและหน้าที่ พร้อมรองรับหลายแผนก"
-            />
-            <FeatureItem
-              icon={<Building2 className="h-5 w-5" />}
-              title="Multi-Department Support"
-              description="ผู้ใช้งาน 1 คนสามารถมีหลายแผนก/บทบาท สลับได้ตามต้องการ"
-            />
-            <FeatureItem
-              icon={<KeyRound className="h-5 w-5" />}
-              title="ปลอดภัยด้วย JWT + Refresh Token"
-              description="2-step login, Session management, 401 auto-refresh"
-            />
-            <FeatureItem
-              icon={<Users className="h-5 w-5" />}
-              title="เมนูแสดงตามสิทธิ์จริง"
-              description="Sidebar แสดงเฉพาะเมนูที่ user มีสิทธิ์เข้าถึง"
-            />
-          </div>
-        </div>
-
-        <div className="relative z-10 text-xs text-sidebar-muted-foreground">v1.0.0</div>
-      </div>
-    </div>
-  );
-}
-
-function FeatureItem({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex items-start gap-3 rounded-md border border-sidebar-border bg-sidebar-accent/30 p-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-sidebar-primary/10 text-sidebar-primary">
-        {icon}
-      </div>
-      <div>
-        <p className="font-medium text-sm">{title}</p>
-        <p className="text-xs text-sidebar-muted-foreground mt-0.5">{description}</p>
       </div>
     </div>
   );

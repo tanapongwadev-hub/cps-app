@@ -4,12 +4,12 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Admin Template",
-    template: "%s | Admin Template",
+    default: "CPS",
+    template: "%s | CPS",
   },
-  description: "Enterprise Admin Template built with Next.js, TypeScript, and Tailwind",
-  applicationName: "Admin Template",
-  authors: [{ name: "Admin Template Team" }],
+  description: "CPS Production Management System",
+  applicationName: "CPS",
+  authors: [{ name: "CPS Team" }],
   keywords: ["admin", "dashboard", "enterprise", "next.js", "typescript", "tailwind"],
   robots: {
     index: false,

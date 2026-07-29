@@ -24,6 +24,7 @@ export function AdminShell({ children, noAuthCheck }: AdminShellProps) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const hasToken = useAuthStore((s) => !!s.accessToken);
   const accessControl = useAuthStore((s) => s.accessControl);
+  const needsDepartmentSelection = useAuthStore((s) => s.needsDepartmentSelection);
   const setSession = useAuthStore((s) => s.setSession);
   const [hydrated, setHydrated] = React.useState(false);
 
@@ -34,7 +35,7 @@ export function AdminShell({ children, noAuthCheck }: AdminShellProps) {
   // (must subscribe to accessToken reactively so the query runs after localStorage
   // hydration finishes populating the token)
   const { data: meData, isLoading: meLoading } = useAuthMe(
-    isAuthenticated && hasToken,
+    isAuthenticated && hasToken && !needsDepartmentSelection,
   );
 
   React.useEffect(() => {
@@ -74,8 +75,14 @@ export function AdminShell({ children, noAuthCheck }: AdminShellProps) {
       const wasLoggedIn = !!useAuthStore.getState().user;
       const search = new URLSearchParams({ redirect: pathname }).toString();
       router.replace(wasLoggedIn ? `/session-expired?${search}` : `/login?${search}`);
+      return;
     }
-  }, [hydrated, isAuthenticated, noAuthCheck, pathname, router]);
+    // Post-login gate: if the user has more than one department and hasn't
+    // picked one yet, force them to /select-department.
+    if (needsDepartmentSelection && pathname !== "/select-department") {
+      router.replace("/select-department");
+    }
+  }, [hydrated, isAuthenticated, noAuthCheck, pathname, router, needsDepartmentSelection]);
 
   if (!hydrated) {
     return (
@@ -87,6 +94,20 @@ export function AdminShell({ children, noAuthCheck }: AdminShellProps) {
 
   if (!noAuthCheck && !isAuthenticated) {
     return null;
+  }
+
+  // Gate the entire admin shell until the user has chosen a (dept, role)
+  // context. The /select-department page is rendered separately by the
+  // auth layout, so this is purely a UI gate for the protected routes.
+  if (!noAuthCheck && needsDepartmentSelection && pathname !== "/select-department") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="text-center space-y-2">
+          <div className="h-6 w-6 mx-auto animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">กำลังเปลี่ยนเส้นทางไปเลือกแผนก...</p>
+        </div>
+      </div>
+    );
   }
 
   // ถ้ายังโหลด accessControl ไม่เสร็จ (เฉพาะตอน authenticated)

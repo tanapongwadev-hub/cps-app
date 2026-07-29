@@ -72,7 +72,7 @@ interface PageFooterProps {
 export function PageFooter({ children }: PageFooterProps) {
   return (
     <footer className="border-t px-4 py-3 text-center text-xs text-muted-foreground sm:px-6">
-      {children ?? "© 2024 Admin Template · Enterprise v1.0.0"}
+      {children ?? "© 2024 CPS · Production Management System v1.0.0"}
     </footer>
   );
 }

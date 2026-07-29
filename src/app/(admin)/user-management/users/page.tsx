@@ -2,9 +2,21 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Plus, Pencil, Trash2, KeyRound, ShieldOff, ShieldCheck, Eye, Download, RefreshCw, Filter } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  KeyRound,
+  ShieldOff,
+  ShieldCheck,
+  Eye,
+  Download,
+  RefreshCw,
+  Filter,
+  Building2,
+  ShieldCheck as ShieldIcon,
+} from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,7 +29,13 @@ import { SelectField, TextField } from "@/components/forms/form-field";
 import { useDebounce } from "@/hooks/use-debounce";
 import { PermissionGuard } from "@/components/ui/permission-guard";
 import { showToast } from "@/lib/toast";
-import { useUsers, useDeleteUser, useUpdateUserStatus, useResetPassword } from "@/features/users/hooks/use-users";
+import {
+  useUsers,
+  useDeleteUser,
+  useUpdateUserStatus,
+  useResetPassword,
+  useUserAssignments,
+} from "@/features/users/hooks/use-users";
 import { useDepartments } from "@/features/users/hooks/use-departments";
 import { useRoles } from "@/features/roles/hooks/use-roles";
 import { UserFormDialog } from "@/features/users/components/user-form-dialog";
@@ -28,24 +46,28 @@ import type { User } from "@/types/auth";
 import { formatRelative } from "@/utils/date";
 import { getInitials } from "@/utils/format";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
+import { cn } from "@/utils/cn";
 
-const statusVariants = {
-  active: "success" as const,
-  inactive: "muted" as const,
-  pending: "warning" as const,
-  archived: "muted" as const,
+/**
+ * Map the real backend `isActive` boolean to a derived UI status.
+ * (The legacy `status` field is no longer in the backend response — we
+ *  compute it here so the table can keep its badge column.)
+ */
+function toUiStatus(u: User): "active" | "inactive" {
+  return u.isActive ? "active" : "inactive";
+}
+
+const statusVariants: Record<"active" | "inactive", "success" | "muted"> = {
+  active: "success",
+  inactive: "muted",
 };
 
-const statusLabels: Record<string, string> = {
+const statusLabels: Record<"active" | "inactive", string> = {
   active: "ใช้งาน",
   inactive: "ระงับ",
-  pending: "รอเปิดใช้งาน",
-  archived: "เก็บถาวร",
 };
 
 export default function UsersPage() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const debounce = useDebounce;
 
   const [page, setPage] = React.useState(1);
@@ -88,10 +110,11 @@ export default function UsersPage() {
         size: 260,
         cell: ({ row }) => {
           const u = row.original;
+          const fullName = `${u.firstName} ${u.lastName}`.trim();
           return (
             <div className="flex items-center gap-3">
               <Avatar size="sm">
-                <AvatarImage src={u.avatarUrl} alt={u.fullName} />
+                <AvatarImage src={u.avatarUrl} alt={fullName} />
                 <AvatarFallback>{getInitials(u.firstName, u.lastName)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
@@ -103,7 +126,7 @@ export default function UsersPage() {
                   }}
                   className="text-sm font-medium hover:underline truncate block"
                 >
-                  {u.fullName}
+                  {fullName || u.username}
                 </Link>
                 <p className="text-xs text-muted-foreground truncate">@{u.username}</p>
               </div>
@@ -120,45 +143,29 @@ export default function UsersPage() {
         ),
       },
       {
-        id: "department",
-        header: "แผนก",
+        id: "telephone",
+        header: "เบอร์โทร",
         cell: ({ row }) =>
-          row.original.departmentName ? (
-            <Badge variant="outline">{row.original.departmentName}</Badge>
+          row.original.telephone ? (
+            <span className="text-sm tabular-nums">{row.original.telephone}</span>
           ) : (
             <span className="text-xs text-muted-foreground">-</span>
           ),
       },
       {
-        id: "role",
-        header: "บทบาท",
+        id: "status",
+        header: "สถานะ",
         cell: ({ row }) => {
-          const roleNames = row.original.roleNames ?? [];
+          const s = toUiStatus(row.original);
           return (
-            <div className="flex flex-wrap gap-1">
-              {roleNames.slice(0, 2).map((name) => (
-                <Badge key={name} variant="secondary" className="text-[10px]">
-                  {name}
-                </Badge>
-              ))}
-              {roleNames.length > 2 && (
-                <Badge variant="muted" className="text-[10px]">
-                  +{roleNames.length - 2}
-                </Badge>
+            <div className="flex items-center gap-1">
+              <Badge variant={statusVariants[s]}>{statusLabels[s]}</Badge>
+              {row.original.isLocked && (
+                <Badge variant="warning" className="text-[10px]">ล็อก</Badge>
               )}
             </div>
           );
         },
-      },
-      {
-        id: "status",
-        header: "สถานะ",
-        accessorKey: "status",
-        cell: ({ row }) => (
-          <Badge variant={statusVariants[row.original.status]}>
-            {statusLabels[row.original.status] ?? row.original.status}
-          </Badge>
-        ),
       },
       {
         id: "lastLogin",
@@ -180,9 +187,10 @@ export default function UsersPage() {
         enableHiding: false,
         cell: ({ row }) => {
           const u = row.original;
+          const uiStatus = toUiStatus(u);
           return (
             <ActionMenu
-              label={`เมนู ${u.fullName}`}
+              label={`เมนู ${u.firstName} ${u.lastName}`}
               items={[
                 {
                   label: "ดูรายละเอียด",
@@ -196,20 +204,21 @@ export default function UsersPage() {
                     setEditingUser(u);
                     setFormOpen(true);
                   },
-                  hidden: !(u.permissions ?? []).includes("*"), // no-op placeholder, real guard via component
                 },
                 {
-                  label: u.status === "active" ? "ระงับการใช้งาน" : "เปิดใช้งาน",
+                  label: uiStatus === "active" ? "ระงับการใช้งาน" : "เปิดใช้งาน",
                   icon:
-                    u.status === "active" ? (
+                    uiStatus === "active" ? (
                       <ShieldOff className="h-3.5 w-3.5" />
                     ) : (
                       <ShieldCheck className="h-3.5 w-3.5" />
                     ),
                   onClick: () => {
+                    // Real backend uses {isActive: boolean} — send the opposite
+                    // of the current status.
                     statusMutation.mutate({
                       id: u.id,
-                      status: u.status === "active" ? "inactive" : "active",
+                      isActive: uiStatus !== "active",
                     });
                   },
                 },
@@ -218,7 +227,7 @@ export default function UsersPage() {
                   icon: <KeyRound className="h-3.5 w-3.5" />,
                   onClick: () => {
                     confirm.open({
-                      title: `รีเซ็ตรหัสผ่านของ ${u.fullName}?`,
+                      title: `รีเซ็ตรหัสผ่านของ ${u.firstName} ${u.lastName}?`,
                       description: "ระบบจะส่งรหัสผ่านใหม่ไปยังอีเมลของผู้ใช้งาน",
                       variant: "warning",
                       confirmText: "ยืนยันรีเซ็ต",
@@ -243,8 +252,6 @@ export default function UsersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [statusMutation, resetMutation],
   );
-
-  const totalSelected = 0; // selection state managed inside DataTable
 
   return (
     <>
@@ -280,7 +287,9 @@ export default function UsersPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => showToast.info("กำลังส่งออกข้อมูล", "ระบบจะแจ้งเตือนเมื่อเสร็จสิ้น")}
+                  onClick={() =>
+                    showToast.info("กำลังส่งออกข้อมูล", "ระบบจะแจ้งเตือนเมื่อเสร็จสิ้น")
+                  }
                 >
                   <Download className="h-4 w-4" />
                   <span className="hidden sm:inline">ส่งออก</span>
@@ -316,7 +325,6 @@ export default function UsersPage() {
                 { value: "", label: "ทุกสถานะ" },
                 { value: "active", label: "ใช้งาน" },
                 { value: "inactive", label: "ระงับการใช้งาน" },
-                { value: "pending", label: "รอเปิดใช้งาน" },
               ]}
             />
             <SelectField
@@ -328,7 +336,10 @@ export default function UsersPage() {
               }}
               options={[
                 { value: "", label: "ทุกแผนก" },
-                ...(deptData?.items?.map((d) => ({ value: d.id, label: d.name })) ?? []),
+                ...(deptData?.items?.map((d) => ({
+                  value: d.id,
+                  label: d.nameTh || d.name || d.code || d.id,
+                })) ?? []),
               ]}
             />
             <SelectField
@@ -340,7 +351,10 @@ export default function UsersPage() {
               }}
               options={[
                 { value: "", label: "ทุกบทบาท" },
-                ...(rolesData?.items?.map((r) => ({ value: r.id, label: r.name })) ?? []),
+                ...(rolesData?.items?.map((r) => ({
+                  value: r.id,
+                  label: r.nameTh || r.nameEn || r.name || r.code,
+                })) ?? []),
               ]}
             />
           </div>
@@ -362,7 +376,7 @@ export default function UsersPage() {
           }}
           enableRowSelection
           enableColumnVisibility
-          defaultHiddenColumns={["email"]}
+          defaultHiddenColumns={["email", "telephone"]}
           pageIndex={page - 1}
           pageSize={pageSize}
           pageCount={usersQuery.data?.meta?.totalPages ?? 1}
@@ -420,10 +434,6 @@ export default function UsersPage() {
       {confirm.dialog}
     </>
   );
-
-  void totalSelected;
-  void searchParams;
-  void router;
 }
 
 function UserDetailSheet({
@@ -435,80 +445,130 @@ function UserDetailSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const fullName = `${user.firstName} ${user.lastName}`.trim() || user.username;
+  const uiStatus = toUiStatus(user);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent size="lg" className="w-full sm:max-w-lg">
         <SheetHeader>
           <div className="flex items-center gap-3">
             <Avatar size="lg">
-              <AvatarImage src={user.avatarUrl} alt={user.fullName} />
+              <AvatarImage src={user.avatarUrl} alt={fullName} />
               <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
             </Avatar>
             <div>
-              <SheetTitle>{user.fullName}</SheetTitle>
+              <SheetTitle>{fullName}</SheetTitle>
               <SheetDescription>@{user.username}</SheetDescription>
             </div>
           </div>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <Tabs defaultValue="info">
-            <TabsList className="w-full grid grid-cols-3">
+            <TabsList className="w-full grid grid-cols-2">
               <TabsTrigger value="info">ข้อมูล</TabsTrigger>
-              <TabsTrigger value="role">สิทธิ์</TabsTrigger>
-              <TabsTrigger value="activity">กิจกรรม</TabsTrigger>
+              <TabsTrigger value="assignments">แผนก & บทบาท</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="mt-4 space-y-3 text-sm">
+              <DetailRow label="ชื่อ-นามสกุล" value={fullName} />
+              <DetailRow label="Username" value={`@${user.username}`} />
               <DetailRow label="อีเมล" value={user.email} />
-              <DetailRow label="เบอร์โทรศัพท์" value={user.phone ?? "-"} />
-              <DetailRow label="แผนก" value={user.departmentName ?? "-"} />
+              <DetailRow label="เบอร์โทรศัพท์" value={user.telephone ?? "-"} />
               <DetailRow
                 label="สถานะ"
                 value={
-                  <Badge variant={statusVariants[user.status]}>
-                    {statusLabels[user.status]}
-                  </Badge>
+                  <div className="flex items-center gap-1">
+                    <Badge variant={statusVariants[uiStatus]}>{statusLabels[uiStatus]}</Badge>
+                    {user.isLocked && <Badge variant="warning">ล็อก</Badge>}
+                  </div>
                 }
               />
-              <DetailRow label="ยืนยันอีเมล" value={user.emailVerified ? "✓ ยืนยันแล้ว" : "✗ ยังไม่ยืนยัน"} />
-              <DetailRow label="ยืนยันเบอร์โทร" value={user.phoneVerified ? "✓ ยืนยันแล้ว" : "✗ ยังไม่ยืนยัน"} />
-              <DetailRow label="เข้าสู่ระบบล่าสุด" value={user.lastLoginAt ? formatRelative(user.lastLoginAt) : "-"} />
+              <DetailRow
+                label="login attempts"
+                value={
+                  <span className="tabular-nums">
+                    {user.failedLoginAttempts ?? 0}
+                    {user.lockedUntil && ` (until ${formatRelative(user.lockedUntil)})`}
+                  </span>
+                }
+              />
+              <DetailRow
+                label="permissionVersion"
+                value={<span className="tabular-nums">{user.permissionVersion ?? "-"}</span>}
+              />
+              <DetailRow
+                label="เข้าสู่ระบบล่าสุด"
+                value={user.lastLoginAt ? formatRelative(user.lastLoginAt) : "-"}
+              />
+              <DetailRow
+                label="IP ล่าสุด"
+                value={user.lastLoginIp ?? "-"}
+              />
               <DetailRow label="สร้างเมื่อ" value={formatRelative(user.createdAt)} />
             </TabsContent>
 
-            <TabsContent value="role" className="mt-4 space-y-3 text-sm">
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">บทบาท</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(user.roleNames ?? []).map((name) => (
-                    <Badge key={name} variant="default">{name}</Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-2">สิทธิ์ ({(user.permissions ?? []).length})</p>
-                <div className="rounded-md border bg-muted/30 p-3 max-h-64 overflow-y-auto">
-                  {(user.permissions ?? []).slice(0, 30).map((p) => (
-                    <code key={p} className="block text-xs text-foreground/70 py-0.5">
-                      {p}
-                    </code>
-                  ))}
-                  {(user.permissions ?? []).length > 30 && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      และอีก {(user.permissions ?? []).length - 30} สิทธิ์
-                    </p>
-                  )}
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="activity" className="mt-4 text-sm text-muted-foreground text-center py-8">
-              <p>ไม่มีประวัติกิจกรรม</p>
+            <TabsContent value="assignments" className="mt-4 text-sm">
+              <UserAssignmentsList userId={user.id} />
             </TabsContent>
           </Tabs>
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function UserAssignmentsList({ userId }: { userId: string }) {
+  const { data, isLoading } = useUserAssignments(userId);
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 2 }).map((_, i) => (
+          <div key={i} className="h-12 rounded-md bg-muted/40 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+  if (!data || data.length === 0) {
+    return (
+      <div className="rounded-md border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+        ผู้ใช้นี้ยังไม่มี assignment (แผนก + บทบาท)
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-2">
+      {data.map((a) => (
+        <div
+          key={a.id}
+          className={cn(
+            "flex items-center justify-between gap-3 rounded-md border bg-card p-3",
+            !a.isActive && "opacity-60",
+          )}
+        >
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="truncate text-sm font-medium">
+                {a.department?.nameTh ?? a.department?.name ?? a.departmentId}
+              </p>
+              <span className="text-xs text-muted-foreground">·</span>
+              <ShieldIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="truncate text-sm">
+                {a.role?.nameTh ?? a.role?.nameEn ?? a.role?.name ?? a.roleId}
+              </p>
+            </div>
+            <p className="mt-0.5 text-[10px] text-muted-foreground">
+              assigned {a.assignedAt ? formatRelative(a.assignedAt) : "-"}
+            </p>
+          </div>
+          {a.isActive ? (
+            <Badge variant="success" className="text-[10px]">ใช้งาน</Badge>
+          ) : (
+            <Badge variant="muted" className="text-[10px]">ระงับ</Badge>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

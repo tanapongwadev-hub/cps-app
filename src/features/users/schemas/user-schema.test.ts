@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { createUserSchema, updateUserSchema } from "./user-schema";
+import {
+  createUserSchema,
+  updateUserSchema,
+  addUserAssignmentSchema,
+  updateUserStatusSchema,
+} from "./user-schema";
 
 describe("createUserSchema", () => {
   const validData = {
@@ -9,10 +14,8 @@ describe("createUserSchema", () => {
     firstName: "John",
     lastName: "Doe",
     email: "john@example.com",
-    phone: "0812345678",
-    departmentId: "dept-001",
-    roleIds: ["role-001"],
-    status: "active" as const,
+    telephone: "0812345678",
+    assignments: [{ departmentId: "dept-001", roleId: "role-001" }],
   };
 
   it("accepts valid data", () => {
@@ -46,7 +49,10 @@ describe("createUserSchema", () => {
   });
 
   it("rejects mismatched confirm password", () => {
-    const result = createUserSchema.safeParse({ ...validData, confirmPassword: "Different1" });
+    const result = createUserSchema.safeParse({
+      ...validData,
+      confirmPassword: "Different1",
+    });
     expect(result.success).toBe(false);
   });
 
@@ -55,13 +61,36 @@ describe("createUserSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects empty roleIds", () => {
-    const result = createUserSchema.safeParse({ ...validData, roleIds: [] });
+  it("rejects empty assignments array", () => {
+    const result = createUserSchema.safeParse({ ...validData, assignments: [] });
     expect(result.success).toBe(false);
   });
 
-  it("allows empty phone", () => {
-    const result = createUserSchema.safeParse({ ...validData, phone: "" });
+  it("rejects assignment with empty departmentId", () => {
+    const result = createUserSchema.safeParse({
+      ...validData,
+      assignments: [{ departmentId: "", roleId: "role-001" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects assignment with empty roleId", () => {
+    const result = createUserSchema.safeParse({
+      ...validData,
+      assignments: [{ departmentId: "dept-001", roleId: "" }],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("allows empty telephone", () => {
+    const result = createUserSchema.safeParse({ ...validData, telephone: "" });
+    expect(result.success).toBe(true);
+  });
+
+  it("allows missing telephone", () => {
+    const { telephone: _t, ...withoutPhone } = validData;
+    void _t;
+    const result = createUserSchema.safeParse(withoutPhone);
     expect(result.success).toBe(true);
   });
 });
@@ -71,10 +100,7 @@ describe("updateUserSchema", () => {
     firstName: "John",
     lastName: "Doe",
     email: "john@example.com",
-    phone: "0812345678",
-    departmentId: "dept-001",
-    roleIds: ["role-001"],
-    status: "active" as const,
+    telephone: "0812345678",
   };
 
   it("accepts valid data", () => {
@@ -89,5 +115,39 @@ describe("updateUserSchema", () => {
 
   it("requires valid email", () => {
     expect(updateUserSchema.safeParse({ ...validData, email: "bad" }).success).toBe(false);
+  });
+
+  it("does not require assignments or roleIds (managed via separate endpoint)", () => {
+    const result = updateUserSchema.safeParse(validData);
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("updateUserStatusSchema", () => {
+  it("accepts isActive true", () => {
+    expect(updateUserStatusSchema.safeParse({ isActive: true }).success).toBe(true);
+  });
+  it("accepts isActive false", () => {
+    expect(updateUserStatusSchema.safeParse({ isActive: false }).success).toBe(true);
+  });
+  it("rejects missing isActive", () => {
+    expect(updateUserStatusSchema.safeParse({}).success).toBe(false);
+  });
+  it("rejects non-boolean isActive", () => {
+    expect(updateUserStatusSchema.safeParse({ isActive: "active" }).success).toBe(false);
+  });
+});
+
+describe("addUserAssignmentSchema", () => {
+  it("accepts valid data", () => {
+    expect(
+      addUserAssignmentSchema.safeParse({ departmentId: "d1", roleId: "r1" }).success,
+    ).toBe(true);
+  });
+  it("rejects missing departmentId", () => {
+    expect(addUserAssignmentSchema.safeParse({ roleId: "r1" }).success).toBe(false);
+  });
+  it("rejects missing roleId", () => {
+    expect(addUserAssignmentSchema.safeParse({ departmentId: "d1" }).success).toBe(false);
   });
 });

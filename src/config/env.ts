@@ -33,9 +33,9 @@ const parseNumber = (value: string | undefined, fallback: number): number => {
 
 export const env = {
   app: {
-    name: optionalEnv("NEXT_PUBLIC_APP_NAME", "Admin Template"),
+    name: optionalEnv("NEXT_PUBLIC_APP_NAME", "CPS"),
     version: optionalEnv("NEXT_PUBLIC_APP_VERSION", "1.0.0"),
-    description: optionalEnv("NEXT_PUBLIC_APP_DESCRIPTION", "Enterprise Admin Template"),
+    description: optionalEnv("NEXT_PUBLIC_APP_DESCRIPTION", "CPS Production Management System"),
     env: optionalEnv("NEXT_PUBLIC_APP_ENV", "development"),
   },
   api: {
@@ -50,7 +50,7 @@ export const env = {
   },
   // For backward-compat with existing code that imports individual vars
   get name() {
-    return requireEnv("NEXT_PUBLIC_APP_NAME", "Admin Template");
+    return requireEnv("NEXT_PUBLIC_APP_NAME", "CPS");
   },
 } as const;
 
