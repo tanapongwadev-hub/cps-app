@@ -30,6 +30,36 @@ export const userAssignmentInputSchema = z.object({
   isPrimary: z.boolean().optional(),
 });
 
+export const editUserAssignmentSchema = z
+  .object({
+    id: z.string().optional(),
+    departmentId: z.string().min(1, "กรุณาเลือกแผนก").nullable(),
+    roleId: z.string().min(1, "กรุณาเลือกบทบาท"),
+    roleScopeType: z.enum(["SYSTEM", "DEPARTMENT"]),
+  })
+  .superRefine((assignment, ctx) => {
+    if (
+      assignment.roleScopeType === "SYSTEM" &&
+      assignment.departmentId !== null
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["departmentId"],
+        message: "System Role ต้องใช้ทุกแผนก",
+      });
+    }
+    if (
+      assignment.roleScopeType === "DEPARTMENT" &&
+      assignment.departmentId === null
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["departmentId"],
+        message: "กรุณาเลือกแผนก",
+      });
+    }
+  });
+
 export const createUserSchema = z
   .object({
     username: z
@@ -66,17 +96,39 @@ export const createUserSchema = z
  * `isActive` and `assignments` are managed via their own endpoints
  * (PATCH /users/:id/status and POST /users/:id/assignments respectively).
  */
-export const updateUserSchema = z.object({
-  firstName: z.string().min(1, "กรุณากรอกชื่อ"),
-  lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
-  email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
-  telephone: z
-    .string()
-    .regex(/^[0-9-]+$/, "รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง")
-    .min(9, "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 ตัว")
-    .optional()
-    .or(z.literal("")),
-});
+export const updateUserSchema = z
+  .object({
+    firstName: z.string().min(1, "กรุณากรอกชื่อ"),
+    lastName: z.string().min(1, "กรุณากรอกนามสกุล"),
+    email: z.string().email("รูปแบบอีเมลไม่ถูกต้อง"),
+    telephone: z
+      .string()
+      .regex(/^[0-9-]+$/, "รูปแบบเบอร์โทรศัพท์ไม่ถูกต้อง")
+      .min(9, "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 ตัว")
+      .optional()
+      .or(z.literal("")),
+    assignments: z
+      .array(editUserAssignmentSchema)
+      .min(1, "ผู้ใช้ต้องมีอย่างน้อย 1 Assignment"),
+  })
+  .superRefine((values, ctx) => {
+    const firstIndexByKey = new Map<string, number>();
+    values.assignments.forEach((assignment, index) => {
+      const key = `${assignment.departmentId ?? "SYSTEM"}:${assignment.roleId}`;
+      const firstIndex = firstIndexByKey.get(key);
+      if (firstIndex === undefined) {
+        firstIndexByKey.set(key, index);
+        return;
+      }
+      for (const duplicateIndex of [firstIndex, index]) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["assignments", duplicateIndex, "roleId"],
+          message: "แผนกและบทบาทนี้ถูกเพิ่มแล้ว",
+        });
+      }
+    });
+  });
 
 /** PATCH /users/:id/status payload */
 export const updateUserStatusSchema = z.object({
@@ -92,5 +144,8 @@ export const addUserAssignmentSchema = z.object({
 export type CreateUserFormValues = z.infer<typeof createUserSchema>;
 export type UpdateUserFormValues = z.infer<typeof updateUserSchema>;
 export type UserAssignmentInput = z.infer<typeof userAssignmentInputSchema>;
+export type EditUserAssignmentValues = z.infer<
+  typeof editUserAssignmentSchema
+>;
 export type UpdateUserStatusValues = z.infer<typeof updateUserStatusSchema>;
 export type AddUserAssignmentValues = z.infer<typeof addUserAssignmentSchema>;

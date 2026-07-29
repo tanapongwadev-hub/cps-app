@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/lib/toast";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/utils/cn";
-import type { DepartmentRoleOption } from "@/types/auth";
+import type { DepartmentRoleOption, UserAssignment } from "@/types/auth";
 
 /**
  * Two flows land on this page:
@@ -54,28 +54,35 @@ function SelectDepartmentContent() {
       return pendingSelection.options ?? [];
     }
     // mode === "switch" — convert UserAssignment[] into DepartmentRoleOption[]
-    return (assignmentsQuery.data ?? []).map((a) => ({
-      userDepartmentRoleId: a.id,
-      department: {
-        id: a.department?.id ?? a.departmentId,
-        code: a.department?.code ?? "",
-        name:
-          a.department?.nameTh ??
-          a.department?.nameEn ??
-          a.department?.name ??
-          a.departmentId,
-      },
-      role: {
-        id: a.role?.id ?? a.roleId,
-        code: a.role?.code ?? "",
-        name:
-          a.role?.nameTh ??
-          a.role?.nameEn ??
-          a.role?.name ??
-          a.roleId,
-      },
-      isPrimary: false,
-    }));
+    return (assignmentsQuery.data ?? [])
+      .filter(
+        (
+          assignment,
+        ): assignment is UserAssignment & { departmentId: string } =>
+          assignment.departmentId !== null,
+      )
+      .map((a) => ({
+        userDepartmentRoleId: a.id,
+        department: {
+          id: a.department?.id ?? a.departmentId,
+          code: a.department?.code ?? "",
+          name:
+            a.department?.nameTh ??
+            a.department?.nameEn ??
+            a.department?.name ??
+            a.departmentId,
+        },
+        role: {
+          id: a.role?.id ?? a.roleId,
+          code: a.role?.code ?? "",
+          name:
+            a.role?.nameTh ??
+            a.role?.nameEn ??
+            a.role?.name ??
+            a.roleId,
+        },
+        isPrimary: false,
+      }));
   }, [pendingSelection, assignmentsQuery.data]);
 
   // Safe access to user — may be undefined in the real 2-step flow

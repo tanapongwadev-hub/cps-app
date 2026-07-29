@@ -105,7 +105,7 @@ export interface User extends BaseEntity {
 export interface UserAssignment {
   id: string;
   userId: string;
-  departmentId: string;
+  departmentId: string | null;
   roleId: string;
   isActive: boolean;
   assignedAt?: string;
@@ -114,8 +114,12 @@ export interface UserAssignment {
   createdAt?: string;
   updatedAt?: string;
   /** Populated by GET /users/:id/assignments */
-  department?: UserDepartment;
-  role?: UserRole & { nameTh?: string; nameEn?: string };
+  department?: UserDepartment | null;
+  role?: UserRole & {
+    nameTh?: string;
+    nameEn?: string;
+    scopeType?: "SYSTEM" | "DEPARTMENT";
+  };
 }
 
 /**
@@ -125,7 +129,7 @@ export interface UserAssignment {
  */
 export interface UserDepartmentRole extends BaseEntity {
   userId: string;
-  departmentId: string;
+  departmentId: string | null;
   departmentName: string;
   departmentCode: string;
   roleId: string;

@@ -101,6 +101,14 @@ describe("updateUserSchema", () => {
     lastName: "Doe",
     email: "john@example.com",
     telephone: "0812345678",
+    assignments: [
+      {
+        id: "assignment-1",
+        departmentId: "dept-1",
+        roleId: "role-1",
+        roleScopeType: "DEPARTMENT" as const,
+      },
+    ],
   };
 
   it("accepts valid data", () => {
@@ -117,9 +125,81 @@ describe("updateUserSchema", () => {
     expect(updateUserSchema.safeParse({ ...validData, email: "bad" }).success).toBe(false);
   });
 
-  it("does not require assignments or roleIds (managed via separate endpoint)", () => {
-    const result = updateUserSchema.safeParse(validData);
-    expect(result.success).toBe(true);
+  it("requires at least one assignment", () => {
+    expect(
+      updateUserSchema.safeParse({ ...validData, assignments: [] }).success,
+    ).toBe(false);
+  });
+
+  it("rejects duplicate department and role pairs", () => {
+    expect(
+      updateUserSchema.safeParse({
+        ...validData,
+        assignments: [
+          validData.assignments[0],
+          { ...validData.assignments[0], id: "assignment-2" },
+        ],
+      }).success,
+    ).toBe(false);
+  });
+
+  it("allows different roles in the same department", () => {
+    expect(
+      updateUserSchema.safeParse({
+        ...validData,
+        assignments: [
+          validData.assignments[0],
+          {
+            id: "assignment-2",
+            departmentId: "dept-1",
+            roleId: "role-2",
+            roleScopeType: "DEPARTMENT",
+          },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("requires null department for a system role", () => {
+    expect(
+      updateUserSchema.safeParse({
+        ...validData,
+        assignments: [
+          {
+            departmentId: "dept-1",
+            roleId: "super",
+            roleScopeType: "SYSTEM",
+          },
+        ],
+      }).success,
+    ).toBe(false);
+    expect(
+      updateUserSchema.safeParse({
+        ...validData,
+        assignments: [
+          {
+            departmentId: null,
+            roleId: "super",
+            roleScopeType: "SYSTEM",
+          },
+        ],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("requires a department for a department role", () => {
+    expect(
+      updateUserSchema.safeParse({
+        ...validData,
+        assignments: [
+          {
+            departmentId: null,
+            roleId: "role-1",
+            roleScopeType: "DEPARTMENT",
+          },
+        ],
+      }).success,
+    ).toBe(false);
   });
 });
 

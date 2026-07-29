@@ -49,7 +49,7 @@ const buildAccessControl = (
     permissions,
     menus,
     userDepartmentRoleId: userDepartmentRole?.id,
-    departmentId: userDepartmentRole?.departmentId,
+    departmentId: userDepartmentRole?.departmentId ?? undefined,
     roleId: userDepartmentRole?.roleId,
   };
 };
@@ -60,11 +60,17 @@ const shapeUser = (
   activeAssignments: UserDepartmentRole[],
 ): User => {
   const primary = activeAssignments.find((a) => a.isPrimary) ?? activeAssignments[0] ?? null;
+  const departmentAssignments = activeAssignments.filter(
+    (
+      assignment,
+    ): assignment is UserDepartmentRole & { departmentId: string } =>
+      assignment.departmentId !== null,
+  );
   return {
     ...user,
     displayName: user.fullName || `${user.firstName} ${user.lastName}`.trim(),
     isSuperAdmin: user.permissions?.includes("*") ?? false,
-    departments: activeAssignments.map((a) => ({
+    departments: departmentAssignments.map((a) => ({
       id: a.departmentId,
       code: a.departmentCode,
       name: a.departmentName,
@@ -75,7 +81,7 @@ const shapeUser = (
       name: a.roleName,
     })),
     // Carry forward the primary assignment as the convenience fields too
-    departmentId: primary?.departmentId,
+    departmentId: primary?.departmentId ?? undefined,
     departmentName: primary?.departmentName,
     roleIds: activeAssignments.map((a) => a.roleId),
     roleNames: activeAssignments.map((a) => a.roleName),
@@ -117,6 +123,12 @@ export async function setupAuthMocks(
       mockDb.departmentSelectionTokens.set(departmentSelectionToken, user.id);
 
       const options: DepartmentRoleOption[] = assignments
+        .filter(
+          (
+            assignment,
+          ): assignment is UserDepartmentRole & { departmentId: string } =>
+            assignment.departmentId !== null,
+        )
         .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
         .map((udr) => ({
           userDepartmentRoleId: udr.id,
