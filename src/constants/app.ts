@@ -44,6 +44,8 @@ export const QUERY_KEYS = {
   },
   DEPARTMENTS: {
     ALL: ["departments"] as const,
+    LIST: (params: unknown) => ["departments", "list", params] as const,
+    DETAIL: (id: string) => ["departments", "detail", id] as const,
     TREE: ["departments", "tree"] as const,
   },
   MENUS: {

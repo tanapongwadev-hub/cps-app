@@ -338,7 +338,7 @@ export default function UsersPage() {
                 { value: "", label: "ทุกแผนก" },
                 ...(deptData?.items?.map((d) => ({
                   value: d.id,
-                  label: d.nameTh || d.name || d.code || d.id,
+                  label: d.nameTh || d.nameEn || d.code || d.id,
                 })) ?? []),
               ]}
             />

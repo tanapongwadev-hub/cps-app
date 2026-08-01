@@ -144,6 +144,8 @@ export interface DepartmentInfo {
   id: string;
   code: string;
   name: string;
+  nameTh?: string;
+  nameEn?: string;
 }
 
 /** Role info (subset) */

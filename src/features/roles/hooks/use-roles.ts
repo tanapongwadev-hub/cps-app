@@ -16,7 +16,9 @@ export interface ListRolesParams {
   [key: string]: string | number | boolean | undefined;
 }
 
-/** map permission code ของ frontend ("user.view") เป็น action code ของ backend ("READ") */
+/** map permission code ของ frontend ("user.view") เป็น action code ของ backend ("READ")
+ *  ใช้เป็น fallback สำหรับ payload เก่าที่ยังส่ง `permissions: string[]` มา
+ *  — payload ใหม่ส่ง `actionCodes` ตรง ๆ จาก catalog */
 const PERMISSION_ACTION_MAP: Record<string, string> = {
   view: "READ",
   create: "CREATE",
@@ -48,7 +50,10 @@ function toRolePayload(data: Partial<Role>): Record<string, unknown> {
   if (data.status !== undefined || data.isActive !== undefined) {
     payload.isActive = data.isActive ?? data.status === "active";
   }
-  if (data.permissions !== undefined) {
+  if (data.actionCodes !== undefined) {
+    payload.actionCodes = data.actionCodes;
+  } else if (data.permissions !== undefined) {
+    // Fallback: derive action codes from frontend dot-format permission codes
     payload.actionCodes = toActionCodes(data.permissions);
   }
   return payload;

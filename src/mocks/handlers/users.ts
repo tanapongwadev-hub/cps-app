@@ -56,7 +56,7 @@ export async function setupUserMocks(
       emailVerified: false,
       phoneVerified: false,
       departmentId,
-      departmentName: mockDb.departments.find((d) => d.id === departmentId)?.name ?? undefined,
+      departmentName: mockDb.departments.find((d) => d.id === departmentId)?.nameTh ?? undefined,
       roleIds,
       roleNames: mockDb.roles
         .filter((r) => roleIds.includes(r.id))
@@ -185,7 +185,7 @@ export async function setupUserMocks(
             id: retained?.id ?? generateId("udr"),
             userId: id,
             departmentId: assignment.departmentId,
-            departmentName: department?.name ?? "",
+            departmentName: department?.nameTh ?? "",
             departmentCode: department?.code ?? "",
             roleId: role.id,
             roleName: role.name,
@@ -318,7 +318,7 @@ export async function setupUserMocks(
             ? {
                 id: dept.id,
                 code: dept.code,
-                name: dept.name,
+                name: dept.nameTh ?? dept.nameEn ?? dept.code,
                 nameTh: dept.nameTh,
                 nameEn: dept.nameEn,
               }
@@ -365,7 +365,7 @@ export async function setupUserMocks(
       id: `udr-${Date.now()}`,
       userId,
       departmentId: data.departmentId,
-      departmentName: dept.name,
+      departmentName: dept.nameTh ?? dept.nameEn ?? dept.code,
       departmentCode: dept.code,
       roleId: data.roleId,
       roleName: role.name,

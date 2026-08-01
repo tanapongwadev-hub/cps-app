@@ -57,7 +57,8 @@ export async function setupTicketMocks(
         : undefined,
       departmentId: (data.departmentId as string) ?? "dept-it",
       departmentName:
-        mockDb.departments.find((d) => d.id === data.departmentId)?.name ?? "เทคโนโลยีสารสนเทศ",
+        mockDb.departments.find((d) => d.id === data.departmentId)?.nameTh ??
+        "เทคโนโลยีสารสนเทศ",
       dueDate: data.dueDate as string | undefined,
       commentCount: 0,
       attachmentCount: 0,

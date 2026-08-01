@@ -239,7 +239,9 @@ function SelectDepartmentContent() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">{opt.department.name}</p>
+                          <p className="font-medium truncate">
+                            {opt.department.nameTh ?? opt.department.nameEn ?? opt.department.code}
+                          </p>
                           {opt.isPrimary && (
                             <Badge variant="info" className="gap-1 text-[10px]">
                               <Star className="h-2.5 w-2.5" />

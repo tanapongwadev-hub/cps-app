@@ -19,7 +19,7 @@ interface EditUserAssignmentsProps {
 }
 
 function departmentLabel(department: Department) {
-  return department.nameTh ?? department.name ?? department.nameEn ?? department.code;
+  return department.nameTh ?? department.nameEn ?? department.code;
 }
 
 function roleLabel(role: Role) {
@@ -130,7 +130,7 @@ export function EditUserAssignments({
                     options={departments.map((department) => ({
                       value: department.id,
                       label: departmentLabel(department),
-                      disabled: department.isActive === false || department.status === "inactive",
+                      disabled: department.isActive === false,
                     }))}
                     placeholder="เลือกแผนก..."
                     error={errors?.departmentId?.message}

@@ -109,10 +109,10 @@ export async function setupPermissionMocks(
       .map((department) => ({
         id: department.id,
         code: department.code,
-        name: department.name,
-        nameTh: department.nameTh ?? department.name,
-        nameEn: department.nameEn ?? department.name,
-        isActive: department.isActive ?? department.status === "active",
+        name: department.nameTh ?? department.nameEn ?? department.code,
+        nameTh: department.nameTh,
+        nameEn: department.nameEn,
+        isActive: department.isActive,
       }));
     permission.updatedAt = new Date().toISOString();
     return ok(permission, "กำหนดแผนกสำหรับสิทธิ์เรียบร้อย");

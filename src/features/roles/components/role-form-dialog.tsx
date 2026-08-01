@@ -4,7 +4,7 @@ import * as React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Shield, Save, Search, X, Check } from "lucide-react";
+import { Shield, Save, Search, X, Check, Loader2, AlertCircle } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -14,36 +14,25 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { TextField, TextAreaField, SelectField, CheckboxField } from "@/components/forms/form-field";
+import { TextField, TextAreaField, SelectField } from "@/components/forms/form-field";
 import { FormSection } from "@/components/forms/form-section";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { PERMISSION_GROUPS } from "@/constants/permissions";
 import { useCreateRole, useUpdateRole } from "../hooks/use-roles";
+import { usePermissions } from "@/features/permissions/hooks/use-permissions";
 import { usePermission } from "@/hooks/use-permission";
-import { showToast } from "@/lib/toast";
+import {
+  actionCodesFromSelectedIds,
+  groupPermissionsByMenu,
+  labelForAction,
+  labelForMenu,
+  readActionCode,
+  selectedPermissionIdsFromActionCodes,
+} from "@/utils/permission-utils";
 import type { Role } from "@/types/auth";
-
-/** map action code ของ backend กลับเป็น permission codes ของฟอร์ม (เช็คทุก module ที่มี action นั้น) */
-const ACTION_TO_PERMISSION_KEY: Record<string, string> = {
-  READ: "view",
-  CREATE: "create",
-  UPDATE: "update",
-  DELETE: "delete",
-};
-
-function permissionsFromActionCodes(actionCodes?: string[]): string[] {
-  if (!actionCodes?.length) return [];
-  const keys = new Set(
-    actionCodes.map((c) => ACTION_TO_PERMISSION_KEY[c]).filter(Boolean),
-  );
-  return PERMISSION_GROUPS.flatMap((g) =>
-    g.permissions.filter((p) => keys.has(p.key)).map((p) => p.code),
-  );
-}
 
 const schema = z.object({
   code: z
@@ -54,7 +43,8 @@ const schema = z.object({
   name: z.string().min(1, "กรุณากรอกชื่อ Role").max(100),
   description: z.string().optional().or(z.literal("")),
   status: z.enum(["active", "inactive", "pending", "archived"]),
-  permissions: z.array(z.string()),
+  /** เก็บ permission IDs จาก /permissions (catalog ของ backend) */
+  selectedPermissionIds: z.array(z.string()),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -76,16 +66,27 @@ export function RoleFormDialog({
   const lockSystemRole = isEdit && !!role?.isSystem && !isSuperAdmin();
   const [search, setSearch] = React.useState("");
 
+  // ดึง permission catalog จาก backend จริง (GET /permissions)
+  const permsQuery = usePermissions({ page: 1, pageSize: 200 });
+  const allPerms = permsQuery.data?.items ?? [];
+  // group by menu.code — ใช้เรนเดอร์เมทริกซ์
+  const groups = React.useMemo(() => groupPermissionsByMenu(allPerms), [allPerms]);
+  const isLoadingCatalog = permsQuery.isLoading;
+  const catalogError = permsQuery.error as Error | null;
+
   const roleName = role?.nameTh ?? role?.nameEn ?? role?.name ?? "";
   const roleStatus = role
     ? (role.isActive ?? role.status === "active")
       ? "active"
       : "inactive"
     : "active";
-  const rolePermissions =
-    role?.permissions?.length
-      ? role.permissions
-      : permissionsFromActionCodes(role?.actionCodes);
+
+  // initial permission IDs derived from role.actionCodes (coarse model)
+  // Recompute when the catalog or role changes
+  const initialSelectedIds = React.useMemo(
+    () => selectedPermissionIdsFromActionCodes(allPerms, role?.actionCodes),
+    [allPerms, role?.actionCodes],
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -94,10 +95,11 @@ export function RoleFormDialog({
       name: roleName,
       description: role?.description ?? "",
       status: roleStatus,
-      permissions: rolePermissions,
+      selectedPermissionIds: initialSelectedIds,
     },
   });
 
+  // Reset form เมื่อ dialog เปิด หรือ role/catalog เปลี่ยน
   React.useEffect(() => {
     if (open) {
       form.reset({
@@ -105,78 +107,100 @@ export function RoleFormDialog({
         name: roleName,
         description: role?.description ?? "",
         status: roleStatus,
-        permissions: rolePermissions,
+        selectedPermissionIds: initialSelectedIds,
       });
       setSearch("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, role]);
+  }, [open, role, initialSelectedIds]);
 
-  const permissions = form.watch("permissions") ?? [];
+  const selected = form.watch("selectedPermissionIds") ?? [];
 
   const filteredGroups = React.useMemo(() => {
-    if (!search.trim()) return PERMISSION_GROUPS;
+    if (!search.trim()) return groups;
     const q = search.toLowerCase();
-    return PERMISSION_GROUPS.filter(
-      (g) =>
-        g.module.toLowerCase().includes(q) ||
-        g.label.toLowerCase().includes(q) ||
-        g.permissions.some((p) => p.label.toLowerCase().includes(q) || p.code.toLowerCase().includes(q)),
-    );
-  }, [search]);
+    return groups.filter((g) => {
+      const menuLabel = labelForMenu(g.menu).toLowerCase();
+      const menuCode = g.menu.code.toLowerCase();
+      const permMatch = g.perms.some(
+        (p) =>
+          p.code.toLowerCase().includes(q) ||
+          (readActionCode(p.action) ?? "").toLowerCase().includes(q) ||
+          labelForAction(readActionCode(p.action)).toLowerCase().includes(q),
+      );
+      return menuLabel.includes(q) || menuCode.includes(q) || permMatch;
+    });
+  }, [search, groups]);
 
-  const togglePermission = (code: string) => {
-    const current = form.getValues("permissions") ?? [];
-    if (current.includes(code)) {
+  const togglePermission = (id: string) => {
+    const current = form.getValues("selectedPermissionIds") ?? [];
+    if (current.includes(id)) {
       form.setValue(
-        "permissions",
-        current.filter((p) => p !== code),
+        "selectedPermissionIds",
+        current.filter((p) => p !== id),
       );
     } else {
-      form.setValue("permissions", [...current, code]);
+      form.setValue("selectedPermissionIds", [...current, id]);
     }
   };
 
-  const toggleGroup = (module: string) => {
-    const group = PERMISSION_GROUPS.find((g) => g.module === module);
+  const toggleGroup = (menuCode: string) => {
+    const group = groups.find((g) => g.menu.code === menuCode);
     if (!group) return;
-    const current = form.getValues("permissions") ?? [];
-    const allSelected = group.permissions.every((p) => current.includes(p.code));
+    const current = form.getValues("selectedPermissionIds") ?? [];
+    const ids = group.perms.map((p) => p.id);
+    const allSelected = ids.every((id) => current.includes(id));
     if (allSelected) {
       form.setValue(
-        "permissions",
-        current.filter((p) => !group.permissions.some((gp) => gp.code === p)),
+        "selectedPermissionIds",
+        current.filter((id) => !ids.includes(id)),
       );
     } else {
-      const merged = [...current];
-      for (const p of group.permissions) {
-        if (!merged.includes(p.code)) merged.push(p.code);
-      }
-      form.setValue("permissions", merged);
+      const merged = new Set(current);
+      for (const id of ids) merged.add(id);
+      form.setValue("selectedPermissionIds", [...merged]);
     }
   };
 
   const selectAll = () => {
-    const all = PERMISSION_GROUPS.flatMap((g) => g.permissions.map((p) => p.code));
-    form.setValue("permissions", all);
+    form.setValue(
+      "selectedPermissionIds",
+      allPerms.map((p) => p.id),
+    );
   };
   const clearAll = () => {
-    form.setValue("permissions", []);
+    form.setValue("selectedPermissionIds", []);
   };
 
+  const selectedActionCodes = React.useMemo(
+    () => actionCodesFromSelectedIds(allPerms, selected),
+    [allPerms, selected],
+  );
+
   const onSubmit = async (values: FormValues) => {
+    const actionCodes = actionCodesFromSelectedIds(allPerms, values.selectedPermissionIds);
     if (isEdit && role) {
-      // ส่งเฉพาะ field ที่เปลี่ยนจริง — กัน validation error จาก field ที่ backend ไม่รับ
-      const changes: Partial<Role> = {};
+      const changes: Partial<Role> & { actionCodes?: string[] } = {};
       if (values.code !== role.code) changes.code = values.code;
       if (values.name !== roleName) changes.name = values.name;
       if ((values.description ?? "") !== (role.description ?? ""))
         changes.description = values.description;
       if (values.status !== roleStatus) changes.status = values.status;
-      changes.permissions = values.permissions;
+      // เปลี่ยนสิทธิ์เมื่อ union ของ action codes ต่างจากเดิม
+      const originalCodes = (role.actionCodes ?? []).map((c) => c.toUpperCase()).sort().join(",");
+      const newCodes = [...actionCodes].sort().join(",");
+      if (originalCodes !== newCodes) changes.actionCodes = actionCodes;
       await update.mutateAsync({ id: role.id, data: changes });
     } else {
-      await create.mutateAsync(values as Partial<Role>);
+      await create.mutateAsync({
+        code: values.code,
+        name: values.name,
+        nameTh: values.name,
+        nameEn: values.name,
+        description: values.description,
+        isActive: values.status === "active",
+        actionCodes,
+      } as Partial<Role>);
     }
     onOpenChange(false);
   };
@@ -237,7 +261,13 @@ export function RoleFormDialog({
 
           <FormSection
             title="สิทธิ์การใช้งาน"
-            description={`เลือกสิทธิ์ที่ Role นี้จะได้รับ (เลือกแล้ว ${permissions.length} สิทธิ์)`}
+            description={
+              isLoadingCatalog
+                ? "กำลังโหลดแคตตาล็อกสิทธิ์จากระบบ..."
+                : catalogError
+                  ? "ไม่สามารถโหลดแคตตาล็อกสิทธิ์จากระบบได้"
+                  : `เลือกสิทธิ์ที่ Role นี้จะได้รับ (เลือก ${selected.length} จาก ${allPerms.length} สิทธิ์ · action codes: ${selectedActionCodes.length ? selectedActionCodes.join(", ") : "—"})`
+            }
           >
             {lockSystemRole && (
               <div className="rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
@@ -249,10 +279,11 @@ export function RoleFormDialog({
               <div className="relative flex-1">
                 <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="ค้นหาสิทธิ์..."
+                  placeholder="ค้นหาเมนู / action / code..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-9 pl-8"
+                  disabled={isLoadingCatalog || !!catalogError}
                 />
               </div>
               <Button
@@ -260,7 +291,7 @@ export function RoleFormDialog({
                 variant="outline"
                 size="sm"
                 onClick={selectAll}
-                disabled={lockSystemRole}
+                disabled={lockSystemRole || isLoadingCatalog || !!catalogError}
               >
                 <Check className="h-3.5 w-3.5" />
                 เลือกทั้งหมด
@@ -270,63 +301,27 @@ export function RoleFormDialog({
                 variant="outline"
                 size="sm"
                 onClick={clearAll}
-                disabled={lockSystemRole}
+                disabled={lockSystemRole || isLoadingCatalog || !!catalogError}
               >
                 <X className="h-3.5 w-3.5" />
                 ล้างทั้งหมด
               </Button>
             </div>
 
-            <ScrollArea className="h-96 rounded-md border">
-              <div className="p-3 space-y-3">
-                {filteredGroups.map((group) => {
-                  const allSelected = group.permissions.every((p) => permissions.includes(p.code));
-                  const someSelected = group.permissions.some((p) => permissions.includes(p.code));
-                  return (
-                    <Card key={group.module} className="p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Checkbox
-                            checked={allSelected || (someSelected && "indeterminate")}
-                            onCheckedChange={() => toggleGroup(group.module)}
-                            disabled={lockSystemRole}
-                            id={`group-${group.module}`}
-                          />
-                          <label
-                            htmlFor={`group-${group.module}`}
-                            className="text-sm font-semibold cursor-pointer"
-                          >
-                            {group.label}
-                          </label>
-                          <Badge variant="muted" className="text-[10px]">
-                            {group.permissions.length} สิทธิ์
-                          </Badge>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 pl-7 sm:grid-cols-3 lg:grid-cols-4">
-                        {group.permissions.map((p) => (
-                          <label
-                            key={p.code}
-                            className="flex items-center gap-2 text-sm cursor-pointer"
-                          >
-                            <Checkbox
-                              checked={permissions.includes(p.code)}
-                              onCheckedChange={() => togglePermission(p.code)}
-                              disabled={lockSystemRole}
-                              id={p.code}
-                            />
-                            <span>{p.label}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-            </ScrollArea>
+            <PermissionMatrix
+              isLoading={isLoadingCatalog}
+              error={catalogError}
+              groups={filteredGroups}
+              selected={selected}
+              disabled={lockSystemRole || isLoadingCatalog || !!catalogError}
+              onTogglePermission={togglePermission}
+              onToggleGroup={toggleGroup}
+            />
 
-            {form.formState.errors.permissions && (
-              <p className="text-xs text-danger">{form.formState.errors.permissions.message}</p>
+            {form.formState.errors.selectedPermissionIds && (
+              <p className="text-xs text-danger">
+                {form.formState.errors.selectedPermissionIds.message}
+              </p>
             )}
           </FormSection>
 
@@ -334,7 +329,11 @@ export function RoleFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               ยกเลิก
             </Button>
-            <Button type="submit" loading={create.isPending || update.isPending}>
+            <Button
+              type="submit"
+              loading={create.isPending || update.isPending}
+              disabled={isLoadingCatalog || !!catalogError}
+            >
               <Save className="h-4 w-4" />
               {isEdit ? "บันทึกการเปลี่ยนแปลง" : "สร้าง Role"}
             </Button>
@@ -343,11 +342,115 @@ export function RoleFormDialog({
       </SheetContent>
     </Sheet>
   );
-
-  void CheckboxField;
-  void FormGrid2;
 }
 
 function FormGrid2({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>;
+}
+
+/**
+ * Renders the (menu × action) matrix.
+ * Each row = one menu (from `/permissions` catalog).
+ * Each column = one action (CREATE / READ / UPDATE / DELETE) the menu has.
+ * Cells show the per-(menu, action) permission ID checkbox.
+ */
+function PermissionMatrix({
+  isLoading,
+  error,
+  groups,
+  selected,
+  disabled,
+  onTogglePermission,
+  onToggleGroup,
+}: {
+  isLoading: boolean;
+  error: Error | null;
+  groups: ReturnType<typeof groupPermissionsByMenu>;
+  selected: string[];
+  disabled: boolean;
+  onTogglePermission: (id: string) => void;
+  onToggleGroup: (menuCode: string) => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex h-48 items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        กำลังโหลดสิทธิ์จาก /permissions...
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className="rounded-md border border-danger/30 bg-danger/5 p-3 text-sm text-danger">
+        <div className="flex items-center gap-2 font-medium">
+          <AlertCircle className="h-4 w-4" />
+          โหลดแคตตาล็อกสิทธิ์ไม่สำเร็จ
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">{error.message}</p>
+      </div>
+    );
+  }
+  if (!groups.length) {
+    return (
+      <div className="flex h-32 items-center justify-center rounded-md border bg-muted/30 text-sm text-muted-foreground">
+        ไม่มีสิทธิ์ในระบบ
+      </div>
+    );
+  }
+  return (
+    <ScrollArea className="h-96 rounded-md border">
+      <div className="p-3 space-y-3">
+        {groups.map((group) => {
+          const ids = group.perms.map((p) => p.id);
+          const allSelected = ids.every((id) => selected.includes(id));
+          const someSelected = ids.some((id) => selected.includes(id));
+          return (
+            <Card key={group.menu.code} className="p-3">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allSelected || (someSelected && "indeterminate")}
+                    onCheckedChange={() => onToggleGroup(group.menu.code)}
+                    disabled={disabled}
+                    id={`group-${group.menu.code}`}
+                  />
+                  <label
+                    htmlFor={`group-${group.menu.code}`}
+                    className="text-sm font-semibold cursor-pointer"
+                  >
+                    {labelForMenu(group.menu)}
+                  </label>
+                  <Badge variant="muted" className="text-[10px] font-mono">
+                    {group.menu.code}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    {ids.filter((id) => selected.includes(id)).length}/{ids.length}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pl-7 sm:grid-cols-3 lg:grid-cols-4">
+                {group.perms.map((p) => {
+                  const actionCode = readActionCode(p.action);
+                  return (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2 text-sm cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={selected.includes(p.id)}
+                        onCheckedChange={() => onTogglePermission(p.id)}
+                        disabled={disabled}
+                        id={`perm-${p.id}`}
+                      />
+                      <span>{labelForAction(actionCode)}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </ScrollArea>
+  );
 }

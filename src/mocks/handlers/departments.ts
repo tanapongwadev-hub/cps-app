@@ -1,5 +1,17 @@
+/**
+ * Mock department handler — mirrors the real NestJS backend:
+ *   GET    /departments            paginated list { items, meta }
+ *   GET    /departments/tree       tree (with children)
+ *   POST   /departments            create (only code, nameTh, nameEn)
+ *   PATCH  /departments/:id        update (only nameTh, nameEn)
+ *   DELETE /departments/:id        delete
+ *
+ * Real backend: POST accepts ONLY { code, nameTh, nameEn } and PATCH
+ * accepts ONLY { nameTh, nameEn } — anything else returns 400.
+ */
 import { mockDb } from "../db";
 import { ok, fail, getBody, generateId, simulateLatency, type ListQuery } from "./helpers";
+import type { Department } from "@/types/department";
 
 export async function setupDepartmentMocks(
   path: string,
@@ -10,14 +22,19 @@ export async function setupDepartmentMocks(
     await simulateLatency();
     const params = ((body as { params?: ListQuery })?.params ?? {}) as ListQuery;
     const search = params.search?.toLowerCase();
-    const status = params.status;
+    const isActiveParam = params.isActive;
     let items = [...mockDb.departments];
     if (search) {
       items = items.filter(
-        (d) => d.name.toLowerCase().includes(search) || d.code.toLowerCase().includes(search),
+        (d) =>
+          d.nameTh.toLowerCase().includes(search) ||
+          d.nameEn.toLowerCase().includes(search) ||
+          d.code.toLowerCase().includes(search),
       );
     }
-    if (status) items = items.filter((d) => d.status === status);
+    if (typeof isActiveParam === "boolean") {
+      items = items.filter((d) => d.isActive === isActiveParam);
+    }
     return ok({
       items,
       page: 1,
@@ -29,11 +46,11 @@ export async function setupDepartmentMocks(
 
   if (path === "/departments/tree" && method === "GET") {
     await simulateLatency(200);
-    const build = (parentId: string | null): typeof mockDb.departments => {
+    const build = (parentId: string | null): Department[] => {
       return mockDb.departments
-        .filter((d) => d.parentId === parentId)
+        .filter((d) => (d.parentId ?? null) === parentId)
         .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-        .map((d) => ({ ...d, children: build(d.id) }) as (typeof mockDb.departments)[number]);
+        .map((d) => ({ ...d, children: build(d.id) }) as Department);
     };
     return ok(build(null));
   }
@@ -44,13 +61,13 @@ export async function setupDepartmentMocks(
     if (mockDb.departments.some((d) => d.code === data.code)) {
       return fail("รหัสแผนกนี้มีอยู่ในระบบแล้ว", 409, "DEPT_CODE_EXISTS");
     }
-    const newDept = {
+    const newDept: Department = {
       id: generateId("dept"),
       code: data.code as string,
-      name: data.name as string,
-      description: data.description as string | undefined,
-      parentId: (data.parentId as string | null) ?? null,
-      status: (data.status as "active" | "inactive") ?? "active",
+      nameTh: data.nameTh as string,
+      nameEn: data.nameEn as string,
+      description: (data.description as string | null) ?? null,
+      isActive: true,
       sortOrder: (data.sortOrder as number) ?? 99,
       userCount: 0,
       createdAt: new Date().toISOString(),
@@ -79,11 +96,13 @@ export async function setupDepartmentMocks(
       const data = (await getBody(body)) as Record<string, unknown>;
       const existing = mockDb.departments[idx];
       if (!existing) return fail("Not found", 404);
+      // Real backend only accepts nameTh / nameEn; merge those.
       mockDb.departments[idx] = {
         ...existing,
-        ...data,
+        nameTh: (data.nameTh as string) ?? existing.nameTh,
+        nameEn: (data.nameEn as string) ?? existing.nameEn,
         updatedAt: new Date().toISOString(),
-      } as typeof existing;
+      };
       return ok(mockDb.departments[idx], "แก้ไขแผนกเรียบร้อย");
     }
 

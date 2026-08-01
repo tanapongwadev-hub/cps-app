@@ -18,7 +18,12 @@ vi.mock("@/hooks/use-permission", () => ({
 }));
 
 vi.mock("@/features/permissions/hooks/use-permissions", () => ({
-  usePermissions: vi.fn(),
+  usePermissions: () => ({
+    data: { items: [], meta: { page: 1, limit: 1000, totalItems: 0, totalPages: 0 } },
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
   useDeletePermission: vi.fn(),
 }));
 

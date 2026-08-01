@@ -335,7 +335,7 @@ const deriveCurrentDepartmentRole = (user: User): UserDepartmentRole | undefined
     id: `${user.id}-${dept.id}-${role.id}`,
     userId: user.id,
     departmentId: dept.id,
-    departmentName: dept.name,
+    departmentName: dept.nameTh ?? dept.nameEn ?? dept.code,
     departmentCode: dept.code,
     roleId: role.id,
     roleName: role.name,
