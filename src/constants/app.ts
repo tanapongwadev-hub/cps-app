@@ -38,6 +38,12 @@ export const QUERY_KEYS = {
     DETAIL: (id: string) => ["users", "detail", id] as const,
     ACCESS_SUMMARY: (id: string) => ["users", "access-summary", id] as const,
   },
+  MATERIALS: {
+    ALL: ["materials"] as const,
+    LIST: (params: unknown) => ["materials", "list", params] as const,
+    DETAIL: (id: string) => ["materials", "detail", id] as const,
+    LOOKUPS: ["materials", "lookups"] as const,
+  },
   ROLES: {
     ALL: ["roles"] as const,
     LIST: (params: unknown) => ["roles", "list", params] as const,
