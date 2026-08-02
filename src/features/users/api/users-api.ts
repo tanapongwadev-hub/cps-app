@@ -19,6 +19,7 @@
  */
 import { apiClient } from "@/services/api-client";
 import type { User, UserAssignment } from "@/types/auth";
+import type { MenuType } from "@/types/menu";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 
@@ -69,6 +70,40 @@ export interface AddUserAssignmentPayload {
   roleId: string;
 }
 
+export interface UserAccessMenuItem {
+  id: string;
+  code: string;
+  name: string;
+  nameEn: string;
+  path: string | null;
+  icon: string | null;
+  menuType: MenuType;
+  sortOrder: number;
+  permissions: string[];
+  children: UserAccessMenuItem[];
+}
+
+export interface UserAssignmentAccess {
+  assignmentId: string;
+  department: { id: string; code: string; name: string } | null;
+  role: {
+    id: string;
+    code: string;
+    name: string;
+    scopeType: "SYSTEM" | "DEPARTMENT";
+  };
+  isActive: boolean;
+  expiredAt: string | null;
+  permissions: string[];
+  menus: UserAccessMenuItem[];
+  menuCount: number;
+}
+
+export interface UserAccessSummary {
+  userId: string;
+  assignments: UserAssignmentAccess[];
+}
+
 export const usersApi = {
   /**
    * List users. The real backend returns
@@ -92,6 +127,9 @@ export const usersApi = {
   },
 
   get: (id: string) => apiClient.get<User>(`/users/${id}`),
+
+  getAccessSummary: (id: string) =>
+    apiClient.get<UserAccessSummary>(`/users/${id}/access-summary`),
 
   create: (data: CreateUserPayload) => apiClient.post<User>("/users", data),
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import {
   QueryClient,
   QueryClientProvider,
@@ -7,10 +7,11 @@ import {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { QUERY_KEYS } from "@/constants/app";
 import { usersApi } from "../api/users-api";
-import { useUpdateUser } from "./use-users";
+import { useUpdateUser, useUserAccessSummary } from "./use-users";
 
 vi.mock("../api/users-api", () => ({
   usersApi: {
+    getAccessSummary: vi.fn(),
     update: vi.fn(),
   },
 }));
@@ -27,7 +28,7 @@ describe("useUpdateUser", () => {
     vi.clearAllMocks();
   });
 
-  it("invalidates list, detail, and assignment caches after one update", async () => {
+  it("invalidates list, detail, assignment, and access summary caches after one update", async () => {
     const queryClient = new QueryClient({
       defaultOptions: { mutations: { retry: false } },
     });
@@ -73,5 +74,36 @@ describe("useUpdateUser", () => {
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: [...QUERY_KEYS.USERS.ALL, "assignments", "7"],
     });
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: QUERY_KEYS.USERS.ACCESS_SUMMARY("7"),
+    });
+  });
+});
+
+describe("useUserAccessSummary", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("loads the persisted access summary for the requested user", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    vi.mocked(usersApi.getAccessSummary).mockResolvedValue({
+      userId: "7",
+      assignments: [],
+    });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useUserAccessSummary("7"), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(usersApi.getAccessSummary).toHaveBeenCalledTimes(1);
+    expect(usersApi.getAccessSummary).toHaveBeenCalledWith("7");
   });
 });

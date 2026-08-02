@@ -26,6 +26,14 @@ export function useUser(id: string) {
   });
 }
 
+export function useUserAccessSummary(userId: string | null) {
+  return useQuery({
+    queryKey: QUERY_KEYS.USERS.ACCESS_SUMMARY(userId ?? ""),
+    queryFn: () => usersApi.getAccessSummary(userId!),
+    enabled: !!userId,
+  });
+}
+
 export function useCreateUser() {
   const qc = useQueryClient();
   return useMutation({
@@ -48,6 +56,9 @@ export function useUpdateUser() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
       qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.DETAIL(vars.id) });
+      qc.invalidateQueries({
+        queryKey: QUERY_KEYS.USERS.ACCESS_SUMMARY(vars.id),
+      });
       qc.invalidateQueries({
         queryKey: [...QUERY_KEYS.USERS.ALL, "assignments", vars.id],
       });
