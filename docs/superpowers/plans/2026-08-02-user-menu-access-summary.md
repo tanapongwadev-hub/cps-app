@@ -293,7 +293,7 @@ git commit -m "feat: expose user menu access summary"
 - Modify: `C:\Users\USER\Desktop\minimax\src\features\users\hooks\use-users.test.tsx`
 
 **Interfaces:**
-- Consumes: `GET /users/:id/access-summary` from Task 1 and existing `MenuType`.
+- Consumes: `GET /users/:id/access-summary` from Task 1 with its canonical `MAIN | SUB` menu-tree discriminator.
 - Produces: `UserAccessMenuItem`, `UserAccessSummary`, `UserAssignmentAccess`, `usersApi.getAccessSummary(id)`, `QUERY_KEYS.USERS.ACCESS_SUMMARY(id)`, and `useUserAccessSummary(userId)`.
 
 - [ ] **Step 1: Write failing API and hook tests**
@@ -327,9 +327,11 @@ Expected: FAIL because the access-summary API, key, and hook are not defined.
 
 - [ ] **Step 3: Add typed API contracts and request**
 
-In `users-api.ts`, import `MenuType` and define a response-specific menu shape matching `MenuResponse` from the backend:
+In `users-api.ts`, define a response-specific menu type and shape matching `MenuResponse` from the backend:
 
 ```ts
+export type UserAccessMenuType = 'MAIN' | 'SUB';
+
 export interface UserAccessMenuItem {
   id: string;
   code: string;
@@ -337,7 +339,7 @@ export interface UserAccessMenuItem {
   nameEn: string;
   path: string | null;
   icon: string | null;
-  menuType: MenuType;
+  menuType: UserAccessMenuType;
   sortOrder: number;
   permissions: string[];
   children: UserAccessMenuItem[];

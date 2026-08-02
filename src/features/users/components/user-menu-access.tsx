@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import type { UserAccessMenuItem, UserAssignmentAccess } from "../api/users-api";
 import { useUserAccessSummary } from "../hooks/use-users";
 
+const MAX_TIMEOUT_DELAY_MS = 2_147_483_647;
+
 export function UserMenuAccess({ userId }: { userId: string }) {
   const { data, isLoading, isError, refetch } = useUserAccessSummary(userId);
 
@@ -63,30 +65,60 @@ function AssignmentAccessCard({ assignment }: { assignment: UserAssignmentAccess
     if (!assignment.expiredAt) return;
 
     const expiresAt = new Date(assignment.expiredAt).getTime();
-    const timeout = window.setTimeout(
-      () => setNow(Date.now()),
-      Math.max(0, expiresAt - Date.now()),
-    );
+    if (!Number.isFinite(expiresAt)) return;
 
-    return () => window.clearTimeout(timeout);
+    let timeout: number | undefined;
+    const scheduleExpiryRefresh = () => {
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        setNow(Date.now());
+        return;
+      }
+
+      timeout = window.setTimeout(
+        scheduleExpiryRefresh,
+        Math.min(remaining, MAX_TIMEOUT_DELAY_MS),
+      );
+    };
+    scheduleExpiryRefresh();
+
+    return () => {
+      if (timeout !== undefined) window.clearTimeout(timeout);
+    };
   }, [assignment.expiredAt]);
 
   const expired =
     !!assignment.expiredAt && new Date(assignment.expiredAt).getTime() <= now;
-  const available = assignment.isActive && !expired;
+  const status = !assignment.isActive ? "inactive" : expired ? "expired" : "active";
+  const available = status === "active";
+  const statusContent = {
+    active: { badge: "พร้อมใช้งาน", variant: "success" as const, explanation: null },
+    inactive: {
+      badge: "ปิดใช้งาน",
+      variant: "muted" as const,
+      explanation: "Assignment นี้ถูกปิดใช้งาน จึงไม่มีสิทธิ์เข้าถึงเมนู",
+    },
+    expired: {
+      badge: "หมดอายุ",
+      variant: "warning" as const,
+      explanation: "Assignment นี้หมดอายุแล้ว จึงไม่มีสิทธิ์เข้าถึงเมนู",
+    },
+  }[status];
 
   return (
     <section className="rounded-md border p-3">
       <div className="flex flex-wrap items-center gap-2">
         <p className="font-medium">
-          {assignment.department?.name ?? "ระบบ / ทุกแผนก"}
+          {assignment.department?.name ?? "ระดับระบบ / ทุกแผนก"}
         </p>
-        <Badge variant={available ? "success" : "muted"}>
-          {available ? "พร้อมใช้งาน" : "ไม่พร้อมใช้งาน"}
-        </Badge>
+        <Badge variant={statusContent.variant}>{statusContent.badge}</Badge>
         {available && <Badge variant="outline">เมนู {assignment.menuCount} รายการ</Badge>}
       </div>
       <p className="mt-1 text-xs text-muted-foreground">{assignment.role.name}</p>
+
+      {statusContent.explanation && (
+        <p className="mt-3 text-sm text-muted-foreground">{statusContent.explanation}</p>
+      )}
 
       {available &&
         (assignment.menus.length ? (

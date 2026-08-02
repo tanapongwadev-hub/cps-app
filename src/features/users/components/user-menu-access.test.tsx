@@ -38,7 +38,7 @@ const departmentAssignment: UserAssignmentAccess = {
       nameEn: "User management",
       path: "/user-management/users",
       icon: "Users",
-      menuType: "MENU",
+      menuType: "MAIN",
       sortOrder: 1,
       permissions: ["users.read"],
       children: [
@@ -49,7 +49,7 @@ const departmentAssignment: UserAssignmentAccess = {
           nameEn: "Create user",
           path: null,
           icon: null,
-          menuType: "BUTTON",
+          menuType: "SUB",
           sortOrder: 1,
           permissions: ["users.create"],
           children: [],
@@ -79,6 +79,12 @@ function summary(assignments: UserAssignmentAccess[]): UserAccessSummary {
   return { userId: "7", assignments };
 }
 
+function getDepartmentMenu(): UserAccessMenuItem {
+  const [menu] = departmentAssignment.menus;
+  if (!menu) throw new Error("department fixture must include a menu");
+  return menu;
+}
+
 describe("UserMenuAccess", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -101,7 +107,8 @@ describe("UserMenuAccess", () => {
 
     expect(screen.getByText("ฝ่ายผลิต")).toBeInTheDocument();
     expect(screen.getByText("ผู้จัดการ")).toBeInTheDocument();
-    expect(screen.getByText("ระบบ / ทุกแผนก")).toBeInTheDocument();
+    expect(screen.getByText("ระดับระบบ / ทุกแผนก")).toBeInTheDocument();
+    expect(screen.getAllByText("พร้อมใช้งาน")).toHaveLength(2);
     expect(screen.getByText("จัดการผู้ใช้งาน")).toBeInTheDocument();
     expect(screen.getByText("เพิ่มผู้ใช้งาน")).toBeInTheDocument();
     expect(screen.getByText("/user-management/users")).toBeInTheDocument();
@@ -126,7 +133,7 @@ describe("UserMenuAccess", () => {
       nameEn: "Expires at boundary",
       path: null,
       icon: null,
-      menuType: "MENU",
+      menuType: "SUB",
       sortOrder: 1,
       permissions: ["users.read"],
       children: [],
@@ -152,9 +159,48 @@ describe("UserMenuAccess", () => {
       vi.advanceTimersByTime(1_000);
     });
 
-    expect(
-      screen.getByText("\u0e44\u0e21\u0e48\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e43\u0e0a\u0e49\u0e07\u0e32\u0e19"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("หมดอายุ")).toBeInTheDocument();
+    expect(screen.queryByText(menuName)).not.toBeInTheDocument();
+  });
+
+  it("keeps a menu available until an expiry beyond one safe timer interval", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-02T00:00:00.000Z"));
+    const menuName = "long-lived-menu";
+    const expiresAt = new Date("2026-09-01T00:00:00.000Z");
+    const remainingAfterFirstTimer =
+      expiresAt.getTime() - Date.now() - 2_147_483_647;
+    mockSummary.mockReturnValue({
+      data: summary([
+        {
+          ...departmentAssignment,
+          expiredAt: expiresAt.toISOString(),
+          menus: [
+            {
+              ...getDepartmentMenu(),
+              id: "long-lived-menu",
+              name: menuName,
+              children: [],
+            },
+          ],
+        },
+      ]),
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+
+    render(<UserMenuAccess userId="7" />);
+
+    act(() => {
+      vi.advanceTimersToNextTimer();
+    });
+    expect(screen.getByText(menuName)).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(remainingAfterFirstTimer);
+    });
+    expect(screen.getByText("หมดอายุ")).toBeInTheDocument();
     expect(screen.queryByText(menuName)).not.toBeInTheDocument();
   });
 
@@ -188,15 +234,38 @@ describe("UserMenuAccess", () => {
     expect(screen.getByText("ไม่มีเมนูที่เข้าถึงได้")).toBeInTheDocument();
   });
 
-  it("hides menus from inactive and expired assignments", () => {
+  it("explains an inactive assignment and hides its menus", () => {
     const unavailableMenu: UserAccessMenuItem = {
-      ...departmentAssignment.menus[0]!,
+      ...getDepartmentMenu(),
       id: "hidden-menu",
       name: "เมนูที่ไม่ควรแสดง",
     };
     mockSummary.mockReturnValue({
       data: summary([
         { ...departmentAssignment, assignmentId: "inactive", isActive: false, menus: [unavailableMenu] },
+      ]),
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+
+    render(<UserMenuAccess userId="7" />);
+
+    expect(screen.getByText("ปิดใช้งาน")).toBeInTheDocument();
+    expect(
+      screen.getByText("Assignment นี้ถูกปิดใช้งาน จึงไม่มีสิทธิ์เข้าถึงเมนู"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("เมนูที่ไม่ควรแสดง")).not.toBeInTheDocument();
+  });
+
+  it("explains an expired assignment and hides its menus", () => {
+    const unavailableMenu: UserAccessMenuItem = {
+      ...getDepartmentMenu(),
+      id: "hidden-menu",
+      name: "เมนูที่ไม่ควรแสดง",
+    };
+    mockSummary.mockReturnValue({
+      data: summary([
         {
           ...departmentAssignment,
           assignmentId: "expired",
@@ -211,7 +280,10 @@ describe("UserMenuAccess", () => {
 
     render(<UserMenuAccess userId="7" />);
 
-    expect(screen.getAllByText("ไม่พร้อมใช้งาน")).toHaveLength(2);
+    expect(screen.getByText("หมดอายุ")).toBeInTheDocument();
+    expect(
+      screen.getByText("Assignment นี้หมดอายุแล้ว จึงไม่มีสิทธิ์เข้าถึงเมนู"),
+    ).toBeInTheDocument();
     expect(screen.queryByText("เมนูที่ไม่ควรแสดง")).not.toBeInTheDocument();
   });
 });

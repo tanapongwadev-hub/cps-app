@@ -19,7 +19,6 @@
  */
 import { apiClient } from "@/services/api-client";
 import type { User, UserAssignment } from "@/types/auth";
-import type { MenuType } from "@/types/menu";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 
@@ -70,6 +69,8 @@ export interface AddUserAssignmentPayload {
   roleId: string;
 }
 
+export type UserAccessMenuType = "MAIN" | "SUB";
+
 export interface UserAccessMenuItem {
   id: string;
   code: string;
@@ -77,7 +78,7 @@ export interface UserAccessMenuItem {
   nameEn: string;
   path: string | null;
   icon: string | null;
-  menuType: MenuType;
+  menuType: UserAccessMenuType;
   sortOrder: number;
   permissions: string[];
   children: UserAccessMenuItem[];
