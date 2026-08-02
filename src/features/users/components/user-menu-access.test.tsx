@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   UserAccessMenuItem,
   UserAccessSummary,
@@ -85,6 +85,10 @@ describe("UserMenuAccess", () => {
     mockSummary.mockReturnValue({ data: summary([]), isLoading: false, isError: false, refetch });
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("groups nested accessible menus by assignment", () => {
     mockSummary.mockReturnValue({
       data: summary([departmentAssignment, systemAssignment]),
@@ -109,6 +113,49 @@ describe("UserMenuAccess", () => {
     render(<UserMenuAccess userId="7" />);
 
     expect(screen.getAllByTestId("menu-access-skeleton").length).toBeGreaterThan(0);
+  });
+
+  it("hides an assignment menu when its expiry boundary passes", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-02T00:00:00.000Z"));
+    const menuName = "expires-at-boundary";
+    const expiringMenu: UserAccessMenuItem = {
+      id: "expires-at-boundary",
+      code: "EXPIRES_AT_BOUNDARY",
+      name: menuName,
+      nameEn: "Expires at boundary",
+      path: null,
+      icon: null,
+      menuType: "MENU",
+      sortOrder: 1,
+      permissions: ["users.read"],
+      children: [],
+    };
+    mockSummary.mockReturnValue({
+      data: summary([
+        {
+          ...departmentAssignment,
+          expiredAt: "2026-08-02T00:00:01.000Z",
+          menus: [expiringMenu],
+        },
+      ]),
+      isLoading: false,
+      isError: false,
+      refetch,
+    });
+
+    render(<UserMenuAccess userId="7" />);
+
+    expect(screen.getByText(menuName)).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+
+    expect(
+      screen.getByText("\u0e44\u0e21\u0e48\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e43\u0e0a\u0e49\u0e07\u0e32\u0e19"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(menuName)).not.toBeInTheDocument();
   });
 
   it("retries after an access summary error", async () => {
