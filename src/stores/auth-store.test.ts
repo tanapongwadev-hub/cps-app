@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { isSuperAdminUser, userNeedsDepartmentSelection } from "./auth-store";
-import type { User } from "@/types/auth";
+import {
+  buildAuthSessionFromDepartmentSelection,
+  isSuperAdminUser,
+  userNeedsDepartmentSelection,
+} from "./auth-store";
+import type {
+  SelectDepartmentResponse,
+  User,
+  UserDepartmentRole,
+} from "@/types/auth";
 
 const makeUser = (overrides: Partial<User> = {}): User => ({
   id: "u1",
@@ -95,5 +103,50 @@ describe("userNeedsDepartmentSelection", () => {
         }),
       ),
     ).toBe(true);
+  });
+});
+
+describe("buildAuthSessionFromDepartmentSelection", () => {
+  it("builds a session from the selected department response", () => {
+    const user = makeUser();
+    const currentDepartmentRole: UserDepartmentRole = {
+      id: "76",
+      userId: "u1",
+      departmentId: "2",
+      departmentName: "ฝ่ายปฏิบัติการ",
+      departmentCode: "OPS",
+      roleId: "3",
+      roleName: "ผู้ใช้งาน",
+      roleCode: "USER",
+      isPrimary: false,
+      isActive: true,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    };
+    const response: SelectDepartmentResponse = {
+      authentication: {
+        accessToken: "selected-access",
+        refreshToken: "selected-refresh",
+        tokenType: "Bearer",
+        expiresIn: 3600,
+      },
+      user,
+      currentDepartmentRole,
+      accessControl: {
+        menus: [],
+        permissions: ["ticket.read"],
+        userDepartmentRoleId: currentDepartmentRole.id,
+        departmentId: currentDepartmentRole.departmentId ?? undefined,
+        roleId: currentDepartmentRole.roleId,
+      },
+    };
+
+    expect(buildAuthSessionFromDepartmentSelection(response)).toMatchObject({
+      user,
+      currentDepartmentRole,
+      accessToken: "selected-access",
+      refreshToken: "selected-refresh",
+      accessControl: response.accessControl,
+    });
   });
 });

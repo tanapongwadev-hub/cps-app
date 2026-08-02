@@ -130,8 +130,8 @@ export interface UserAssignment {
 export interface UserDepartmentRole extends BaseEntity {
   userId: string;
   departmentId: string | null;
-  departmentName: string;
-  departmentCode: string;
+  departmentName: string | null;
+  departmentCode: string | null;
   roleId: string;
   roleName: string;
   roleCode: string;
@@ -184,9 +184,22 @@ export interface AccessControl {
   permissions: string[];
   menus: MenuItem[];
   /** Optional context from the spec's multi-dept flow */
-  userDepartmentRoleId?: string;
-  departmentId?: string;
-  roleId?: string;
+  userDepartmentRoleId?: string | null;
+  departmentId?: string | null;
+  roleId?: string | null;
+}
+
+export interface AuthenticationSuccessResponse {
+  authentication: {
+    accessToken: string;
+    refreshToken: string;
+    tokenType: "Bearer";
+    /** Backend may send number (seconds) or string ("15m"). */
+    expiresIn: number | string;
+  };
+  user: User;
+  accessControl: AccessControl;
+  currentDepartmentRole?: UserDepartmentRole | null;
 }
 
 /**
@@ -200,17 +213,7 @@ export interface AccessControl {
  * and the client must POST /auth/select-department to get the real session.
  */
 export type LoginResponse =
-  | {
-      authentication: {
-        accessToken: string;
-        refreshToken: string;
-        tokenType: "Bearer";
-        /** Backend may send number (seconds) or string ("15m"). We normalize to seconds in the client. */
-        expiresIn: number | string;
-      };
-      user: User;
-      accessControl: AccessControl;
-    }
+  | AuthenticationSuccessResponse
   | BackendLoginRequiresDepartmentSelection;
 
 /** Type guard for the 1-step login response (has `authentication`). */
@@ -287,12 +290,8 @@ export interface LoginRequiresDepartmentSelectionResponse {
 /**
  * Response จาก /auth/select-department
  */
-export interface SelectDepartmentResponse {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: "Bearer";
-  user: User;
+export interface SelectDepartmentResponse
+  extends AuthenticationSuccessResponse {
   currentDepartmentRole: UserDepartmentRole;
 }
 

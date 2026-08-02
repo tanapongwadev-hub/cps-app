@@ -63,8 +63,14 @@ const shapeUser = (
   const departmentAssignments = activeAssignments.filter(
     (
       assignment,
-    ): assignment is UserDepartmentRole & { departmentId: string } =>
-      assignment.departmentId !== null,
+    ): assignment is UserDepartmentRole & {
+      departmentId: string;
+      departmentName: string;
+      departmentCode: string;
+    } =>
+      assignment.departmentId !== null &&
+      assignment.departmentName !== null &&
+      assignment.departmentCode !== null,
   );
   return {
     ...user,
@@ -82,7 +88,7 @@ const shapeUser = (
     })),
     // Carry forward the primary assignment as the convenience fields too
     departmentId: primary?.departmentId ?? undefined,
-    departmentName: primary?.departmentName,
+    departmentName: primary?.departmentName ?? undefined,
     roleIds: activeAssignments.map((a) => a.roleId),
     roleNames: activeAssignments.map((a) => a.roleName),
   };
@@ -126,8 +132,14 @@ export async function setupAuthMocks(
         .filter(
           (
             assignment,
-          ): assignment is UserDepartmentRole & { departmentId: string } =>
-            assignment.departmentId !== null,
+          ): assignment is UserDepartmentRole & {
+            departmentId: string;
+            departmentName: string;
+            departmentCode: string;
+          } =>
+            assignment.departmentId !== null &&
+            assignment.departmentName !== null &&
+            assignment.departmentCode !== null,
         )
         .sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
         .map((udr) => ({

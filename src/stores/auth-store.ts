@@ -317,6 +317,18 @@ export const buildAuthSessionFromLogin = (
   };
 };
 
+export const buildAuthSessionFromDepartmentSelection = (
+  response: SelectDepartmentResponse,
+): AuthSession => ({
+  user: response.user,
+  currentDepartmentRole: response.currentDepartmentRole,
+  accessControl: response.accessControl,
+  accessToken: response.authentication.accessToken,
+  refreshToken: response.authentication.refreshToken,
+  expiresAt:
+    Date.now() + parseExpiresInMs(response.authentication.expiresIn),
+});
+
 /**
  * Try to derive a UserDepartmentRole from the user object (departments + roles arrays).
  * For superadmin (no departments) this returns undefined and the session skips it.
@@ -358,7 +370,8 @@ export const buildAuthSession = (
   user: login.user,
   currentDepartmentRole: login.currentDepartmentRole,
   accessControl,
-  accessToken: login.accessToken,
-  refreshToken: login.refreshToken,
-  expiresAt: Date.now() + parseExpiresInMs(login.expiresIn),
+  accessToken: login.authentication.accessToken,
+  refreshToken: login.authentication.refreshToken,
+  expiresAt:
+    Date.now() + parseExpiresInMs(login.authentication.expiresIn),
 });
