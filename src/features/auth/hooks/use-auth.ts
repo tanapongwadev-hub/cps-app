@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { authApi } from "../api/auth-api";
 import {
   useAuthStore,
-  buildAuthSession,
+  buildAuthSessionFromDepartmentSelection,
   buildAuthSessionFromLogin,
   userNeedsDepartmentSelection,
 } from "@/stores/auth-store";
@@ -160,16 +160,14 @@ export function useSelectDepartment() {
 
   return useMutation({
     mutationFn: (data: SelectDepartmentRequest) => authApi.selectDepartment(data),
-    onSuccess: async (response) => {
-      try {
-        const me = await authApi.me();
-        const session = buildAuthSession(response, me.accessControl);
-        setSession(session);
-        showToast.success("เลือกแผนกเรียบร้อย", `เข้าสู่ระบบในฐานะ ${response.currentDepartmentRole.roleName}`);
-        router.push("/dashboard");
-      } catch {
-        showToast.error("ไม่สามารถโหลดข้อมูลสิทธิ์ได้");
-      }
+    onSuccess: (response) => {
+      const session = buildAuthSessionFromDepartmentSelection(response);
+      setSession(session);
+      showToast.success(
+        "เลือกแผนกเรียบร้อย",
+        `เข้าสู่ระบบในฐานะ ${response.currentDepartmentRole.roleName}`,
+      );
+      router.push("/dashboard");
     },
   });
 }
