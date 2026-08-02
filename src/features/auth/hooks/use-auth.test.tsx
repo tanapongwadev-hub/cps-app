@@ -13,7 +13,7 @@ import type {
   User,
   UserDepartmentRole,
 } from "@/types/auth";
-import { useSelectDepartment } from "./use-auth";
+import { useSelectDepartment, useSwitchDepartment } from "./use-auth";
 
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));
 
@@ -24,6 +24,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("../api/auth-api", () => ({
   authApi: {
     selectDepartment: vi.fn(),
+    switchDepartment: vi.fn(),
     me: vi.fn(),
   },
 }));
@@ -154,5 +155,118 @@ describe("useSelectDepartment", () => {
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().pendingSelection?.mode).toBe("select");
+  });
+});
+
+describe("useSwitchDepartment", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useAuthStore.getState().logout();
+    useAuthStore.getState().setSession({
+      user: selectedUser,
+      currentDepartmentRole,
+      accessControl: {
+        menus: [],
+        permissions: ["materials.we.read"],
+        userDepartmentRoleId: "76",
+        departmentId: "2",
+        roleId: "3",
+      },
+      accessToken: "we-access",
+      refreshToken: "we-refresh",
+      expiresAt: Date.now() + 60_000,
+    });
+  });
+
+  it("stores tokens and access control from the selected assignment response", async () => {
+    const pcRole: UserDepartmentRole = {
+      ...currentDepartmentRole,
+      id: "92",
+      departmentId: "6",
+      departmentName: "แผนก PC",
+      departmentCode: "PC",
+    };
+    const pcResponse: SelectDepartmentResponse = {
+      authentication: {
+        accessToken: "pc-access",
+        refreshToken: "pc-refresh",
+        tokenType: "Bearer",
+        expiresIn: 3600,
+      },
+      user: selectedUser,
+      currentDepartmentRole: pcRole,
+      accessControl: {
+        menus: [
+          {
+            id: "13",
+            parentId: null,
+            code: "MATERIALS_MANAGEMENTS",
+            nameTh: "จัดการอะไหล่",
+            nameEn: "Materials Management",
+            name: "จัดการอะไหล่",
+            menuType: "MAIN",
+            path: "/materials",
+            icon: "package",
+            sortOrder: 10,
+            isVisible: true,
+            isActive: true,
+            permissions: [],
+            children: [
+              {
+                id: "27",
+                parentId: "13",
+                code: "MATERIALS_PC_MANAGEMENTS",
+                nameTh: "จัดการอะไหล่ PC",
+                nameEn: "Material PC",
+                name: "จัดการอะไหล่ PC",
+                menuType: "MENU",
+                path: "/materials/pc",
+                icon: null,
+                sortOrder: 1,
+                isVisible: true,
+                isActive: true,
+                permissions: ["MATERIALS_PC_MANAGEMENTS.read"],
+                children: [],
+                createdAt: "2026-01-01T00:00:00.000Z",
+                updatedAt: "2026-01-01T00:00:00.000Z",
+              },
+            ],
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ],
+        permissions: ["MATERIALS_PC_MANAGEMENTS.read"],
+        userDepartmentRoleId: "92",
+        departmentId: "6",
+        roleId: "3",
+      },
+    };
+    vi.mocked(authApi.switchDepartment).mockResolvedValue(pcResponse);
+    vi.mocked(authApi.me).mockResolvedValue({
+      user: selectedUser,
+      currentDepartmentRole,
+      accessControl: {
+        menus: [],
+        permissions: ["materials.we.read"],
+        userDepartmentRoleId: "76",
+        departmentId: "2",
+        roleId: "3",
+      },
+    });
+    const { result } = renderHook(() => useSwitchDepartment(), {
+      wrapper: createWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ userDepartmentRoleId: "92" });
+    });
+
+    expect(authApi.me).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().accessToken).toBe("pc-access");
+    expect(useAuthStore.getState().refreshToken).toBe("pc-refresh");
+    expect(useAuthStore.getState().currentDepartmentRole?.id).toBe("92");
+    expect(useAuthStore.getState().menu[0]?.children?.[0]?.code).toBe(
+      "MATERIALS_PC_MANAGEMENTS",
+    );
   });
 });

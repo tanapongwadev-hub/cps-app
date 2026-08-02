@@ -176,18 +176,14 @@ export function useSelectDepartment() {
  * Switch department mutation
  */
 export function useSwitchDepartment() {
-  const switchDepartmentRole = useAuthStore((s) => s.switchDepartmentRole);
+  const setSession = useAuthStore((s) => s.setSession);
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: SwitchDepartmentRequest) => {
-      const response = await authApi.switchDepartment(data);
-      // ใน mock mode เราต้อง re-fetch me เพื่อ get menus
-      const me = await authApi.me();
-      return { response, me };
-    },
-    onSuccess: ({ response, me }) => {
-      switchDepartmentRole(response.currentDepartmentRole, me.accessControl);
+    mutationFn: (data: SwitchDepartmentRequest) =>
+      authApi.switchDepartment(data),
+    onSuccess: (response) => {
+      setSession(buildAuthSessionFromDepartmentSelection(response));
       qc.invalidateQueries({ queryKey: ["auth"] });
       showToast.success(
         "เปลี่ยนแผนกเรียบร้อย",
