@@ -32,6 +32,8 @@ const { replace, updateMutateAsync, assignmentData } = vi.hoisted(() => ({
   ],
 }));
 
+const { userMenuAccess } = vi.hoisted(() => ({ userMenuAccess: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
 }));
@@ -85,6 +87,13 @@ vi.mock("@/features/roles/hooks/use-roles", () => ({
     },
     isLoading: false,
   }),
+}));
+
+vi.mock("./user-menu-access", () => ({
+  UserMenuAccess: ({ userId }: { userId: string }) => {
+    userMenuAccess(userId);
+    return <div>mock user menu access</div>;
+  },
 }));
 
 const editedUser: User = {
@@ -180,5 +189,14 @@ describe("UserFormDialog aggregate edit", () => {
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
     });
     expect(replace).toHaveBeenCalledWith("/login");
+  });
+
+  it("shows the selected user's menu access in the third edit tab", async () => {
+    const user = userEvent.setup();
+    render(<UserFormDialog open onOpenChange={vi.fn()} user={editedUser} />);
+
+    await user.click(screen.getByRole("tab", { name: "เมนูที่เข้าถึงได้" }));
+
+    expect(userMenuAccess).toHaveBeenLastCalledWith("7");
   });
 });

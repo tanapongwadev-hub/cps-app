@@ -44,6 +44,7 @@ import {
 import { useAuthStore } from "@/stores/auth-store";
 import type { User } from "@/types/auth";
 import { EditUserAssignments } from "./edit-user-assignments";
+import { UserMenuAccess } from "./user-menu-access";
 
 interface UserFormDialogProps {
   open: boolean;
@@ -234,6 +235,7 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
               <TabsList className="w-full">
                 <TabsTrigger value="general" className="flex-1">ข้อมูลทั่วไป</TabsTrigger>
                 <TabsTrigger value="assignments" className="flex-1">แผนก & บทบาท</TabsTrigger>
+                <TabsTrigger value="menu-access" className="flex-1">เมนูที่เข้าถึงได้</TabsTrigger>
               </TabsList>
 
               <form
@@ -287,6 +289,12 @@ export function UserFormDialog({ open, onOpenChange, user }: UserFormDialogProps
                         disabled={update.isPending}
                       />
                     )}
+                  </FormSection>
+                </TabsContent>
+
+                <TabsContent value="menu-access" className="mt-0 space-y-4">
+                  <FormSection title="สิทธิ์การเข้าถึงเมนู">
+                    <UserMenuAccess userId={user.id} />
                   </FormSection>
                 </TabsContent>
 
