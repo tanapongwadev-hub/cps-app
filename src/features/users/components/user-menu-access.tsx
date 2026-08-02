@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Menu } from "lucide-react";
+import { useState } from "react";
 import type { UserAccessMenuItem, UserAssignmentAccess } from "../api/users-api";
 import { useUserAccessSummary } from "../hooks/use-users";
 
@@ -56,8 +57,9 @@ function MenuAccessEmpty() {
 }
 
 function AssignmentAccessCard({ assignment }: { assignment: UserAssignmentAccess }) {
+  const [now] = useState(Date.now);
   const expired =
-    !!assignment.expiredAt && new Date(assignment.expiredAt).getTime() <= Date.now();
+    !!assignment.expiredAt && new Date(assignment.expiredAt).getTime() <= now;
   const available = assignment.isActive && !expired;
 
   return (
