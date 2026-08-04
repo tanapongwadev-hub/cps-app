@@ -69,6 +69,21 @@ export const QUERY_KEYS = {
     LIST: (params: unknown) => ["loading-points", "list", params] as const,
     DETAIL: (id: string) => ["loading-points", "detail", id] as const,
   },
+  CATEGORIES: {
+    ALL: ["categories"] as const,
+    LIST: (params: unknown) => ["categories", "list", params] as const,
+    DETAIL: (id: string) => ["categories", "detail", id] as const,
+  },
+  STATUS_ITEMS: {
+    ALL: ["status-items"] as const,
+    LIST: (params: unknown) => ["status-items", "list", params] as const,
+    DETAIL: (id: string) => ["status-items", "detail", id] as const,
+  },
+  ORGANIZATIONS: {
+    ALL: ["organizations"] as const,
+    LIST: (params: unknown) => ["organizations", "list", params] as const,
+    DETAIL: (id: string) => ["organizations", "detail", id] as const,
+  },
   ROLES: {
     ALL: ["roles"] as const,
     LIST: (params: unknown) => ["roles", "list", params] as const,
