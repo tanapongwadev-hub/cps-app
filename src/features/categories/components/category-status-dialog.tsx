@@ -1,20 +1,21 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "@/components/forms/confirm-dialog";
+import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import type { Category } from "../api/categories-api";
 
 export function CategoryStatusDialog({ category, onOpenChange, onConfirm, pending }: {
-  category: Category | null; onOpenChange: (o: boolean) => void;
+  category: Category | null; onOpenChange: (open: boolean) => void;
   onConfirm: (c: Category) => Promise<void> | void; pending?: boolean;
 }) {
   return (
-    <ConfirmDeleteDialog
+    <ConfirmDialog
       open={!!category}
-      onOpenChange={(o) => !o && onOpenChange(false)}
-      itemName={category ? `${category.code} - ${category.nameTh}` : "รายการ"}
+      onOpenChange={onOpenChange}
       title={category?.isActive ? "ปิดใช้งานหมวดหมู่" : "เปิดใช้งานหมวดหมู่"}
       description={category?.isActive ? "หมวดหมู่นี้จะถูกปิดใช้งาน (ไม่ใช่การลบถาวร)" : "หมวดหมู่นี้จะถูกเปิดใช้งานอีกครั้ง"}
-      confirmLabel={category?.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      confirmText={category?.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      cancelText="ยกเลิก"
+      variant="warning"
       loading={pending}
       onConfirm={async () => { if (category) await onConfirm(category); }}
     />

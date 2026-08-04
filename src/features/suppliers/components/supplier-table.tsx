@@ -39,12 +39,15 @@ export function SupplierTable({
         data={suppliers}
         isLoading={isLoading}
         globalSearch={false}
-        page={page}
+        manualPagination
+        pageIndex={page}
         pageSize={pageSize}
         totalItems={totalItems}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
+        pageCount={totalPages}
+        onPaginationChange={({ pageIndex, pageSize }) => {
+          onPageChange(pageIndex);
+          onPageSizeChange(pageSize);
+        }}
         emptyState={{
           title: "ไม่พบผู้จัดจำหน่าย",
           description: "เพิ่มผู้จัดจำหน่ายใหม่เพื่อเริ่มต้นใช้งาน",

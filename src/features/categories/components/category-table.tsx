@@ -17,9 +17,12 @@ export function CategoryTable({ categories, isLoading, page, pageSize, totalItem
     <Card className="p-4">
       <DataTable
         data={categories} isLoading={isLoading} globalSearch={false}
-        page={page} pageSize={pageSize} totalItems={totalItems} totalPages={totalPages}
-        onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}
-        emptyState={{ title: "ไม่พบหมวดหมู่", description: "เพิ่มหมวดหมู่ใหม่เพื่อเริ่มต้นใช้งาน" }}
+        manualPagination
+        pageIndex={page}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        pageCount={totalPages}
+        onPaginationChange={({ pageIndex, pageSize }) => { onPageChange(pageIndex); onPageSizeChange(pageSize); }}
         columns={[
           { id: "code", header: "รหัส", cell: ({ row }: any) => <code className="text-xs">{row.original.code}</code> },
           { id: "nameTh", header: "ชื่อ (ไทย)", cell: ({ row }: any) => <span className="font-medium">{row.original.nameTh}</span> },
@@ -32,6 +35,7 @@ export function CategoryTable({ categories, isLoading, page, pageSize, totalItem
             return <ActionMenu items={items} />;
           }},
         ]}
+        emptyState={{ title: "ไม่พบหมวดหมู่", description: "เพิ่มหมวดหมู่ใหม่เพื่อเริ่มต้นใช้งาน" }}
       />
     </Card>
   );

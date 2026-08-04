@@ -1,6 +1,6 @@
 "use client";
 
-import { ConfirmDeleteDialog } from "@/components/forms/confirm-dialog";
+import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import type { MaterialModel } from "../api/material-models-api";
 
 export function MaterialModelStatusDialog({
@@ -15,17 +15,18 @@ export function MaterialModelStatusDialog({
   pending?: boolean;
 }) {
   return (
-    <ConfirmDeleteDialog
+    <ConfirmDialog
       open={!!model}
-      onOpenChange={(o) => !o && onOpenChange(false)}
-      itemName={model ? `${model.code} - ${model.nameTh}` : "รายการ"}
+      onOpenChange={onOpenChange}
       title={model?.isActive ? "ปิดใช้งานรุ่นวัสดุ" : "เปิดใช้งานรุ่นวัสดุ"}
       description={
         model?.isActive
           ? "รุ่นวัสดุนี้จะถูกปิดใช้งาน (ไม่ใช่การลบถาวร)"
           : "รุ่นวัสดุนี้จะถูกเปิดใช้งานอีกครั้ง"
       }
-      confirmLabel={model?.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      confirmText={model?.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      cancelText="ยกเลิก"
+      variant="warning"
       loading={pending}
       onConfirm={async () => {
         if (model) await onConfirm(model);

@@ -16,7 +16,7 @@ export function OrganizationFormDialog({ open, onOpenChange, organization, onSub
   onSubmit: (v: OrganizationFormValues) => Promise<void> | void; pending?: boolean;
 }) {
   const form = useForm<OrganizationFormValues>({
-    resolver: zodResolver(organizationSchema),
+    resolver: zodResolver(organizationSchema) as any,
     defaultValues: { code: "", nameTh: "", nameEn: "", taxId: "", address: "", phone: "", email: "", website: "", logoUrl: "", parentId: "", type: "department", isActive: true },
   });
   useEffect(() => {
@@ -35,7 +35,7 @@ export function OrganizationFormDialog({ open, onOpenChange, organization, onSub
           <DialogTitle>{organization ? "แก้ไของค์กร" : "เพิ่มองค์กร"}</DialogTitle>
           <DialogDescription>กรอกข้อมูลองค์กร/สาขา</DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(async (v) => { await onSubmit(v); })} className="space-y-4">
+        <form onSubmit={form.handleSubmit(async (v) => { await onSubmit(v as OrganizationFormValues); })} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium">รหัส *</label>

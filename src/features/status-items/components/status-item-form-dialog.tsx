@@ -16,7 +16,7 @@ export function StatusItemFormDialog({ open, onOpenChange, item, onSubmit, pendi
   onSubmit: (v: StatusItemFormValues) => Promise<void> | void; pending?: boolean;
 }) {
   const form = useForm<StatusItemFormValues>({
-    resolver: zodResolver(statusItemSchema),
+    resolver: zodResolver(statusItemSchema) as any,
     defaultValues: { code: "", nameTh: "", nameEn: "", color: "info", module: "", isDefault: false, sortOrder: 0, description: "", isActive: true },
   });
   useEffect(() => {
@@ -35,7 +35,7 @@ export function StatusItemFormDialog({ open, onOpenChange, item, onSubmit, pendi
           <DialogTitle>{item ? "แก้ไขสถานะ" : "เพิ่มสถานะ"}</DialogTitle>
           <DialogDescription>กรอกข้อมูลสถานะ</DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(async (v) => { await onSubmit(v); })} className="space-y-4">
+        <form onSubmit={form.handleSubmit(async (v) => { await onSubmit(v as StatusItemFormValues); })} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-sm font-medium">รหัส *</label>

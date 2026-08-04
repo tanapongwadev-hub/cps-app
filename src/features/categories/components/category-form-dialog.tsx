@@ -15,7 +15,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, onSubmit, pen
   onSubmit: (v: CategoryFormValues) => Promise<void> | void; pending?: boolean;
 }) {
   const form = useForm<CategoryFormValues>({
-    resolver: zodResolver(categorySchema),
+    resolver: zodResolver(categorySchema) as any,
     defaultValues: { code: "", nameTh: "", nameEn: "", parentId: "", sortOrder: 0, iconColor: "", description: "", isActive: true },
   });
   useEffect(() => {
@@ -34,7 +34,7 @@ export function CategoryFormDialog({ open, onOpenChange, category, onSubmit, pen
           <DialogTitle>{category ? "แก้ไขหมวดหมู่" : "เพิ่มหมวดหมู่"}</DialogTitle>
           <DialogDescription>กรอกข้อมูลหมวดหมู่</DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(async (v) => { await onSubmit(v); })} className="space-y-4">
+        <form onSubmit={form.handleSubmit(async (v) => { await onSubmit(v as CategoryFormValues); })} className="space-y-4">
           <div>
             <label className="text-sm font-medium">รหัส *</label>
             <Input {...form.register("code")} placeholder="CAT-01" disabled={!!category} />

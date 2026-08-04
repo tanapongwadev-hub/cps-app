@@ -46,15 +46,14 @@ export function UnitTable({
         data={units}
         isLoading={isLoading}
         globalSearch={false}
-        page={page}
+        manualPagination
+        pageIndex={page}
         pageSize={pageSize}
         totalItems={totalItems}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        emptyState={{
-          title: "ไม่พบหน่วยนับ",
-          description: "เพิ่มหน่วยนับใหม่เพื่อเริ่มต้นใช้งาน",
+        pageCount={totalPages}
+        onPaginationChange={({ pageIndex, pageSize }) => {
+          onPageChange(pageIndex);
+          onPageSizeChange(pageSize);
         }}
         columns={[
           {
@@ -103,14 +102,14 @@ export function UnitTable({
               if (canEdit) {
                 actions.push({
                   label: "แก้ไข",
-                  icon: Pencil,
+                  icon: <Pencil className="h-3 w-3" />,
                   onClick: () => onEdit(row.original),
                 });
               }
               if (row.original.isActive && canDelete) {
                 actions.push({
                   label: "ปิดใช้งาน",
-                  icon: Power,
+                  icon: <Power className="h-3 w-3" />,
                   onClick: () => onStatusChange(row.original),
                   variant: "danger" as const,
                 });
@@ -118,14 +117,18 @@ export function UnitTable({
               if (!row.original.isActive && canRestore) {
                 actions.push({
                   label: "เปิดใช้งาน",
-                  icon: RotateCcw,
+                  icon: <RotateCcw className="h-3 w-3" />,
                   onClick: () => onStatusChange(row.original),
                 });
               }
-              return actions.length > 0 ? <ActionMenu items={actions} /> : null;
+              return actions.length > 0 ? <ActionMenu items={actions as any} /> : null;
             },
           },
         ]}
+        emptyState={{
+          title: "ไม่พบหน่วยนับ",
+          description: "เพิ่มหน่วยนับใหม่เพื่อเริ่มต้นใช้งาน",
+        }}
       />
     </Card>
   );

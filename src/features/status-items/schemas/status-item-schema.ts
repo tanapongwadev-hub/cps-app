@@ -7,7 +7,7 @@ export const statusItemSchema = z.object({
   color: z.enum(["info", "success", "warning", "danger", "muted"]).default("info"),
   module: z.string().trim().min(1, "กรุณากรอกโมดูล").max(50),
   isDefault: z.boolean().optional(),
-  sortOrder: z.coerce.number().int().min(0).max(9999).optional(),
+  sortOrder: z.preprocess((v) => (v === "" || v == null ? undefined : Number(v)), z.number().int().min(0).max(9999)).optional(),
   description: z.string().trim().optional().or(z.literal("")),
   isActive: z.boolean().optional(),
 });

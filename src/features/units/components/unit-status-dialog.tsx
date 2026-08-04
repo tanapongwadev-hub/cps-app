@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { ConfirmDeleteDialog } from "@/components/forms/confirm-dialog";
+import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import type { Unit } from "../api/units-api";
 
 export interface UnitStatusDialogProps {
@@ -18,17 +17,18 @@ export function UnitStatusDialog({
   pending,
 }: UnitStatusDialogProps) {
   return (
-    <ConfirmDeleteDialog
+    <ConfirmDialog
       open={!!unit}
-      onOpenChange={(o) => !o && onOpenChange(false)}
-      itemName={unit ? `${unit.code} - ${unit.nameTh}` : "รายการ"}
+      onOpenChange={onOpenChange}
       title={unit?.isActive ? "ปิดใช้งานหน่วยนับ" : "เปิดใช้งานหน่วยนับ"}
       description={
         unit?.isActive
           ? "หน่วยนับนี้จะถูกปิดใช้งาน (ไม่ใช่การลบถาวร) สามารถเปิดใช้งานกลับได้ภายหลัง"
           : "หน่วยนับนี้จะถูกเปิดใช้งานอีกครั้ง"
       }
-      confirmLabel={unit?.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      confirmText={unit?.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      cancelText="ยกเลิก"
+      variant="warning"
       loading={pending}
       onConfirm={async () => {
         if (unit) {

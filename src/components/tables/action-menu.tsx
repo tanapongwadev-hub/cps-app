@@ -14,7 +14,8 @@ import { cn } from "@/utils/cn";
 
 export interface ActionItem {
   label: string;
-  icon?: React.ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon?: React.ReactElement<any>;
   onClick: () => void;
   variant?: "default" | "danger";
   disabled?: boolean;

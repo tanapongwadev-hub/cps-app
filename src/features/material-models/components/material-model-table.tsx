@@ -39,13 +39,15 @@ export function MaterialModelTable({
         data={models}
         isLoading={isLoading}
         globalSearch={false}
-        page={page}
+        manualPagination
+        pageIndex={page}
         pageSize={pageSize}
         totalItems={totalItems}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        emptyState={{ title: "ไม่พบรุ่นวัสดุ", description: "เพิ่มรุ่นวัสดุใหม่เพื่อเริ่มต้นใช้งาน" }}
+        pageCount={totalPages}
+        onPaginationChange={({ pageIndex, pageSize }) => {
+          onPageChange(pageIndex);
+          onPageSizeChange(pageSize);
+        }}
         columns={[
           {
             id: "code",
@@ -92,6 +94,7 @@ export function MaterialModelTable({
             },
           },
         ]}
+        emptyState={{ title: "ไม่พบรุ่นวัสดุ", description: "เพิ่มรุ่นวัสดุใหม่เพื่อเริ่มต้นใช้งาน" }}
       />
     </Card>
   );
