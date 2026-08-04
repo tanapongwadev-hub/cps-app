@@ -1,0 +1,21 @@
+import { z } from "zod";
+
+export const supplierSchema = z.object({
+  code: z.string().trim().min(1, "กรุณากรอกรหัส").max(50),
+  nameTh: z.string().trim().min(1, "กรุณากรอกชื่อ (ไทย)").max(255),
+  nameEn: z.string().trim().max(255).optional().or(z.literal("")),
+  taxId: z.string().trim().max(20).optional().or(z.literal("")),
+  contactName: z.string().trim().max(255).optional().or(z.literal("")),
+  telephone: z.string().trim().max(50).optional().or(z.literal("")),
+  email: z
+    .string()
+    .trim()
+    .email("อีเมลไม่ถูกต้อง")
+    .max(255)
+    .optional()
+    .or(z.literal("")),
+  address: z.string().trim().optional().or(z.literal("")),
+  isActive: z.boolean().optional(),
+});
+
+export type SupplierFormValues = z.infer<typeof supplierSchema>;
