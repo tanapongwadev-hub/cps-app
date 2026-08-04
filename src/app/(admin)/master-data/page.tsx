@@ -1,224 +1,125 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, FolderTree, Tag, Building } from "lucide-react";
+import Link from "next/link";
+import { Box, Building, FolderTree, MapPin, Ruler, Tag, Truck, Wrench, ChevronRight } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { DataTable } from "@/components/tables/data-table";
-import { ActionMenu } from "@/components/tables/action-menu";
-import { ConfirmDeleteDialog } from "@/components/forms/confirm-dialog";
-import { apiClient } from "@/services/api-client";
-import { showToast } from "@/lib/toast";
-import { QUERY_KEYS } from "@/constants/app";
-import type { Category, Organization, StatusItem } from "@/types/master-data";
+import { cn } from "@/utils/cn";
 
-type AnyMasterItem = Category | Organization | StatusItem;
-
-interface MasterPageConfig {
+interface MasterCard {
   key: string;
   title: string;
   description: string;
-  breadcrumbs: Array<{ label: string; href?: string }>;
-  queryKey: readonly unknown[];
-  endpoint: string;
+  href: string;
   icon: React.ComponentType<{ className?: string }>;
-  columns: Array<{
-    id: string;
-    header: string;
-    cell: (item: AnyMasterItem) => React.ReactNode;
-  }>;
 }
 
-const configs: Record<string, MasterPageConfig> = {
-  categories: {
+const cards: MasterCard[] = [
+  {
+    key: "units",
+    title: "หน่วยนับ",
+    description: "จัดการหน่วยนับ เช่น ชิ้น กิโลกรัม เมตร",
+    href: "/master-data/units",
+    icon: Ruler,
+  },
+  {
+    key: "suppliers",
+    title: "ผู้จัดจำหน่าย",
+    description: "จัดการข้อมูลผู้จัดจำหน่าย/Supplier",
+    href: "/master-data/suppliers",
+    icon: Truck,
+  },
+  {
+    key: "material-models",
+    title: "รุ่นวัสดุ",
+    description: "จัดการรุ่น/Model ของวัสดุ",
+    href: "/master-data/material-models",
+    icon: Wrench,
+  },
+  {
+    key: "delivery-types",
+    title: "ประเภทการจัดส่ง",
+    description: "จัดการประเภทการจัดส่ง เช่น ด่วน ปกติ",
+    href: "/master-data/delivery-types",
+    icon: Truck,
+  },
+  {
+    key: "loading-points",
+    title: "จุดขนถ่าย",
+    description: "จัดการจุดขนถ่าย/Loading Point",
+    href: "/master-data/loading-points",
+    icon: MapPin,
+  },
+  {
     key: "categories",
     title: "หมวดหมู่",
-    description: "จัดการหมวดหมู่ที่ใช้ในระบบ",
-    breadcrumbs: [
-      { label: "หน้าหลัก", href: "/dashboard" },
-      { label: "ข้อมูลหลัก" },
-      { label: "หมวดหมู่" },
-    ],
-    queryKey: QUERY_KEYS.MASTER_DATA.CATEGORIES,
-    endpoint: "/master-data/categories",
+    description: "จัดการหมวดหมู่/Category",
+    href: "/master-data/categories",
     icon: FolderTree,
-    columns: [
-      { id: "code", header: "รหัส", cell: (i) => <code className="text-xs">{String((i as Category).code)}</code> },
-      { id: "name", header: "ชื่อ", cell: (i) => <span className="font-medium">{(i as Category).name}</span> },
-      {
-        id: "sort",
-        header: "ลำดับ",
-        cell: (i) => <span className="text-sm text-muted-foreground">{(i as Category).sortOrder}</span>,
-      },
-      {
-        id: "status",
-        header: "สถานะ",
-        cell: (i) => (
-          <Badge variant={(i as Category).status === "active" ? "success" : "muted"}>
-            {(i as Category).status === "active" ? "ใช้งาน" : "ระงับ"}
-          </Badge>
-        ),
-      },
-    ],
   },
-  statuses: {
+  {
     key: "statuses",
     title: "สถานะ",
-    description: "จัดการสถานะที่ใช้ในระบบ",
-    breadcrumbs: [
-      { label: "หน้าหลัก", href: "/dashboard" },
-      { label: "ข้อมูลหลัก" },
-      { label: "สถานะ" },
-    ],
-    queryKey: QUERY_KEYS.MASTER_DATA.STATUSES,
-    endpoint: "/master-data/statuses",
+    description: "จัดการสถานะ/Status Item",
+    href: "/master-data/statuses",
     icon: Tag,
-    columns: [
-      { id: "code", header: "รหัส", cell: (i) => <code className="text-xs">{String((i as StatusItem).code)}</code> },
-      { id: "name", header: "ชื่อ", cell: (i) => <span className="font-medium">{(i as StatusItem).name}</span> },
-      {
-        id: "color",
-        header: "สี",
-        cell: (i) => (
-          <Badge variant={(i as StatusItem).color === "danger" ? "danger" : (i as StatusItem).color === "warning" ? "warning" : (i as StatusItem).color === "success" ? "success" : "info"}>
-            {(i as StatusItem).color}
-          </Badge>
-        ),
-      },
-      {
-        id: "module",
-        header: "โมดูล",
-        cell: (i) => <Badge variant="outline">{(i as StatusItem).module}</Badge>,
-      },
-    ],
   },
-  organizations: {
+  {
     key: "organizations",
     title: "องค์กร",
     description: "จัดการข้อมูลองค์กรและสาขา",
-    breadcrumbs: [
-      { label: "หน้าหลัก", href: "/dashboard" },
-      { label: "ข้อมูลหลัก" },
-      { label: "องค์กร" },
-    ],
-    queryKey: QUERY_KEYS.MASTER_DATA.ORGANIZATIONS,
-    endpoint: "/master-data/organizations",
+    href: "/master-data/organizations",
     icon: Building,
-    columns: [
-      { id: "code", header: "รหัส", cell: (i) => <code className="text-xs">{String((i as Organization).code)}</code> },
-      { id: "name", header: "ชื่อ (ไทย)", cell: (i) => <span className="font-medium">{(i as Organization).name}</span> },
-      { id: "nameEn", header: "Name (EN)", cell: (i) => <span className="text-muted-foreground">{(i as Organization).nameEn ?? "-"}</span> },
-      {
-        id: "type",
-        header: "ประเภท",
-        cell: (i) => <Badge variant="outline">{(i as Organization).type}</Badge>,
-      },
-      {
-        id: "status",
-        header: "สถานะ",
-        cell: (i) => (
-          <Badge variant={(i as Organization).status === "active" ? "success" : "muted"}>
-            {(i as Organization).status === "active" ? "ใช้งาน" : "ระงับ"}
-          </Badge>
-        ),
-      },
-    ],
   },
-};
+];
 
-export default function MasterDataDetailPage() {
-  const params = useParams<{ slug: string }>();
-  const slug = params.slug;
-  const config = slug ? configs[slug] : null;
-  const qc = useQueryClient();
-
-  const [deletingId, setDeletingId] = React.useState<string | null>(null);
-
-  const { data, isLoading } = useQuery({
-    queryKey: config?.queryKey ?? ["md"],
-    queryFn: () => apiClient.get<AnyMasterItem[]>(config?.endpoint ?? ""),
-    enabled: !!config,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => apiClient.delete(`${config?.endpoint}/${id}`),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: config?.queryKey });
-      showToast.success("ลบข้อมูลเรียบร้อย");
-    },
-    onError: (err: Error) => showToast.error("ลบไม่สำเร็จ", err.message),
-  });
-
-  if (!config) {
-    return (
-      <PageContainer>
-        <Card className="p-8 text-center text-muted-foreground">ไม่พบหน้าที่ต้องการ</Card>
-      </PageContainer>
-    );
-  }
-
-  const Icon = config.icon;
-  const list = (data ?? []) as AnyMasterItem[];
-
+export default function MasterDataIndexPage() {
   return (
     <>
       <PageContainer>
         <PageHeader
-          title={config.title}
-          description={config.description}
-          breadcrumbs={config.breadcrumbs}
-          primaryAction={
-            <Button onClick={() => showToast.info("เพิ่มข้อมูล", "ฟีเจอร์นี้จะพร้อมใช้งานเร็วๆ นี้")}>
-              <Plus className="h-4 w-4" />
-              เพิ่ม{config.title}
-            </Button>
-          }
+          title="ข้อมูลหลัก"
+          description="เลือกประเภทข้อมูลหลักที่ต้องการจัดการ"
+          breadcrumbs={[
+            { label: "หน้าหลัก", href: "/dashboard" },
+            { label: "ข้อมูลหลัก" },
+          ]}
         />
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Icon className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-medium">ทั้งหมด {list.length} รายการ</h3>
-          </div>
-        </Card>
-
-        <DataTable
-          columns={
-            config.columns.map((c) => ({
-              id: c.id,
-              header: c.header,
-              cell: ({ row }: { row: { original: AnyMasterItem } }) => c.cell(row.original),
-            })) as never
-          }
-          data={list}
-          isLoading={isLoading}
-          globalSearch={false}
-          enableColumnVisibility={false}
-          emptyState={{
-            title: `ไม่พบ${config.title}`,
-            description: "เพิ่มรายการใหม่เพื่อเริ่มต้นใช้งาน",
-          }}
-        />
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {cards.map((c) => {
+            const Icon = c.icon;
+            return (
+              <Link
+                key={c.key}
+                href={c.href}
+                className="group block focus:outline-none"
+              >
+                <Card className="flex h-full items-center gap-4 p-5 transition-colors hover:border-primary/40 hover:bg-accent/50">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-base font-semibold">{c.title}</h3>
+                    <p className="mt-0.5 text-sm text-muted-foreground line-clamp-2">
+                      {c.description}
+                    </p>
+                  </div>
+                  <ChevronRight
+                    className={cn(
+                      "h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+                      "group-hover:translate-x-0.5 group-hover:text-primary",
+                    )}
+                  />
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
       </PageContainer>
 
       <PageFooter />
-
-      <ConfirmDeleteDialog
-        open={!!deletingId}
-        onOpenChange={(o) => !o && setDeletingId(null)}
-        itemName="รายการ"
-        loading={deleteMutation.isPending}
-        onConfirm={async () => {
-          if (deletingId) {
-            await deleteMutation.mutateAsync(deletingId);
-            setDeletingId(null);
-          }
-        }}
-      />
     </>
   );
 }
