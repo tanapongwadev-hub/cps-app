@@ -1,16 +1,28 @@
 "use client";
 
 /**
- * Materials page
- * Wired to the real backend at /materials.
- * Backend contract: see docs/prompts/PROMPT-material-crud.md
+ * Materials — PC (อะไหล่ PC) page
+ *
+ * The NestJS backend exposes a generic /materials endpoint (see
+ * D:/project-cps/cps-api/src/modules/materials). PC / OF / OF-MAT are
+ * UI-side views that share the same API but have distinct branding and
+ * permission codes (MATERIALS_PC_MANAGEMENTS.*).
+ *
+ * This page:
+ *  - Lists materials fetched from the real backend
+ *  - Creates / edits via the shared MaterialFormDialog
+ *  - Toggles status (deactivate / restore) via MaterialStatusDialog
+ *  - Uses /materials/lookups for dropdowns
+ *  - Filters by `code` / `name` with the standard `useDebounce` pattern
+ *  - Renders with the same MaterialTable / MaterialFilters as the main
+ *    /materials page, so behaviour stays consistent across the suite
  */
 import * as React from "react";
 import {
-  Package,
   Plus,
   RefreshCw,
   Construction,
+  Cpu,
 } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -41,7 +53,7 @@ import type {
 type SortBy = NonNullable<ListMaterialsParams["sortBy"]>;
 type SortOrder = NonNullable<ListMaterialsParams["sortOrder"]>;
 
-export default function MaterialsPage() {
+export default function MaterialsPCPage() {
   const [filters, setFilters] = React.useState<ListMaterialsParams>({
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
@@ -111,7 +123,6 @@ export default function MaterialsPage() {
   const handleSave = React.useCallback(
     async (payload: MaterialPayload | UpdateMaterialPayload) => {
       if ("updatedAt" in payload) {
-        // Edit mode
         const editing = editingMaterial;
         if (!editing) return;
         await updateMutation.mutateAsync({ id: editing.id, data: payload });
@@ -145,21 +156,22 @@ export default function MaterialsPage() {
     <>
       <PageContainer>
         <PageHeader
-          title="จัดการอะไหล่"
-          description="คลังอะไหล่และวัสดุสิ้นเปลือง — Material Master"
+          title="จัดการอะไหล่ PC"
+          description="Material Master — อะไหล่และวัสดุสิ้นเปลืองสำหรับฝ่าย PC"
           breadcrumbs={[
             { label: "หน้าหลัก", href: "/dashboard" },
-            { label: "จัดการอะไหล่" },
+            { label: "จัดการอะไหล่", href: "/materials" },
+            { label: "อะไหล่ PC" },
           ]}
           primaryAction={
             <PermissionGuard permission={PERMISSIONS.MATERIAL_CREATE}>
               <Button
                 onClick={handleCreate}
                 disabled={!canSave}
-                aria-label="เพิ่มวัสดุใหม่"
+                aria-label="เพิ่มอะไหล่ PC ใหม่"
               >
                 <Plus className="h-4 w-4" />
-                เพิ่มอะไหล่
+                เพิ่มอะไหล่ PC
               </Button>
             </PermissionGuard>
           }
@@ -169,7 +181,7 @@ export default function MaterialsPage() {
               size="sm"
               onClick={() => listQuery.refetch()}
               disabled={listQuery.isFetching}
-              aria-label="รีเฟรชรายการวัสดุ"
+              aria-label="รีเฟรชรายการอะไหล่ PC"
             >
               <RefreshCw
                 className={listQuery.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
@@ -203,9 +215,9 @@ export default function MaterialsPage() {
         />
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Package className="h-3.5 w-3.5" />
+          <Cpu className="h-3.5 w-3.5" />
           <span>
-            แสดง {items.length} จาก {totalItems} รายการ
+            แสดง {items.length} จาก {totalItems} รายการ (PC)
           </span>
         </div>
 

@@ -26,6 +26,9 @@ export const MENU_PATH_OVERRIDES: Record<string, string | null> = {
   PERMISSION_MANAGEMENT: "/permissions",
   SESSION_MANAGEMENT: "/sessions",
   MATERIALS_MANAGEMENTS: "/materials",
+  MATERIALS_PC_MANAGEMENTS: "/materials/pc",
+  MATERIALS_OF_MANAGEMENTS: "/materials/of",
+  MATERIALS_OF_MAT_MANAGEMENTS: "/materials/of-mat",
 };
 
 /**

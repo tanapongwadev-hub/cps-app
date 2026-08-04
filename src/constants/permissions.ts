@@ -30,6 +30,12 @@ export const PERMISSIONS = {
   MENU_VIEW: "menu.view",
   MENU_MANAGE: "menu.manage",
 
+  // Material Management
+  MATERIAL_VIEW: "MATERIALS_PC_MANAGEMENTS.read",
+  MATERIAL_CREATE: "MATERIALS_PC_MANAGEMENTS.create",
+  MATERIAL_UPDATE: "MATERIALS_PC_MANAGEMENTS.update",
+  MATERIAL_DELETE: "MATERIALS_PC_MANAGEMENTS.delete",
+
   // Ticket Management
   TICKET_VIEW: "ticket.view",
   TICKET_CREATE: "ticket.create",
