@@ -44,6 +44,31 @@ export const QUERY_KEYS = {
     DETAIL: (id: string) => ["materials", "detail", id] as const,
     LOOKUPS: ["materials", "lookups"] as const,
   },
+  UNITS: {
+    ALL: ["units"] as const,
+    LIST: (params: unknown) => ["units", "list", params] as const,
+    DETAIL: (id: string) => ["units", "detail", id] as const,
+  },
+  SUPPLIERS: {
+    ALL: ["suppliers"] as const,
+    LIST: (params: unknown) => ["suppliers", "list", params] as const,
+    DETAIL: (id: string) => ["suppliers", "detail", id] as const,
+  },
+  MATERIAL_MODELS: {
+    ALL: ["material-models"] as const,
+    LIST: (params: unknown) => ["material-models", "list", params] as const,
+    DETAIL: (id: string) => ["material-models", "detail", id] as const,
+  },
+  DELIVERY_TYPES: {
+    ALL: ["delivery-types"] as const,
+    LIST: (params: unknown) => ["delivery-types", "list", params] as const,
+    DETAIL: (id: string) => ["delivery-types", "detail", id] as const,
+  },
+  LOADING_POINTS: {
+    ALL: ["loading-points"] as const,
+    LIST: (params: unknown) => ["loading-points", "list", params] as const,
+    DETAIL: (id: string) => ["loading-points", "detail", id] as const,
+  },
   ROLES: {
     ALL: ["roles"] as const,
     LIST: (params: unknown) => ["roles", "list", params] as const,

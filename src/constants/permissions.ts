@@ -36,6 +36,32 @@ export const PERMISSIONS = {
   MATERIAL_UPDATE: "MATERIALS_PC_MANAGEMENTS.update",
   MATERIAL_DELETE: "MATERIALS_PC_MANAGEMENTS.delete",
 
+  // Master Data — Lookup tables
+  UNIT_VIEW: "UNIT_VIEW",
+  UNIT_CREATE: "UNIT_CREATE",
+  UNIT_UPDATE: "UNIT_UPDATE",
+  UNIT_DELETE: "UNIT_DELETE",
+
+  SUPPLIER_VIEW: "SUPPLIER_VIEW",
+  SUPPLIER_CREATE: "SUPPLIER_CREATE",
+  SUPPLIER_UPDATE: "SUPPLIER_UPDATE",
+  SUPPLIER_DELETE: "SUPPLIER_DELETE",
+
+  MATERIAL_MODEL_VIEW: "MATERIAL_MODEL_VIEW",
+  MATERIAL_MODEL_CREATE: "MATERIAL_MODEL_CREATE",
+  MATERIAL_MODEL_UPDATE: "MATERIAL_MODEL_UPDATE",
+  MATERIAL_MODEL_DELETE: "MATERIAL_MODEL_DELETE",
+
+  DELIVERY_TYPE_VIEW: "DELIVERY_TYPE_VIEW",
+  DELIVERY_TYPE_CREATE: "DELIVERY_TYPE_CREATE",
+  DELIVERY_TYPE_UPDATE: "DELIVERY_TYPE_UPDATE",
+  DELIVERY_TYPE_DELETE: "DELIVERY_TYPE_DELETE",
+
+  LOADING_POINT_VIEW: "LOADING_POINT_VIEW",
+  LOADING_POINT_CREATE: "LOADING_POINT_CREATE",
+  LOADING_POINT_UPDATE: "LOADING_POINT_UPDATE",
+  LOADING_POINT_DELETE: "LOADING_POINT_DELETE",
+
   // Ticket Management
   TICKET_VIEW: "ticket.view",
   TICKET_CREATE: "ticket.create",
@@ -156,6 +182,56 @@ export const PERMISSION_GROUPS = [
     permissions: [
       { key: "view", code: PERMISSIONS.MASTER_DATA_VIEW, label: "ดู" },
       { key: "manage", code: PERMISSIONS.MASTER_DATA_MANAGE, label: "จัดการ" },
+    ],
+  },
+  {
+    module: "unit",
+    label: "หน่วยนับ",
+    permissions: [
+      { key: "view", code: PERMISSIONS.UNIT_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.UNIT_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.UNIT_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.UNIT_DELETE, label: "ลบ" },
+    ],
+  },
+  {
+    module: "supplier",
+    label: "ผู้จัดจำหน่าย",
+    permissions: [
+      { key: "view", code: PERMISSIONS.SUPPLIER_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.SUPPLIER_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.SUPPLIER_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.SUPPLIER_DELETE, label: "ลบ" },
+    ],
+  },
+  {
+    module: "material-model",
+    label: "รุ่นวัสดุ",
+    permissions: [
+      { key: "view", code: PERMISSIONS.MATERIAL_MODEL_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.MATERIAL_MODEL_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.MATERIAL_MODEL_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.MATERIAL_MODEL_DELETE, label: "ลบ" },
+    ],
+  },
+  {
+    module: "delivery-type",
+    label: "ประเภทการจัดส่ง",
+    permissions: [
+      { key: "view", code: PERMISSIONS.DELIVERY_TYPE_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.DELIVERY_TYPE_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.DELIVERY_TYPE_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.DELIVERY_TYPE_DELETE, label: "ลบ" },
+    ],
+  },
+  {
+    module: "loading-point",
+    label: "จุดขนถ่าย",
+    permissions: [
+      { key: "view", code: PERMISSIONS.LOADING_POINT_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.LOADING_POINT_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.LOADING_POINT_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.LOADING_POINT_DELETE, label: "ลบ" },
     ],
   },
   {
