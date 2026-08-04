@@ -16,6 +16,18 @@ const API_ORIGIN = API_TARGET.startsWith("http")
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Next.js blocks cross-origin requests to dev resources (/_next/*, including the
+  // webpack-hmr websocket) unless the origin is allowlisted. Needed when the dev
+  // server is reached through a tunnel (ngrok) or another machine on the LAN.
+  // Extra hosts can be added via NEXT_DEV_ALLOWED_ORIGINS (comma-separated).
+  allowedDevOrigins: [
+    "*.ngrok-free.dev",
+    "*.ngrok-free.app",
+    "*.ngrok.io",
+    ...(process.env.NEXT_DEV_ALLOWED_ORIGINS?.split(",")
+      .map((host) => host.trim())
+      .filter(Boolean) ?? []),
+  ],
   experimental: {
     optimizePackageImports: [
       "lucide-react",
