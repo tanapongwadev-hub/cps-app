@@ -31,3 +31,31 @@ export function useRevokeSession() {
     },
   });
 }
+
+/**
+ * Revoke every active session belonging to a user.
+ * Used by admin to force-logout a user across all devices.
+ * Real backend: POST /sessions/revoke-all/:userId
+ */
+export function useRevokeAllSessionsForUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => sessionsApi.revokeAllForUser(userId),
+    onSuccess: (result, userId) => {
+      const revoked = (result as { revoked?: number } | undefined)?.revoked;
+      showToast.success(
+        revoked != null
+          ? `บังคับออกจากระบบเรียบร้อย (${revoked} เซสชัน)`
+          : "บังคับออกจากระบบเรียบร้อย",
+      );
+      qc.invalidateQueries({ queryKey: [SESSIONS_QUERY_KEY] });
+      // Invalidate users list to refresh any "is online" indicator
+      qc.invalidateQueries({ queryKey: ["users"] });
+      // Side-effect: this could be the current user
+      void userId;
+    },
+    onError: (err: Error) => {
+      showToast.error("ไม่สามารถบังคับออกจากระบบได้", err.message);
+    },
+  });
+}

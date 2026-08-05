@@ -16,6 +16,7 @@ import {
   Filter,
   Building2,
   ShieldCheck as ShieldIcon,
+  LogOut,
 } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ import {
   useResetPassword,
   useUserAssignments,
 } from "@/features/users/hooks/use-users";
+import { useRevokeAllSessionsForUser } from "@/features/sessions/hooks/use-sessions";
 import { useDepartments } from "@/features/users/hooks/use-departments";
 import { useRoles } from "@/features/roles/hooks/use-roles";
 import { UserFormDialog } from "@/features/users/components/user-form-dialog";
@@ -89,6 +91,7 @@ export default function UsersPage() {
   const deleteMutation = useDeleteUser();
   const statusMutation = useUpdateUserStatus();
   const resetMutation = useResetPassword();
+  const revokeAllSessions = useRevokeAllSessionsForUser();
   const confirm = useConfirmDialog();
 
   const usersQuery = useUsers({
@@ -238,6 +241,29 @@ export default function UsersPage() {
                   },
                 },
                 {
+                  label: "บังคับออกจากระบบทั้งหมด",
+                  icon: <LogOut className="h-3.5 w-3.5" />,
+                  onClick: () => {
+                    confirm.open({
+                      title: `บังคับ ${u.firstName} ${u.lastName} ออกจากระบบทุกอุปกรณ์?`,
+                      description: (
+                        <div className="space-y-1">
+                          <p>ทุกเซสชันที่ login อยู่จะถูกยกเลิกทันที</p>
+                          <p className="text-xs text-muted-foreground">
+                            ผู้ใช้จะต้อง login ใหม่ทุกอุปกรณ์
+                          </p>
+                        </div>
+                      ),
+                      variant: "danger",
+                      confirmText: "ยืนยันบังคับออก",
+                      onConfirm: async () => {
+                        await revokeAllSessions.mutateAsync(u.id);
+                      },
+                    });
+                  },
+                  disabled: !u.isActive || revokeAllSessions.isPending,
+                },
+                {
                   label: "ลบ",
                   icon: <Trash2 className="h-3.5 w-3.5" />,
                   variant: "danger",
@@ -250,7 +276,7 @@ export default function UsersPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [statusMutation, resetMutation],
+    [statusMutation, resetMutation, revokeAllSessions],
   );
 
   return (

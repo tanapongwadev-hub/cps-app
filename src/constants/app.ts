@@ -109,7 +109,9 @@ export const QUERY_KEYS = {
     ACTIVITIES: ["dashboard", "activities"] as const,
   },
   ACTIVITY_LOGS: {
+    ALL: ["activity-logs"] as const,
     LIST: (params: unknown) => ["activity-logs", "list", params] as const,
+    DETAIL: (id: string) => ["activity-logs", "detail", id] as const,
   },
   MASTER_DATA: {
     CATEGORIES: ["master-data", "categories"] as const,

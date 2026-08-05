@@ -1,23 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Search, Download, RefreshCw, ChevronRight, Globe, Monitor } from "lucide-react";
+import { Download, RefreshCw, Eye } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { DataTable } from "@/components/tables/data-table";
+import { ActionMenu } from "@/components/tables/action-menu";
 import type { ColumnDef } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/services/api-client";
-import type { ActivityLog } from "@/types/activity-log";
-import type { PaginatedResponse } from "@/types/common";
+import type { ActivityAction, ActivityLog } from "@/types/activity-log";
 import { formatDateTime, formatRelative } from "@/utils/date";
 import { useDebounce } from "@/hooks/use-debounce";
 import { showToast } from "@/lib/toast";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
 import { TextField, SelectField } from "@/components/forms/form-field";
+import { useActivityLogsList } from "@/features/activity-logs/hooks/use-activity-logs";
+import { ActivityLogDetailDialog } from "@/features/activity-logs/components/activity-log-detail-dialog";
 
 const actionVariant: Record<string, "success" | "info" | "warning" | "danger" | "default" | "muted"> = {
   create: "success",
@@ -51,6 +50,14 @@ const actionLabel: Record<string, string> = {
   permission_change: "เปลี่ยนสิทธิ์",
 };
 
+function actionVariantFor(action: ActivityAction) {
+  return actionVariant[action] ?? "default";
+}
+
+function actionLabelFor(action: ActivityAction) {
+  return actionLabel[action] ?? action;
+}
+
 export default function ActivityLogsPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE);
@@ -58,19 +65,15 @@ export default function ActivityLogsPage() {
   const [debouncedSearch] = useDebounce(search, 300);
   const [action, setAction] = React.useState<string>("");
   const [module, setModule] = React.useState<string>("");
+  const [viewingLogId, setViewingLogId] = React.useState<string | null>(null);
 
-  const logsQuery = useQuery({
-    queryKey: ["activity-logs", { page, pageSize, search: debouncedSearch, action, module }],
-    queryFn: () =>
-      apiClient.get<PaginatedResponse<ActivityLog>>("/activity-logs", {
-        params: {
-          page,
-          pageSize,
-          search: debouncedSearch || undefined,
-          action: action || undefined,
-          module: module || undefined,
-        },
-      }),
+  const logsQuery = useActivityLogsList({
+    page,
+    pageSize,
+    search: debouncedSearch || undefined,
+    userId: undefined,
+    action: action || undefined,
+    module: module || undefined,
   });
 
   const columns: ColumnDef<ActivityLog>[] = React.useMemo(
@@ -99,8 +102,8 @@ export default function ActivityLogsPage() {
         id: "action",
         header: "การกระทำ",
         cell: ({ row }) => (
-          <Badge variant={actionVariant[row.original.action] ?? "default"}>
-            {actionLabel[row.original.action] ?? row.original.action}
+          <Badge variant={actionVariantFor(row.original.action)}>
+            {actionLabelFor(row.original.action)}
           </Badge>
         ),
       },
@@ -132,6 +135,25 @@ export default function ActivityLogsPage() {
           >
             {row.original.status === "success" ? "สำเร็จ" : row.original.status === "failure" ? "ล้มเหลว" : "เตือน"}
           </Badge>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        size: 60,
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <ActionMenu
+            label={`เมนูบันทึกกิจกรรม ${row.original.id}`}
+            items={[
+              {
+                label: "ดูรายละเอียด",
+                icon: <Eye className="h-3.5 w-3.5" />,
+                onClick: () => setViewingLogId(row.original.id),
+              },
+            ]}
+          />
         ),
       },
     ],
@@ -230,11 +252,14 @@ export default function ActivityLogsPage() {
         />
       </PageContainer>
       <PageFooter />
+
+      <ActivityLogDetailDialog
+        logId={viewingLogId}
+        open={!!viewingLogId}
+        onOpenChange={(open) => {
+          if (!open) setViewingLogId(null);
+        }}
+      />
     </>
   );
-
-  void ChevronRight;
-  void Globe;
-  void Monitor;
-  void Input;
 }
