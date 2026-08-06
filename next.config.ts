@@ -50,6 +50,10 @@ const nextConfig: NextConfig = {
   //   1. `/api/v1/auth/login`  — full versioned path
   //   2. `/api/auth/login`      — unversioned (apiClient prepends `/api` from NEXT_PUBLIC_API_BASE_URL)
   // Both rewrite to the real backend at `${API_ORIGIN}/api/v1/auth/login`.
+  //
+  // We also proxy /uploads/* → <backend>/uploads/* so that image paths returned
+  // by the API (e.g. `/uploads/materials/abc.jpg`) can be used directly as `<img src>`
+  // in the browser without CORS or cross-origin issues.
   async rewrites() {
     return [
       // Versioned: /api/v1/:path* → backend /api/v1/:path*
@@ -61,6 +65,11 @@ const nextConfig: NextConfig = {
       {
         source: "/api/:path*",
         destination: `${API_ORIGIN}/api/v1/:path*`,
+      },
+      // Static material images (staged + promoted) served by the backend.
+      {
+        source: "/uploads/:path*",
+        destination: `${API_ORIGIN}/uploads/:path*`,
       },
     ];
   },

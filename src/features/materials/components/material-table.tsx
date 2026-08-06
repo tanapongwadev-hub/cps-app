@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { resolveMaterialImage } from "../utils";
 import type { ListMaterialsParams, Material } from "../api/materials-api";
 
 type MaterialSortBy = NonNullable<ListMaterialsParams["sortBy"]>;
@@ -174,12 +175,13 @@ export function MaterialTable({
                       className="border-primary bg-muted/30 flex items-center gap-3 rounded-md border-l-2 py-1 pr-2 pl-3"
                     >
                       <div className="bg-background flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border">
-                        {material.imagePath ? (
+                        {resolveMaterialImage(material.imagePath) ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={material.imagePath}
+                            src={resolveMaterialImage(material.imagePath) ?? ""}
                             alt={`รูปวัสดุ ${material.code}`}
                             className="size-full object-cover"
+                            loading="lazy"
                           />
                         ) : (
                           <ImageOff className="text-muted-foreground size-4" aria-hidden="true" />

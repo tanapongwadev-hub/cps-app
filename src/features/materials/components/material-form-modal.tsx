@@ -1,5 +1,20 @@
 "use client";
 
+/**
+ * MaterialFormModal
+ *
+ * Centered modal variant of the Material create / edit form. Used by
+ * `/materials/pc` (and any other page that prefers a true modal over a
+ * side-drawer).
+ *
+ * Shares the same form behaviour, validation, image-upload flow, and
+ * dirty-state guard as `MaterialFormDialog` — only the shell differs.
+ *
+ * The image preview URL is resolved through `resolveMaterialImage` so
+ * that bare `/uploads/...` paths returned by the API are loadable
+ * through the Next.js rewrite (see `next.config.ts`).
+ */
+
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ImagePlus, Package, Save, X } from "lucide-react";
@@ -9,15 +24,15 @@ import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import { FormGrid, FormSection } from "@/components/forms/form-section";
 import { TextField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/cn";
 import { resolveMaterialImage } from "../utils";
@@ -50,7 +65,7 @@ const materialFormSchema = z.object({
 
 type MaterialFormValues = z.infer<typeof materialFormSchema>;
 
-export interface MaterialFormDialogProps {
+export interface MaterialFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   material?: Material | null;
@@ -148,7 +163,7 @@ function errorMessage(error: unknown, staleConflict: boolean): string {
   return error instanceof Error ? error.message : "ไม่สามารถบันทึกวัสดุได้ กรุณาลองใหม่อีกครั้ง";
 }
 
-export function MaterialFormDialog({
+export function MaterialFormModal({
   open,
   onOpenChange,
   material,
@@ -157,16 +172,14 @@ export function MaterialFormDialog({
   onSave,
   savePending = false,
   uploadPending = false,
-}: MaterialFormDialogProps) {
+}: MaterialFormModalProps) {
   const isEdit = !!material;
   const form = useForm<MaterialFormValues>({
     resolver: zodResolver(materialFormSchema),
     defaultValues: formValues(material),
   });
   const [imageFile, setImageFile] = React.useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = React.useState<string | null>(
-    resolveMaterialImage(material?.imagePath ?? null),
-  );
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
   const [imageRemoved, setImageRemoved] = React.useState(false);
   const [imageDirty, setImageDirty] = React.useState(false);
   const [imageError, setImageError] = React.useState<string | null>(null);
@@ -190,6 +203,9 @@ export function MaterialFormDialog({
     revokeObjectUrl();
     form.reset(formValues(material));
     setImageFile(null);
+    // Resolve the preview URL so the browser can load it (the API returns
+    // a bare `/uploads/...` path; the Next.js rewrite at `/uploads/:path*`
+    // proxies to the backend).
     setPreviewUrl(resolveMaterialImage(material?.imagePath ?? null));
     setImageRemoved(false);
     setImageDirty(false);
@@ -292,7 +308,7 @@ export function MaterialFormDialog({
         description: optionalText(values.description),
         isActive: values.isActive,
       };
-      await onSave(isEdit ? { ...payload, updatedAt: material.updatedAt } : payload);
+      await onSave(isEdit ? { ...payload, updatedAt: material!.updatedAt } : payload);
 
       revokeObjectUrl();
       setImageDirty(false);
@@ -327,26 +343,26 @@ export function MaterialFormDialog({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={requestOpenChange}>
-        <SheetContent size="xl" className="w-full sm:max-w-2xl" hideClose={pending}>
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
+      <Dialog open={open} onOpenChange={requestOpenChange}>
+        <DialogContent size="xl" className="w-full sm:max-w-3xl" hideClose={pending}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
               <Package className="size-4" />
-              {isEdit ? "แก้ไขวัสดุ" : "เพิ่มวัสดุใหม่"}
-            </SheetTitle>
-            <SheetDescription>
+              {isEdit ? "แก้ไขอะไหล่ PC" : "เพิ่มอะไหล่ PC"}
+            </DialogTitle>
+            <DialogDescription>
               {isEdit
-                ? `แก้ไข Material Master — ${material.code}`
-                : "เพิ่มข้อมูลกลางสำหรับฝ่ายคลังสินค้าและฝ่ายผลิต"}
-            </SheetDescription>
-          </SheetHeader>
+                ? `แก้ไข Material Master — ${material!.code}`
+                : "เพิ่มข้อมูลอะไหล่สำหรับฝ่าย PC"}
+            </DialogDescription>
+          </DialogHeader>
 
           <form
-            className="mt-6 flex min-h-0 flex-1 flex-col"
+            className="flex min-h-0 flex-1 flex-col"
             onSubmit={handleFormSubmit}
             noValidate
           >
-            <div className="flex-1 space-y-7 overflow-y-auto pr-1">
+            <div className="flex-1 space-y-6 overflow-y-auto pr-1">
               {apiError && (
                 <div
                   role="alert"
@@ -554,7 +570,7 @@ export function MaterialFormDialog({
               </FormSection>
             </div>
 
-            <SheetFooter className="mt-6 border-t px-0 pt-4">
+            <DialogFooter className="mt-6 border-t px-0 pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -563,14 +579,14 @@ export function MaterialFormDialog({
               >
                 ยกเลิก
               </Button>
-              <Button type="submit" loading={pending}>
+              <Button type="submit" loading={pending} disabled={pending}>
                 <Save className="size-4" />
-                {isEdit ? "บันทึกการเปลี่ยนแปลง" : "สร้างวัสดุ"}
+                {isEdit ? "บันทึกการเปลี่ยนแปลง" : "สร้างอะไหล่"}
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           </form>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={discardOpen}

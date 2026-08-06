@@ -3,19 +3,14 @@
 /**
  * Materials — PC (อะไหล่ PC) page
  *
- * The NestJS backend exposes a generic /materials endpoint (see
- * D:/project-cps/cps-api/src/modules/materials). PC / OF / OF-MAT are
- * UI-side views that share the same API but have distinct branding and
- * permission codes (MATERIALS_PC_MANAGEMENTS.*).
- *
- * This page:
- *  - Lists materials fetched from the real backend
- *  - Creates / edits via the shared MaterialFormDialog
- *  - Toggles status (deactivate / restore) via MaterialStatusDialog
- *  - Uses /materials/lookups for dropdowns
- *  - Filters by `code` / `name` with the standard `useDebounce` pattern
- *  - Renders with the same MaterialTable / MaterialFilters as the main
- *    /materials page, so behaviour stays consistent across the suite
+ * Redesigned for the PC subset of the Material Master:
+ *  - "เพิ่มอะไหล่" / "แก้ไข" now opens a centered `Dialog` modal
+ *    (`MaterialFormModal`) instead of the side-drawer used on /materials.
+ *  - The list is rendered as a responsive card grid (`MaterialCardGrid`)
+ *    so each part is shown with its image, units, and quick actions.
+ *  - Material images are resolved through `resolveMaterialImage` so the
+ *    API's bare `/uploads/...` paths load through the Next.js rewrite
+ *    to the backend origin (see `next.config.ts`).
  */
 import * as React from "react";
 import {
@@ -28,7 +23,6 @@ import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PermissionGuard } from "@/components/ui/permission-guard";
-import { DEFAULT_PAGE_SIZE } from "@/constants/app";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
   useMaterials,
@@ -39,9 +33,9 @@ import {
   useRestoreMaterial,
   useUploadMaterialImage,
 } from "@/features/materials/hooks/use-materials";
-import { MaterialTable } from "@/features/materials/components/material-table";
+import { MaterialCardGrid } from "@/features/materials/components/material-card-grid";
 import { MaterialFilters } from "@/features/materials/components/material-filters";
-import { MaterialFormDialog } from "@/features/materials/components/material-form-dialog";
+import { MaterialFormModal } from "@/features/materials/components/material-form-modal";
 import { MaterialStatusDialog } from "@/features/materials/components/material-status-dialog";
 import type {
   ListMaterialsParams,
@@ -53,10 +47,12 @@ import type {
 type SortBy = NonNullable<ListMaterialsParams["sortBy"]>;
 type SortOrder = NonNullable<ListMaterialsParams["sortOrder"]>;
 
+const PC_PAGE_SIZE = 12;
+
 export default function MaterialsPCPage() {
   const [filters, setFilters] = React.useState<ListMaterialsParams>({
     page: 1,
-    pageSize: DEFAULT_PAGE_SIZE,
+    pageSize: PC_PAGE_SIZE,
   });
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingMaterial, setEditingMaterial] = React.useState<Material | null>(null);
@@ -221,20 +217,17 @@ export default function MaterialsPCPage() {
           </span>
         </div>
 
-        <MaterialTable
+        <MaterialCardGrid
           materials={items}
           page={filters.page}
-          pageSize={filters.pageSize}
+          pageSize={filters.pageSize ?? PC_PAGE_SIZE}
           totalItems={totalItems}
-          sortBy={filters.sortBy}
-          sortOrder={filters.sortOrder}
           isLoading={listQuery.isLoading || lookupsLoading}
           isError={listQuery.isError}
           onRetry={() => listQuery.refetch()}
           onCreate={canSave ? handleCreate : undefined}
           onEdit={canSave ? handleEdit : undefined}
           onStatusChange={canSave ? handleStatusChange : undefined}
-          onSortChange={handleSortChange}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />
@@ -242,7 +235,7 @@ export default function MaterialsPCPage() {
 
       <PageFooter />
 
-      <MaterialFormDialog
+      <MaterialFormModal
         open={formOpen}
         onOpenChange={handleFormOpenChange}
         material={editingMaterial}
