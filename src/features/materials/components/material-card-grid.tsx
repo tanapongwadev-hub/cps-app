@@ -19,6 +19,7 @@ import {
   ChevronRight,
   ImageOff,
   Pencil,
+  Power,
   RotateCcw,
   Slash,
 } from "lucide-react";
@@ -132,8 +133,8 @@ export function MaterialCardGrid({
                 key={material.id}
                 data-testid={`material-card-${material.code}`}
                 className={cn(
-                  "group flex h-full flex-col overflow-hidden transition-shadow",
-                  "hover:shadow-md",
+                  "group flex h-full flex-col overflow-hidden transition-all duration-200",
+                  "hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-primary/20",
                 )}
               >
                 <div className="bg-muted relative aspect-[4/3] w-full overflow-hidden">
@@ -142,7 +143,7 @@ export function MaterialCardGrid({
                     <img
                       src={imageUrl}
                       alt={`รูปอะไหล่ ${material.code}`}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       loading="lazy"
                     />
                   ) : (
@@ -151,11 +152,71 @@ export function MaterialCardGrid({
                       <span>ไม่มีรูป</span>
                     </div>
                   )}
+
+                  {/* Top-right: status pill */}
                   <div className="absolute right-2 top-2">
-                    <Badge variant={material.isActive ? "success" : "muted"}>
+                    <Badge
+                      variant={material.isActive ? "success" : "muted"}
+                      className="shadow-sm backdrop-blur-sm"
+                    >
                       {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                     </Badge>
                   </div>
+
+                  {/* Top-left: action buttons (visible on hover) */}
+                  {(onEdit || onStatusChange) && (
+                    <div className="absolute left-2 top-2 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100">
+                      {onEdit && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          onClick={() => onEdit(material)}
+                          aria-label={`แก้ไข ${material.code}`}
+                          className="bg-background/85 hover:bg-background size-8 rounded-full border shadow-sm backdrop-blur-sm"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      )}
+                      {onStatusChange && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          onClick={() => onStatusChange(material)}
+                          aria-label={
+                            material.isActive
+                              ? `ปิดใช้งาน ${material.code}`
+                              : `เปิดใช้งาน ${material.code}`
+                          }
+                          className={cn(
+                            "size-8 rounded-full border bg-background/85 shadow-sm backdrop-blur-sm hover:bg-background",
+                            material.isActive
+                              ? "text-muted-foreground hover:text-danger"
+                              : "text-success hover:text-success",
+                          )}
+                        >
+                          {material.isActive ? (
+                            <Power className="size-3.5" aria-hidden="true" />
+                          ) : (
+                            <RotateCcw className="size-3.5" aria-hidden="true" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Bottom gradient + unit badge for clearer visual hierarchy */}
+                  {imageUrl && (
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
+                  )}
+                  {material.unit && (
+                    <div className="absolute bottom-2 left-2">
+                      <span className="bg-background/90 text-foreground rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-medium shadow-sm backdrop-blur-sm">
+                        {unitLabel(material)}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 <CardContent className="flex flex-1 flex-col gap-2 p-3">
@@ -163,8 +224,12 @@ export function MaterialCardGrid({
                     <code className="text-primary font-mono text-xs font-semibold">
                       {material.code}
                     </code>
-                    <span className="bg-background text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[10px]">
-                      {unitLabel(material)}
+                    <span className="text-muted-foreground text-[10px]">
+                      {new Date(material.updatedAt).toLocaleDateString("th-TH", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
                     </span>
                   </div>
 
@@ -197,6 +262,7 @@ export function MaterialCardGrid({
                     </div>
                   </dl>
 
+                  {/* Bottom action bar (always visible for mobile / no-hover devices) */}
                   {(onEdit || onStatusChange) && (
                     <div className="mt-auto flex items-center justify-end gap-1 border-t pt-2">
                       {onEdit && (
@@ -206,9 +272,10 @@ export function MaterialCardGrid({
                           size="sm"
                           onClick={() => onEdit(material)}
                           aria-label={`แก้ไข ${material.code}`}
+                          className="h-8 px-2"
                         >
-                          <Pencil className="size-4" />
-                          แก้ไข
+                          <Pencil className="size-3.5" />
+                          <span className="hidden sm:inline">แก้ไข</span>
                         </Button>
                       )}
                       {onStatusChange && (
@@ -222,16 +289,22 @@ export function MaterialCardGrid({
                               ? `ปิดใช้งาน ${material.code}`
                               : `เปิดใช้งาน ${material.code}`
                           }
+                          className={cn(
+                            "h-8 px-2",
+                            material.isActive
+                              ? "text-muted-foreground hover:text-danger"
+                              : "text-success hover:text-success",
+                          )}
                         >
                           {material.isActive ? (
                             <>
-                              <Slash className="size-4" />
-                              ปิดใช้งาน
+                              <Power className="size-3.5" aria-hidden="true" />
+                              <span className="hidden sm:inline">ปิดใช้งาน</span>
                             </>
                           ) : (
                             <>
-                              <RotateCcw className="size-4" />
-                              เปิดใช้งาน
+                              <RotateCcw className="size-3.5" aria-hidden="true" />
+                              <span className="hidden sm:inline">เปิดใช้งาน</span>
                             </>
                           )}
                         </Button>
