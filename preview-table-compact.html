@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Material Table — Compact & Dense</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --fg: #0f172a;
+    --muted: #f1f5f9;
+    --muted-fg: #64748b;
+    --border: #e2e8f0;
+    --primary: #2563eb;
+    --success: #10b981;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Inter", "Noto Sans Thai", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 32px 16px;
+    line-height: 1.4;
+  }
+  .page { max-width: 1100px; margin: 0 auto; }
+  .header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+  }
+  .header h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  .header .sub { color: var(--muted-fg); font-size: 14px; }
+  .view-toggle {
+    display: inline-flex; gap: 4px;
+    background: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 3px;
+  }
+  .view-toggle button {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 12px; border-radius: 5px;
+    background: transparent; border: 0;
+    font-size: 13px; font-weight: 500; color: var(--muted-fg);
+    cursor: pointer;
+  }
+  .view-toggle button.active {
+    background: var(--card); color: var(--fg);
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+
+  /* Table */
+  .table-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgba(0,0,0,.03);
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: rgba(241, 245, 249, 0.7);
+    color: var(--muted-fg);
+    font-weight: 600; font-size: 12px;
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  thead th.right { text-align: right; }
+  thead th.sortable { cursor: pointer; }
+  thead th.sortable:hover { color: var(--fg); }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: 0; }
+  tbody tr:hover { background: rgba(241, 245, 249, 0.3); cursor: pointer; }
+  tbody td { padding: 8px 16px; vertical-align: middle; }
+
+  /* === Cell "วัสดุ" — Compact & Dense === */
+  .material-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .thumb {
+    position: relative;
+    width: 40px; height: 40px; flex-shrink: 0;
+    background: var(--muted);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .thumb .placeholder { color: rgba(100, 116, 139, .5); font-size: 14px; }
+  .thumb .dot {
+    position: absolute; right: 2px; bottom: 2px;
+    width: 8px; height: 8px; border-radius: 50%;
+    border: 1.5px solid var(--card);
+  }
+  .dot.active { background: #10b981; }
+  .dot.inactive { background: #94a3b8; }
+
+  .content {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    gap: 2px;
+    line-height: 1.2;
+  }
+  /* Line 1: code • unit • name */
+  .line-1 {
+    display: flex; align-items: baseline; gap: 8px;
+  }
+  .code {
+    color: var(--primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: -.01em;
+    flex-shrink: 0;
+  }
+  .unit {
+    color: var(--muted-fg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 10px;
+    flex-shrink: 0;
+  }
+  .sep {
+    width: 2px; height: 2px; border-radius: 50%;
+    background: rgba(203, 213, 225, .7);
+    flex-shrink: 0;
+  }
+  .name {
+    color: var(--fg);
+    font-size: 14px; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    min-width: 0;
+  }
+  /* Line 2: meta inline */
+  .line-2 {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--muted-fg);
+    font-size: 11px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .line-2 .k { color: rgba(100, 116, 139, .7); }
+  .line-2 .v { color: rgba(15, 23, 42, .7); font-weight: 500; }
+
+  /* Cell "ผู้ขาย" */
+  .supplier-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--muted);
+    border-radius: 4px;
+    padding: 2px 8px; font-size: 12px;
+    max-width: 180px;
+  }
+  .supplier-badge .text {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Cell "สถานะ" */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px; border-radius: 6px;
+    font-size: 12px; font-weight: 500;
+  }
+  .status-badge.active { background: rgba(16, 185, 129, .1); color: #047857; }
+  .status-badge.inactive { background: var(--muted); color: var(--muted-fg); }
+  .status-badge .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+  }
+  .status-badge.active .dot { background: #10b981; }
+  .status-badge.inactive .dot { background: #94a3b8; }
+
+  /* Cell "อัปเดต" */
+  .updated { font-size: 12px; color: var(--fg); font-weight: 500; }
+
+  /* Cell "การทำงาน" */
+  .actions { display: flex; justify-content: flex-end; gap: 2px; }
+  .icon-btn {
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: 0; border-radius: 6px;
+    color: var(--muted-fg); cursor: pointer;
+    transition: all .12s;
+  }
+  .icon-btn:hover { background: var(--muted); }
+  .icon-btn.view:hover { color: var(--primary); }
+  .icon-btn.danger:hover { color: #ef4444; }
+  .icon-btn.success { color: #10b981; }
+  .icon-btn.success:hover { color: #10b981; }
+  svg { width: 16px; height: 16px; }
+
+  /* Pagination */
+  .pagination {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    font-size: 13px; color: var(--muted-fg);
+    border-top: 1px solid var(--border);
+  }
+  .pagination .left { display: flex; align-items: center; gap: 16px; }
+  .pagination select {
+    height: 32px; padding: 0 8px; border-radius: 6px;
+    border: 1px solid var(--border); background: var(--card);
+    color: var(--fg); font-size: 13px;
+  }
+  .pagination .right { display: flex; align-items: center; gap: 6px; }
+  .page-btn {
+    height: 32px; padding: 0 12px;
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 13px; cursor: pointer;
+  }
+
+  .legend {
+    margin: 16px 0; padding: 12px 16px;
+    background: rgba(37,99,235,.05);
+    border-left: 3px solid var(--primary);
+    border-radius: 4px;
+    font-size: 13px; color: var(--muted-fg);
+  }
+  .legend strong { color: var(--fg); }
+  .legend code {
+    background: var(--card); padding: 1px 5px; border-radius: 3px;
+    border: 1px solid var(--border); font-size: 12px;
+  }
+  .compare {
+    margin: 24px 0; padding: 16px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  .compare h2 { margin: 0 0 12px; font-size: 14px; font-weight: 600; }
+  .compare ul { margin: 0; padding-left: 20px; color: var(--muted-fg); font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div>
+        <h1>จัดการอะไหล่</h1>
+        <div class="sub">คลังอะไหล่และวัสดุสิ้นเปลือง — Material Master</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <div class="view-toggle">
+          <button class="active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+            ตาราง
+          </button>
+          <button>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            การ์ด
+          </button>
+        </div>
+        <button class="page-btn" style="background: var(--primary); color: white; border-color: var(--primary);">+ เพิ่มอะไหล่</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <strong>Compact & Dense — แนว Linear/Notion</strong> เน้น scan เร็ว ไม่มี background/box รอบ cell<br>
+      <strong>Line 1:</strong> <code>code</code> • <code>unit</code> • <code>name</code> — inline 1 แถว, dot separator<br>
+      <strong>Line 2:</strong> <code>รุ่น: X</code> • <code>จัดส่ง: Y</code> — meta inline 1 แถว, ใช้ label:value แทน chip
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="sortable" style="min-width: 320px;">วัสดุ ↕</th>
+            <th>ผู้ขาย</th>
+            <th class="sortable">สถานะ ↕</th>
+            <th class="sortable">อัปเดตล่าสุด ↕</th>
+            <th class="right">การทำงาน</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="material-cell">
+                <div class="thumb">
+                  <span class="placeholder">📦</span>
+                  <span class="dot active"></span>
+                </div>
+                <div class="content">
+                  <div class="line-1">
+                    <span class="code">A001</span>
+                    <span class="sep"></span>
+                    <span class="unit">ชิ้น (PCS)</span>
+                    <span class="sep"></span>
+                    <span class="name">Material-A-1</span>
+                  </div>
+                  <div class="line-2">
+                    <span class="k">รุ่น</span> <span class="v">Model A</span>
+                    <span class="sep"></span>
+                    <span class="k">จัดส่ง</span> <span class="v">จัดส่ง 1</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="supplier-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                <span class="text">บริษัท ABC จำกัด</span>
+              </span>
+            </td>
+            <td>
+              <span class="status-badge active">
+                <span class="dot"></span>
+                ใช้งาน
+              </span>
+            </td>
+            <td><span class="updated">6 ส.ค. 69</span></td>
+            <td>
+              <div class="actions">
+                <button class="icon-btn view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
+                <button class="icon-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg></button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="material-cell">
+                <div class="thumb">
+                  <span class="placeholder">🔧</span>
+                  <span class="dot inactive"></span>
+                </div>
+                <div class="content">
+                  <div class="line-1">
+                    <span class="code">B023</span>
+                    <span class="sep"></span>
+                    <span class="unit">ตัว (PCS)</span>
+                    <span class="sep"></span>
+                    <span class="name">Sensor Module X-200</span>
+                  </div>
+                  <div class="line-2">
+                    <span class="k">รุ่น</span> <span class="v">X-200</span>
+                    <span class="sep"></span>
+                    <span class="k">จัดส่ง</span> <span class="v">จัดส่งด่วน</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="supplier-badge">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg>
+                <span class="text">Siam Tech</span>
+              </span>
+            </td>
+            <td>
+              <span class="status-badge inactive">
+                <span class="dot"></span>
+                ปิดใช้งาน
+              </span>
+            </td>
+            <td><span class="updated">5 ส.ค. 69</span></td>
+            <td>
+              <div class="actions">
+                <button class="icon-btn view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
+                <button class="icon-btn success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg></button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="material-cell">
+                <div class="thumb">
+                  <span class="placeholder">⚙️</span>
+                  <span class="dot active"></span>
+                </div>
+                <div class="content">
+                  <div class="line-1">
+                    <span class="code">C145</span>
+                    <span class="sep"></span>
+                    <span class="unit">อัน (PCS)</span>
+                    <span class="sep"></span>
+                    <span class="name">Bearing 6203-2RS High Precision Long Name Here</span>
+                  </div>
+                  <div class="line-2">
+                    <span class="k">รุ่น</span> <span class="v">6203-2RS</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="supplier-badge" style="opacity:.5;">—</span>
+            </td>
+            <td>
+              <span class="status-badge active">
+                <span class="dot"></span>
+                ใช้งาน
+              </span>
+            </td>
+            <td><span class="updated">1 ส.ค. 69</span></td>
+            <td>
+              <div class="actions">
+                <button class="icon-btn view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
+                <button class="icon-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg></button>
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="material-cell">
+                <div class="thumb">
+                  <span class="placeholder">🔌</span>
+                  <span class="dot active"></span>
+                </div>
+                <div class="content">
+                  <div class="line-1">
+                    <span class="code">D007</span>
+                    <span class="sep"></span>
+                    <span class="unit">เส้น (M)</span>
+                    <span class="sep"></span>
+                    <span class="name">สายไฟ THW 2.5 sq.mm</span>
+                  </div>
+                  <div class="line-2">
+                    <span class="k">รุ่น</span> <span class="v">THW-2.5</span>
+                    <span class="sep"></span>
+                    <span class="k">จัดส่ง</span> <span class="v">ปกติ</span>
+                  </div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="supplier-badge">
+                <span class="text">Phelps Dodge</span>
+              </span>
+            </td>
+            <td>
+              <span class="status-badge active">
+                <span class="dot"></span>
+                ใช้งาน
+              </span>
+            </td>
+            <td><span class="updated">28 ก.ค. 69</span></td>
+            <td>
+              <div class="actions">
+                <button class="icon-btn view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
+                <button class="icon-btn danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg></button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination">
+        <div class="left">
+          <span>1–4 จาก 47 รายการ</span>
+          <label>จำนวนต่อหน้า
+            <select><option>10</option><option>25</option><option>50</option></select>
+          </label>
+        </div>
+        <div class="right">
+          <button class="page-btn">‹ ก่อนหน้า</button>
+          <span>หน้า 1 / 12</span>
+          <button class="page-btn">ถัดไป ›</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare">
+      <h2>สรุปการเปลี่ยนแปลง (Compact & Dense)</h2>
+      <ul>
+        <li><strong>ไม่มี background/box</strong> รอบ cell — ใช้ padding + spacing ล้วน ๆ ให้ cell ดูเป็นส่วนหนึ่งของ table</li>
+        <li><strong>Thumbnail 40×40px</strong> (จาก 56) + <code>rounded-4px</code> (จาก rounded-md) — เล็กกะทัดรัด ไม่เด่นเกินไป</li>
+        <li><strong>Active dot ที่มุมล่างขวา</strong> (จากมุมบนขวา) — เป็น visual hint เบา ๆ ไม่บังรูป</li>
+        <li><strong>2-line content</strong>:
+          <ul>
+            <li>Line 1: <code>code</code> · <code>unit</code> · <code>name</code> — inline 1 แถว ใช้ dot separator</li>
+            <li>Line 2: <code>รุ่น: X</code> · <code>จัดส่ง: Y</code> — inline label:value ไม่มี chip</li>
+          </ul>
+        </li>
+        <li><strong>Code เป็น text ล้วน</strong> (mono, primary color) — ไม่มี gradient/background — เบาที่สุด</li>
+        <li><strong>Meta เป็น text 11px</strong> ไม่ใช่ uppercase label — ใช้ <code>:</code> แทน dt/dd เพื่อความกระชับ</li>
+        <li><strong>Row height เล็กลง</strong> (py-2 จาก py-3) — เห็น row มากขึ้น 30% ใน viewport เดียว</li>
+        <li><strong>Cell padding uniform</strong> ทุก column ใช้ py-2 — ไม่มี cell เด่น/เตี้ย</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

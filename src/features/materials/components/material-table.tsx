@@ -1,15 +1,29 @@
 "use client";
 
+/**
+ * MaterialTable
+ *
+ * ตารางแสดงรายการวัสดุ — ปรับปรุงใหม่ให้สอดคล้องกับ MaterialDetailCard:
+ *  - เพิ่มปุ่ม "ดู" สำหรับเปิดหน้ารายละเอียด
+ *  - เพิ่ม column "อัปเดตล่าสุด" เพื่อ trace การเปลี่ยนแปลง
+ *  - ปรับ status badge ให้มี dot (เหมือน detail card) และรองรับ sort
+ *  - ปรับ row hover / active state ให้อ่านง่ายขึ้น
+ *  - รวมสอง column ที่ซ้ำซ้อน (หน่วย) ไว้ใน chip ภายใน cell "วัสดุ"
+ */
+
 import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ChevronsUpDown,
+  Eye,
   ImageOff,
   Package,
   Pencil,
+  Power,
   RotateCcw,
   Slash,
+  Store,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/utils/cn";
 import { resolveMaterialImage } from "../utils";
 import type { ListMaterialsParams, Material } from "../api/materials-api";
 
@@ -42,14 +57,85 @@ export interface MaterialTableProps {
   onCreate?: () => void;
   onEdit?: (material: Material) => void;
   onStatusChange?: (material: Material) => void;
+  /**
+   * If provided, each row gains a "ดู" action that navigates to the
+   * returned URL. The whole row also becomes clickable for the same URL.
+   */
+  detailHref?: (material: Material) => string;
   onSortChange: (sortBy: MaterialSortBy, sortOrder: MaterialSortOrder) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }
 
-function lookupLabel(value: Material["unit"] | null): string {
-  if (!value) return "—";
-  return value.symbol || value.nameTh || value.code;
+function unitLabel(material: Material): string {
+  if (!material.unit) return "—";
+  return material.unit.symbol || material.unit.nameTh || material.unit.code;
+}
+
+function supplierSummary(material: Material): {
+  text: string;
+  overflow: number;
+} {
+  if (material.suppliers.length === 0) return { text: "—", overflow: 0 };
+  const first = material.suppliers[0];
+  if (!first) return { text: "—", overflow: 0 };
+  const overflow = material.suppliers.length - 1;
+  return { text: first.nameTh, overflow };
+}
+
+function formatDate(value: string): string {
+  try {
+    return new Date(value).toLocaleDateString("th-TH", {
+      year: "2-digit",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
+
+function SortableHeader({
+  label,
+  field,
+  sortBy,
+  sortOrder,
+  onSortChange,
+  ariaLabel,
+  align = "left",
+}: {
+  label: string;
+  field: MaterialSortBy;
+  sortBy?: MaterialSortBy;
+  sortOrder?: MaterialSortOrder;
+  onSortChange: (sortBy: MaterialSortBy, sortOrder: MaterialSortOrder) => void;
+  ariaLabel: string;
+  align?: "left" | "right";
+}) {
+  const isActive = sortBy === field;
+  const toggleSort = () => {
+    onSortChange(field, isActive && sortOrder === "asc" ? "desc" : "asc");
+  };
+  return (
+    <button
+      type="button"
+      onClick={toggleSort}
+      aria-label={ariaLabel}
+      className={cn(
+        "focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2",
+        align === "right" && "ml-auto",
+      )}
+    >
+      {label}
+      {isActive ? (
+        <ChevronDown
+          className={cn("size-3.5", sortOrder === "asc" && "rotate-180")}
+        />
+      ) : (
+        <ChevronsUpDown className="text-muted-foreground/60 size-3.5" />
+      )}
+    </button>
+  );
 }
 
 export function MaterialTable({
@@ -65,6 +151,7 @@ export function MaterialTable({
   onCreate,
   onEdit,
   onStatusChange,
+  detailHref,
   onSortChange,
   onPageChange,
   onPageSizeChange,
@@ -73,66 +160,58 @@ export function MaterialTable({
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
 
-  const toggleSort = (field: MaterialSortBy) => {
-    onSortChange(field, sortBy === field && sortOrder === "asc" ? "desc" : "asc");
-  };
-
   return (
     <div className="space-y-3">
-      <div className="bg-card overflow-hidden rounded-lg border">
-        <Table className="min-w-[980px]">
+      <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
+        <Table className="min-w-[820px]">
           <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[280px]">
-                <button
-                  type="button"
-                  onClick={() => toggleSort("code")}
-                  aria-label="เรียงตามรหัสวัสดุ"
-                  className="focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2"
-                >
-                  วัสดุ
-                  {sortBy === "code" ? (
-                    <ChevronDown
-                      className={sortOrder === "asc" ? "size-3.5 rotate-180" : "size-3.5"}
-                    />
-                  ) : (
-                    <ChevronsUpDown className="size-3.5" />
-                  )}
-                </button>
+            <TableRow className="bg-muted/60 hover:bg-muted/60">
+              <TableHead className="min-w-[320px] py-2.5">
+                <SortableHeader
+                  label="วัสดุ"
+                  field="code"
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortChange={onSortChange}
+                  ariaLabel="เรียงตามรหัสวัสดุ"
+                />
               </TableHead>
-              <TableHead>หน่วย</TableHead>
-              <TableHead>รุ่น</TableHead>
-              <TableHead>ประเภทการจัดส่ง</TableHead>
               <TableHead>ผู้ขาย</TableHead>
               <TableHead>
-                <button
-                  type="button"
-                  onClick={() => toggleSort("isActive")}
-                  aria-label="เรียงตามสถานะ"
-                  className="focus-visible:ring-ring inline-flex items-center gap-1.5 rounded-sm outline-none focus-visible:ring-2"
-                >
-                  สถานะ
-                  <ChevronsUpDown className="size-3.5" />
-                </button>
+                <SortableHeader
+                  label="สถานะ"
+                  field="isActive"
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortChange={onSortChange}
+                  ariaLabel="เรียงตามสถานะ"
+                />
+              </TableHead>
+              <TableHead>
+                <SortableHeader
+                  label="อัปเดตล่าสุด"
+                  field="updatedAt"
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortChange={onSortChange}
+                  ariaLabel="เรียงตามวันที่อัปเดต"
+                />
               </TableHead>
               <TableHead className="text-right">การทำงาน</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={7}>
-                  <div role="status" aria-label="กำลังโหลดรายการวัสดุ" className="space-y-3 py-2">
-                    <span className="sr-only">กำลังโหลดรายการวัสดุ</span>
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <Skeleton key={index} className="h-11 w-full" />
-                    ))}
-                  </div>
-                </TableCell>
-              </TableRow>
+              Array.from({ length: 6 }).map((_, index) => (
+                <TableRow key={`skel-${index}`} className="hover:bg-transparent">
+                  <TableCell colSpan={5} className="py-2">
+                    <Skeleton className="h-14 w-full" />
+                  </TableCell>
+                </TableRow>
+              ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell colSpan={5} className="py-12 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                     <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
                       <Slash className="size-5" />
@@ -151,7 +230,7 @@ export function MaterialTable({
               </TableRow>
             ) : materials.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
+                <TableCell colSpan={5} className="p-0">
                   <EmptyState
                     icon={<Package className="size-6" />}
                     title="ยังไม่มีข้อมูลวัสดุ"
@@ -167,99 +246,220 @@ export function MaterialTable({
                 </TableCell>
               </TableRow>
             ) : (
-              materials.map((material) => (
-                <TableRow key={material.id}>
-                  <TableCell>
-                    <div
-                      data-testid={`material-identity-${material.code}`}
-                      className="border-primary bg-muted/30 flex items-center gap-3 rounded-md border-l-2 py-1 pr-2 pl-3"
-                    >
-                      <div className="bg-background flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border">
-                        {resolveMaterialImage(material.imagePath) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={resolveMaterialImage(material.imagePath) ?? ""}
-                            alt={`รูปวัสดุ ${material.code}`}
-                            className="size-full object-cover"
-                            loading="lazy"
+              materials.map((material) => {
+                const href = detailHref?.(material);
+                const suppliers = supplierSummary(material);
+                const imageUrl = resolveMaterialImage(material.imagePath);
+                return (
+                  <TableRow
+                    key={material.id}
+                    data-testid={`material-row-${material.code}`}
+                    className={cn(
+                      "group transition-colors",
+                      href && "hover:bg-muted/30 cursor-pointer",
+                    )}
+                    onClick={
+                      href
+                        ? (event) => {
+                            // Don't navigate if the click came from a button/link
+                            // inside the row — let those handlers run instead.
+                            const target = event.target as HTMLElement;
+                            if (target.closest("button, a")) return;
+                            window.location.href = href;
+                          }
+                        : undefined
+                    }
+                  >
+                    <TableCell className="py-2.5">
+                      <div className="flex items-center gap-3">
+                        {/* Thumbnail — 40px compact, no border-radius heavy */}
+                        <div className="bg-muted relative size-10 shrink-0 overflow-hidden rounded">
+                          {imageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={imageUrl}
+                              alt={`รูปวัสดุ ${material.code}`}
+                              className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <ImageOff
+                              className="text-muted-foreground/60 size-4"
+                              aria-hidden="true"
+                            />
+                          )}
+                          {/* Active dot — bottom-right corner */}
+                          <span
+                            className={cn(
+                              "absolute right-0.5 bottom-0.5 size-2 rounded-full ring-[1.5px] ring-card",
+                              material.isActive
+                                ? "bg-emerald-500"
+                                : "bg-slate-400",
+                            )}
+                            aria-label={material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                           />
-                        ) : (
-                          <ImageOff className="text-muted-foreground size-4" aria-hidden="true" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <code className="text-primary font-mono text-xs font-semibold">
-                          {material.code}
-                        </code>
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-medium">{material.name}</p>
-                          <span className="bg-background text-muted-foreground rounded border px-1.5 py-0.5 font-mono text-[10px]">
-                            {lookupLabel(material.unit)}
-                          </span>
+                        </div>
+
+                        {/* Content — single column, 2-line clamp */}
+                        <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
+                          {/* Line 1: code (mono) + name */}
+                          <div className="flex items-baseline gap-2">
+                            <code className="text-primary shrink-0 font-mono text-[11px] font-semibold tracking-tight">
+                              {material.code}
+                            </code>
+                            {material.unit && (
+                              <>
+                                <span className="bg-border/60 size-0.5 shrink-0 rounded-full" />
+                                <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+                                  {unitLabel(material)}
+                                </span>
+                              </>
+                            )}
+                            <span className="bg-border/60 size-0.5 shrink-0 rounded-full" />
+                            <span
+                              className="text-foreground truncate text-sm font-medium"
+                              title={material.name}
+                            >
+                              {material.name}
+                            </span>
+                          </div>
+
+                          {/* Line 2: meta — model • delivery (single inline string) */}
+                          {(material.model?.nameTh || material.deliveryType?.nameTh) && (
+                            <div className="text-muted-foreground flex items-center gap-1.5 truncate text-[11px]">
+                              {material.model?.nameTh && (
+                                <span className="truncate">
+                                  <span className="text-muted-foreground/60">รุ่น</span>{" "}
+                                  <span className="text-foreground/70 font-medium">
+                                    {material.model.nameTh}
+                                  </span>
+                                </span>
+                              )}
+                              {material.model?.nameTh && material.deliveryType?.nameTh && (
+                                <span
+                                  className="bg-border/70 size-0.5 shrink-0 rounded-full"
+                                  aria-hidden="true"
+                                />
+                              )}
+                              {material.deliveryType?.nameTh && (
+                                <span className="truncate">
+                                  <span className="text-muted-foreground/60">จัดส่ง</span>{" "}
+                                  <span className="text-foreground/70 font-medium">
+                                    {material.deliveryType.nameTh}
+                                  </span>
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>{lookupLabel(material.unit)}</TableCell>
-                  <TableCell>{material.model?.nameTh ?? "—"}</TableCell>
-                  <TableCell>{material.deliveryType?.nameTh ?? "—"}</TableCell>
-                  <TableCell>
-                    {material.suppliers.length > 0 ? (
-                      <div className="flex max-w-[240px] flex-wrap gap-1">
-                        {material.suppliers.map((supplier) => (
-                          <Badge key={supplier.id} variant="muted" size="sm">
-                            {supplier.nameTh}
-                          </Badge>
-                        ))}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex max-w-[220px] flex-wrap items-center gap-1">
+                        {material.suppliers.length > 0 ? (
+                          <>
+                            <Badge variant="muted" size="sm" className="max-w-[180px]">
+                              <Store className="mr-1 size-2.5 shrink-0" />
+                              <span className="truncate">{suppliers.text}</span>
+                            </Badge>
+                            {suppliers.overflow > 0 && (
+                              <span className="text-muted-foreground shrink-0 text-xs">
+                                +{suppliers.overflow}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </div>
-                    ) : (
-                      "—"
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={material.isActive ? "success" : "muted"}>
-                      {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-1">
-                      {onEdit && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => onEdit(material)}
-                          aria-label={`แก้ไข ${material.code}`}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
-                      )}
-                      {onStatusChange && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => onStatusChange(material)}
-                          aria-label={
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <Badge
+                        variant={material.isActive ? "success" : "muted"}
+                        className="gap-1"
+                      >
+                        <span
+                          className={cn(
+                            "size-1.5 rounded-full",
                             material.isActive
-                              ? `ปิดใช้งาน ${material.code}`
-                              : `เปิดใช้งาน ${material.code}`
-                          }
-                        >
-                          {material.isActive ? (
-                            <Slash className="size-4" />
-                          ) : (
-                            <RotateCcw className="size-4" />
+                              ? "bg-success-foreground/80"
+                              : "bg-muted-foreground/60",
                           )}
-                        </Button>
-                      )}
-                      {!onEdit && !onStatusChange && (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+                        />
+                        {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <span className="text-foreground text-xs font-medium">
+                        {formatDate(material.updatedAt)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <div
+                        className="flex items-center justify-end gap-0.5"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {href && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => {
+                              window.location.href = href;
+                            }}
+                            aria-label={`ดูรายละเอียด ${material.code}`}
+                            title="ดูรายละเอียด"
+                            className="text-muted-foreground hover:text-primary"
+                          >
+                            <Eye className="size-4" />
+                          </Button>
+                        )}
+                        {onEdit && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => onEdit(material)}
+                            aria-label={`แก้ไข ${material.code}`}
+                            title="แก้ไข"
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                        )}
+                        {onStatusChange && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => onStatusChange(material)}
+                            aria-label={
+                              material.isActive
+                                ? `ปิดใช้งาน ${material.code}`
+                                : `เปิดใช้งาน ${material.code}`
+                            }
+                            title={material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                            className={cn(
+                              material.isActive
+                                ? "text-muted-foreground hover:text-danger"
+                                : "text-success hover:text-success",
+                            )}
+                          >
+                            {material.isActive ? (
+                              <Power className="size-4" />
+                            ) : (
+                              <RotateCcw className="size-4" />
+                            )}
+                          </Button>
+                        )}
+                        {!href && !onEdit && !onStatusChange && (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>

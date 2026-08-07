@@ -16,6 +16,7 @@ import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PermissionGuard } from "@/components/ui/permission-guard";
+import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
@@ -28,6 +29,7 @@ import {
   useUploadMaterialImage,
 } from "@/features/materials/hooks/use-materials";
 import { MaterialTable } from "@/features/materials/components/material-table";
+import { MaterialCardGrid } from "@/features/materials/components/material-card-grid";
 import { MaterialFilters } from "@/features/materials/components/material-filters";
 import { MaterialFormDialog } from "@/features/materials/components/material-form-dialog";
 import { MaterialStatusDialog } from "@/features/materials/components/material-status-dialog";
@@ -46,6 +48,7 @@ export default function MaterialsPage() {
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
   });
+  const [viewMode, setViewMode] = React.useState<ViewMode>("list");
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingMaterial, setEditingMaterial] = React.useState<Material | null>(null);
   const [statusChange, setStatusChange] = React.useState<{
@@ -202,30 +205,57 @@ export default function MaterialsPage() {
           onChange={setFilters}
         />
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Package className="h-3.5 w-3.5" />
-          <span>
-            แสดง {items.length} จาก {totalItems} รายการ
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Package className="h-3.5 w-3.5" />
+            <span>
+              แสดง {items.length} จาก {totalItems} รายการ
+            </span>
+          </div>
+          <ViewToggle
+            value={viewMode}
+            onValueChange={setViewMode}
+            storageKey="materials:view-mode"
+            ariaLabel="สลับมุมมองรายการอะไหล่"
+          />
         </div>
 
-        <MaterialTable
-          materials={items}
-          page={filters.page}
-          pageSize={filters.pageSize}
-          totalItems={totalItems}
-          sortBy={filters.sortBy}
-          sortOrder={filters.sortOrder}
-          isLoading={listQuery.isLoading || lookupsLoading}
-          isError={listQuery.isError}
-          onRetry={() => listQuery.refetch()}
-          onCreate={canSave ? handleCreate : undefined}
-          onEdit={canSave ? handleEdit : undefined}
-          onStatusChange={canSave ? handleStatusChange : undefined}
-          onSortChange={handleSortChange}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        {viewMode === "list" ? (
+          <MaterialTable
+            materials={items}
+            page={filters.page}
+            pageSize={filters.pageSize}
+            totalItems={totalItems}
+            sortBy={filters.sortBy}
+            sortOrder={filters.sortOrder}
+            isLoading={listQuery.isLoading || lookupsLoading}
+            isError={listQuery.isError}
+            onRetry={() => listQuery.refetch()}
+            onCreate={canSave ? handleCreate : undefined}
+            onEdit={canSave ? handleEdit : undefined}
+            onStatusChange={canSave ? handleStatusChange : undefined}
+            detailHref={(material) => `/materials/pc/${material.id}`}
+            onSortChange={handleSortChange}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        ) : (
+          <MaterialCardGrid
+            materials={items}
+            page={filters.page}
+            pageSize={filters.pageSize ?? DEFAULT_PAGE_SIZE}
+            totalItems={totalItems}
+            isLoading={listQuery.isLoading || lookupsLoading}
+            isError={listQuery.isError}
+            onRetry={() => listQuery.refetch()}
+            onCreate={canSave ? handleCreate : undefined}
+            onEdit={canSave ? handleEdit : undefined}
+            onStatusChange={canSave ? handleStatusChange : undefined}
+            detailHref={(material) => `/materials/pc/${material.id}`}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
       </PageContainer>
 
       <PageFooter />

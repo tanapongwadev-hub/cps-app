@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Material Detail — Image Fills Panel</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --fg: #0f172a;
+    --muted: #f1f5f9;
+    --muted-fg: #64748b;
+    --border: #e2e8f0;
+    --primary: #2563eb;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --info: #0ea5e9;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Inter", "Noto Sans Thai", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 32px 16px;
+    line-height: 1.5;
+  }
+  .page { max-width: 1100px; margin: 0 auto; }
+  .crumbs {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted-fg);
+    margin-bottom: 12px;
+  }
+  .crumbs a { color: var(--muted-fg); text-decoration: none; }
+  .crumbs a:hover { color: var(--fg); }
+  .crumbs .sep { opacity: .5; }
+  .header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px; padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+  .header h1 { font-size: 24px; font-weight: 600; margin: 0; }
+  .header .sub { color: var(--muted-fg); font-size: 14px; margin-top: 4px; }
+  .actions { display: flex; gap: 8px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    height: 32px; padding: 0 12px; border-radius: 6px;
+    font-size: 13px; font-weight: 500; border: 1px solid var(--border);
+    background: var(--card); cursor: pointer;
+  }
+  .btn:hover { background: var(--muted); }
+  .btn.ghost { border-color: transparent; }
+
+  /* Card — 2 column grid with image fills height */
+  .card {
+    background: linear-gradient(135deg, var(--card) 0%, #f8fafc 100%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+  }
+  @media (max-width: 800px) { .card { grid-template-columns: 1fr; } }
+
+  /* Image panel — fills full height of card */
+  .image-panel {
+    position: relative;
+    background: var(--muted);
+    /* KEY: stretch to full height of card */
+    min-height: 100%;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+  }
+  @media (max-width: 800px) {
+    .image-panel { border-right: 0; border-bottom: 1px solid var(--border); min-height: 280px; }
+  }
+  .image-panel img {
+    /* KEY: absolute fill + object-cover */
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .top-grad {
+    position: absolute; inset: 0 0 auto 0; height: 80px;
+    background: linear-gradient(180deg, rgba(0,0,0,.4), transparent);
+    pointer-events: none;
+  }
+  .bot-grad {
+    position: absolute; inset: auto 0 0 0; height: 80px;
+    background: linear-gradient(0deg, rgba(0,0,0,.5), transparent);
+    pointer-events: none;
+  }
+  .status-pill {
+    position: absolute; top: 12px; right: 12px;
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(16,185,129,.95);
+    color: white; font-size: 11px; font-weight: 500;
+    padding: 4px 10px; border-radius: 999px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.15);
+  }
+  .status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: white; }
+  .placeholder {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: var(--muted-fg); font-size: 14px; gap: 10px;
+    z-index: 1;
+  }
+  .placeholder .ico {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--card); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,.05);
+  }
+
+  /* Content panel */
+  .content-panel {
+    display: flex; flex-direction: column;
+  }
+  .content-head { padding: 20px 24px; }
+  .meta-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
+  .code-chip {
+    background: rgba(37,99,235,.1); color: var(--primary);
+    padding: 4px 10px; border-radius: 6px;
+    font-family: ui-monospace, monospace;
+    font-weight: 600; font-size: 12px;
+  }
+  .type-chip {
+    background: var(--muted); color: var(--muted-fg);
+    padding: 4px 8px; border-radius: 4px; font-size: 11px;
+  }
+  .meta-right { margin-left: auto; color: var(--muted-fg); display: flex; align-items: center; gap: 4px; }
+  h2.title { font-size: 24px; font-weight: 600; margin: 12px 0 0; letter-spacing: -.01em; }
+  .divider { height: 1px; background: var(--border); border: 0; margin: 0; }
+
+  .info-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: rgba(226,232,240,.7);
+  }
+  @media (max-width: 600px) { .info-grid { grid-template-columns: 1fr; } }
+  .info-cell { background: var(--card); padding: 20px 24px; }
+  .info-head {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 600; margin-bottom: 12px;
+  }
+  .info-head .ico {
+    width: 24px; height: 24px; border-radius: 5px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ico.info { background: rgba(37,99,235,.1); color: var(--primary); }
+  .ico.ship { background: rgba(16,185,129,.1); color: var(--success); }
+  .ico svg { width: 14px; height: 14px; }
+  dl.rows { display: flex; flex-direction: column; gap: 10px; margin: 0; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 13px; }
+  .row dt { color: var(--muted-fg); font-size: 12px; flex-shrink: 0; }
+  .row dd { margin: 0; text-align: right; }
+  .row .mono { font-family: ui-monospace, monospace; font-size: 12px; }
+
+  .add-section { padding: 20px 24px; }
+  .add-head { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 13px; margin-bottom: 12px; }
+  .add-head .ico { background: rgba(14,165,233,.1); color: var(--info); }
+  .kv-table {
+    background: rgba(241,245,249,.5);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+  }
+  @media (max-width: 600px) { .kv-table { grid-template-columns: 1fr; } }
+  .kv {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .kv:nth-child(2n) { border-right: 0; }
+  .kv:nth-last-child(-n+2) { border-bottom: 0; }
+  .kv .k { color: var(--muted-fg); font-size: 12px; }
+  .kv .v { font-size: 13px; font-weight: 500; }
+  .kv .v.success { color: var(--success); font-weight: 600; }
+  .kv .v.pill {
+    background: rgba(37,99,235,.1); color: var(--primary);
+    padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 500;
+  }
+
+  .action-bar {
+    background: rgba(241,245,249,.5);
+    border-top: 1px solid var(--border);
+    padding: 14px 24px; display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: auto;
+  }
+  .btn-primary {
+    background: var(--primary); color: white; border-color: var(--primary);
+  }
+  .btn-primary:hover { background: rgba(37,99,235,.9); }
+  .btn-danger { background: #ef4444; color: white; border-color: #ef4444; }
+  .btn-danger:hover { background: #dc2626; }
+
+  .legend {
+    margin: 24px 0 16px; padding: 12px 16px;
+    background: rgba(37,99,235,.05);
+    border-left: 3px solid var(--primary);
+    border-radius: 4px;
+    font-size: 13px; color: var(--muted-fg);
+  }
+  .legend strong { color: var(--fg); }
+  .legend code {
+    background: var(--card); padding: 1px 5px; border-radius: 3px;
+    border: 1px solid var(--border); font-size: 12px;
+  }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
+  .compare-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+  }
+  .compare-card h3 {
+    margin: 0 0 8px; font-size: 13px; font-weight: 600;
+    color: var(--muted-fg); text-transform: uppercase; letter-spacing: .04em;
+  }
+  .compare-card.bad h3 { color: #ef4444; }
+  .compare-card.good h3 { color: var(--success); }
+  .compare-card ul {
+    margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6;
+    color: var(--muted-fg);
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="crumbs">
+      <a href="#">หน้าหลัก</a>
+      <span class="sep">/</span>
+      <a href="#">จัดการอะไหล่</a>
+      <span class="sep">/</span>
+      <a href="#">อะไหล่ PC</a>
+      <span class="sep">/</span>
+      <span>A001</span>
+    </div>
+    <div class="header">
+      <div>
+        <h1>Material-A-1</h1>
+        <div class="sub">A001 · Model A</div>
+      </div>
+      <div class="actions">
+        <button class="btn ghost">รีเฟรช</button>
+        <button class="btn ghost">กลับ</button>
+      </div>
+    </div>
+
+    <div class="legend">
+      <strong>แก้แล้ว:</strong> image panel ใช้ <code>min-h-full</code> (จาก <code>min-h-[280px]</code>) + รูปเป็น <code>absolute inset-0 object-cover</code>
+      ทำให้รูปเต็มความสูง content panel เสมอ ไม่มี letterbox
+    </div>
+
+    <!-- Main card — image fills full height -->
+    <div class="card">
+      <!-- Image panel — KEY: min-height: 100% -->
+      <div class="image-panel">
+        <!-- Mock product image: gradient + product-like shape -->
+        <svg viewBox="0 0 320 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg" style="position:absolute;inset:0;width:100%;height:100%;display:block;">
+          <defs>
+            <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#dbeafe;stop-opacity:1" />
+              <stop offset="50%" style="stop-color:#bfdbfe;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#93c5fd;stop-opacity:1" />
+            </linearGradient>
+            <linearGradient id="box" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:#1e40af;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#1e3a8a;stop-opacity:1" />
+            </linearGradient>
+            <linearGradient id="screen" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style="stop-color:#06b6d4;stop-opacity:1" />
+              <stop offset="100%" style="stop-color:#0891b2;stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <rect width="320" height="600" fill="url(#bg)"/>
+          <!-- Product mockup: VOTE machine -->
+          <rect x="100" y="120" width="120" height="280" rx="20" fill="url(#box)"/>
+          <rect x="115" y="160" width="90" height="140" rx="8" fill="url(#screen)"/>
+          <circle cx="160" cy="200" r="20" fill="#fbbf24"/>
+          <circle cx="160" cy="200" r="10" fill="#0e7490"/>
+          <rect x="120" y="230" width="80" height="6" rx="3" fill="#fff" opacity=".6"/>
+          <rect x="120" y="245" width="60" height="6" rx="3" fill="#fff" opacity=".4"/>
+          <rect x="120" y="260" width="70" height="6" rx="3" fill="#fff" opacity=".4"/>
+          <!-- Keypad -->
+          <g fill="#fff" opacity=".8">
+            <rect x="120" y="320" width="20" height="14" rx="2"/>
+            <rect x="150" y="320" width="20" height="14" rx="2"/>
+            <rect x="180" y="320" width="20" height="14" rx="2"/>
+            <rect x="120" y="340" width="20" height="14" rx="2"/>
+            <rect x="150" y="340" width="20" height="14" rx="2"/>
+            <rect x="180" y="340" width="20" height="14" rx="2"/>
+            <rect x="120" y="360" width="20" height="14" rx="2"/>
+            <rect x="150" y="360" width="20" height="14" rx="2"/>
+            <rect x="180" y="360" width="20" height="14" rx="2"/>
+          </g>
+          <rect x="125" y="450" width="70" height="30" rx="6" fill="#fbbf24"/>
+          <text x="160" y="470" text-anchor="middle" font-family="sans-serif" font-size="14" font-weight="700" fill="#1e3a8a">VOTE</text>
+        </svg>
+
+        <div class="top-grad"></div>
+        <div class="bot-grad"></div>
+        <div class="status-pill">
+          <span class="dot"></span> ใช้งาน
+        </div>
+      </div>
+
+      <!-- Content panel — height matches image -->
+      <div class="content-panel">
+        <div class="content-head">
+          <div class="meta-row">
+            <span class="code-chip">A001</span>
+            <span class="type-chip">วัสดุ / Material</span>
+            <span class="meta-right">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              อัปเดตล่าสุด 6 ส.ค. 2569
+            </span>
+          </div>
+          <h2 class="title">Material-A-1</h2>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-head">
+              <span class="ico info">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              </span>
+              ข้อมูลพื้นฐาน
+            </div>
+            <dl class="rows">
+              <div class="row"><dt>รหัสวัสดุ</dt><dd class="mono">A001</dd></div>
+              <div class="row"><dt>ชื่อวัสดุ</dt><dd>Material-A-1</dd></div>
+              <div class="row"><dt>รุ่น</dt><dd>Model A</dd></div>
+              <div class="row"><dt>ผู้ขาย</dt><dd style="color: var(--primary); font-weight: 500;">บริษัท ABC</dd></div>
+            </dl>
+          </div>
+
+          <div class="info-cell">
+            <div class="info-head">
+              <span class="ico ship">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              </span>
+              รายละเอียดการจัดส่ง
+            </div>
+            <dl class="rows">
+              <div class="row"><dt>การจัดส่ง</dt><dd>จัดส่ง 1</dd></div>
+              <div class="row"><dt>สถานะ</dt><dd style="color: var(--success); font-weight: 500;">● ใช้งาน</dd></div>
+              <div class="row"><dt>วันที่บันทึก</dt><dd>6 ส.ค. 2569</dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="add-section">
+          <div class="add-head">
+            <span class="ico">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            </span>
+            ข้อมูลเพิ่มเติม
+          </div>
+          <div class="kv-table">
+            <div class="kv"><span class="k">หมวดหมู่</span><span class="v pill">อะไหล่อิเล็กทรอนิกส์</span></div>
+            <div class="kv"><span class="k">หน่วยนับ</span><span class="v">ชิ้น (PCS)</span></div>
+            <div class="kv"><span class="k">ค่าแนะนำจัดเก็บ</span><span class="v">100 ชิ้น</span></div>
+            <div class="kv"><span class="k">สต็อกคงเหลือ</span><span class="v success">250 ชิ้น</span></div>
+            <div class="kv"><span class="k">ขั้นต่ำการสั่งซื้อ</span><span class="v">50 ชิ้น</span></div>
+            <div class="kv"><span class="k">หมายเหตุ</span><span class="v" style="color: var(--muted-fg);">—</span></div>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <button class="btn">✎ แก้ไข</button>
+          <button class="btn btn-danger">⏻ ปิดใช้งาน</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div class="compare-card bad">
+        <h3>ก่อนแก้ ❌</h3>
+        <ul>
+          <li>Image panel: <code>min-h-[280px]</code></li>
+          <li>เมื่อ content panel สูงกว่า 280px → image panel ไม่ stretch</li>
+          <li>รูป <code>object-cover</code> แต่พื้นที่ไม่พอ → letterbox</li>
+        </ul>
+      </div>
+      <div class="compare-card good">
+        <h3>หลังแก้ ✓</h3>
+        <ul>
+          <li>Image panel: <code>min-h-[280px] lg:min-h-full</code></li>
+          <li>Content panel: <code>lg:h-full</code> + <code>margin-top: auto</code> ใน action bar</li>
+          <li>รูป: <code>absolute inset-0 object-cover</code> → เต็มพื้นที่ panel</li>
+          <li>Mobile (<code>&lt;lg</code>): ใช้ <code>min-h-[280px]</code> เหมือนเดิม</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

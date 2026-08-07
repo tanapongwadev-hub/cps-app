@@ -23,6 +23,7 @@ import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PermissionGuard } from "@/components/ui/permission-guard";
+import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 import { PERMISSIONS } from "@/constants/permissions";
 import {
   useMaterials,
@@ -34,6 +35,7 @@ import {
   useUploadMaterialImage,
 } from "@/features/materials/hooks/use-materials";
 import { MaterialCardGrid } from "@/features/materials/components/material-card-grid";
+import { MaterialTable } from "@/features/materials/components/material-table";
 import { MaterialFilters } from "@/features/materials/components/material-filters";
 import { MaterialFormModal } from "@/features/materials/components/material-form-modal";
 import { MaterialStatusDialog } from "@/features/materials/components/material-status-dialog";
@@ -54,6 +56,7 @@ export default function MaterialsPCPage() {
     page: 1,
     pageSize: PC_PAGE_SIZE,
   });
+  const [viewMode, setViewMode] = React.useState<ViewMode>("card");
   const [formOpen, setFormOpen] = React.useState(false);
   const [editingMaterial, setEditingMaterial] = React.useState<Material | null>(null);
   const [statusChange, setStatusChange] = React.useState<{
@@ -210,27 +213,57 @@ export default function MaterialsPCPage() {
           onChange={setFilters}
         />
 
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Cpu className="h-3.5 w-3.5" />
-          <span>
-            แสดง {items.length} จาก {totalItems} รายการ (PC)
-          </span>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Cpu className="h-3.5 w-3.5" />
+            <span>
+              แสดง {items.length} จาก {totalItems} รายการ (PC)
+            </span>
+          </div>
+          <ViewToggle
+            value={viewMode}
+            onValueChange={setViewMode}
+            storageKey="materials:view-mode"
+            ariaLabel="สลับมุมมองรายการอะไหล่ PC"
+          />
         </div>
 
-        <MaterialCardGrid
-          materials={items}
-          page={filters.page}
-          pageSize={filters.pageSize ?? PC_PAGE_SIZE}
-          totalItems={totalItems}
-          isLoading={listQuery.isLoading || lookupsLoading}
-          isError={listQuery.isError}
-          onRetry={() => listQuery.refetch()}
-          onCreate={canSave ? handleCreate : undefined}
-          onEdit={canSave ? handleEdit : undefined}
-          onStatusChange={canSave ? handleStatusChange : undefined}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-        />
+        {viewMode === "card" ? (
+          <MaterialCardGrid
+            materials={items}
+            page={filters.page}
+            pageSize={filters.pageSize ?? PC_PAGE_SIZE}
+            totalItems={totalItems}
+            isLoading={listQuery.isLoading || lookupsLoading}
+            isError={listQuery.isError}
+            onRetry={() => listQuery.refetch()}
+            onCreate={canSave ? handleCreate : undefined}
+            onEdit={canSave ? handleEdit : undefined}
+            onStatusChange={canSave ? handleStatusChange : undefined}
+            detailHref={(material) => `/materials/pc/${material.id}`}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        ) : (
+          <MaterialTable
+            materials={items}
+            page={filters.page}
+            pageSize={filters.pageSize ?? PC_PAGE_SIZE}
+            totalItems={totalItems}
+            sortBy={filters.sortBy}
+            sortOrder={filters.sortOrder}
+            isLoading={listQuery.isLoading || lookupsLoading}
+            isError={listQuery.isError}
+            onRetry={() => listQuery.refetch()}
+            onCreate={canSave ? handleCreate : undefined}
+            onEdit={canSave ? handleEdit : undefined}
+            onStatusChange={canSave ? handleStatusChange : undefined}
+            detailHref={(material) => `/materials/pc/${material.id}`}
+            onSortChange={handleSortChange}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+        )}
       </PageContainer>
 
       <PageFooter />

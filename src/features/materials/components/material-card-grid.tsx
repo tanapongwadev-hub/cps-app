@@ -17,6 +17,7 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Eye,
   ImageOff,
   Pencil,
   Power,
@@ -40,6 +41,12 @@ export interface MaterialCardGridProps {
   onCreate?: () => void;
   onEdit?: (material: Material) => void;
   onStatusChange?: (material: Material) => void;
+  /**
+   * If provided, each card becomes clickable and navigates to this URL
+   * (with the material id appended). When undefined, the whole card is
+   * non-interactive and only the per-card action buttons are clickable.
+   */
+  detailHref?: (material: Material) => string;
   page: number;
   pageSize: number;
   totalItems: number;
@@ -60,6 +67,7 @@ export function MaterialCardGrid({
   onCreate,
   onEdit,
   onStatusChange,
+  detailHref,
   page,
   pageSize,
   totalItems,
@@ -128,6 +136,7 @@ export function MaterialCardGrid({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {materials.map((material) => {
             const imageUrl = resolveMaterialImage(material.imagePath);
+            const href = detailHref?.(material);
             return (
               <Card
                 key={material.id}
@@ -135,7 +144,15 @@ export function MaterialCardGrid({
                 className={cn(
                   "group flex h-full flex-col overflow-hidden transition-all duration-200",
                   "hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-primary/20",
+                  href && "cursor-pointer",
                 )}
+                onClick={
+                  href
+                    ? () => {
+                        window.location.href = href;
+                      }
+                    : undefined
+                }
               >
                 <div className="bg-muted relative aspect-[4/3] w-full overflow-hidden">
                   {imageUrl ? (
@@ -263,8 +280,25 @@ export function MaterialCardGrid({
                   </dl>
 
                   {/* Bottom action bar (always visible for mobile / no-hover devices) */}
-                  {(onEdit || onStatusChange) && (
-                    <div className="mt-auto flex items-center justify-end gap-1 border-t pt-2">
+                  {(onEdit || onStatusChange || href) && (
+                    <div className="mt-auto flex items-center justify-between gap-1 border-t pt-2">
+                      {href && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            window.location.href = href;
+                          }}
+                          aria-label={`ดูรายละเอียด ${material.code}`}
+                          className="h-8 px-2"
+                        >
+                          <Eye className="size-3.5" />
+                          <span className="hidden sm:inline">ดู</span>
+                        </Button>
+                      )}
+                      <div className="ml-auto flex items-center gap-1">
                       {onEdit && (
                         <Button
                           type="button"
@@ -309,6 +343,7 @@ export function MaterialCardGrid({
                           )}
                         </Button>
                       )}
+                      </div>
                     </div>
                   )}
                 </CardContent>
