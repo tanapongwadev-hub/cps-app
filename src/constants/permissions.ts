@@ -112,6 +112,20 @@ export const PERMISSIONS = {
   // System Settings
   SYSTEM_SETTINGS_VIEW: "system-settings.view",
   SYSTEM_SETTINGS_UPDATE: "system-settings.update",
+
+  // Goods Receipt
+  GOODS_RECEIPT_VIEW: "goods_receipt.read",
+  GOODS_RECEIPT_CREATE: "goods_receipt.create",
+  GOODS_RECEIPT_UPDATE: "goods_receipt.update",
+  GOODS_RECEIPT_DELETE: "goods_receipt.delete",
+  GOODS_RECEIPT_POST: "goods_receipt.post",
+  GOODS_RECEIPT_CANCEL: "goods_receipt.cancel",
+
+  // Reject Reason
+  REJECT_REASON_VIEW: "REJECT_REASON_VIEW",
+  REJECT_REASON_CREATE: "REJECT_REASON_CREATE",
+  REJECT_REASON_UPDATE: "REJECT_REASON_UPDATE",
+  REJECT_REASON_DELETE: "REJECT_REASON_DELETE",
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
@@ -272,6 +286,28 @@ export const PERMISSION_GROUPS = [
     permissions: [
       { key: "view", code: PERMISSIONS.SYSTEM_SETTINGS_VIEW, label: "ดู" },
       { key: "update", code: PERMISSIONS.SYSTEM_SETTINGS_UPDATE, label: "แก้ไข" },
+    ],
+  },
+  {
+    module: "reject-reason",
+    label: "เหตุผลการปฏิเสธ",
+    permissions: [
+      { key: "view", code: PERMISSIONS.REJECT_REASON_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.REJECT_REASON_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.REJECT_REASON_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.REJECT_REASON_DELETE, label: "ลบ" },
+    ],
+  },
+  {
+    module: "goods-receipt",
+    label: "รับเข้าวัตถุดิบ",
+    permissions: [
+      { key: "view", code: PERMISSIONS.GOODS_RECEIPT_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.GOODS_RECEIPT_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.GOODS_RECEIPT_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.GOODS_RECEIPT_DELETE, label: "ลบ" },
+      { key: "post", code: PERMISSIONS.GOODS_RECEIPT_POST, label: "รับรอง" },
+      { key: "cancel", code: PERMISSIONS.GOODS_RECEIPT_CANCEL, label: "ยกเลิก" },
     ],
   },
 ] as const;
