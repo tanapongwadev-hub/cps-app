@@ -9,26 +9,34 @@
  * - Clear visual hierarchy
  */
 
+import { useState } from "react";
 import {
   AlertCircle,
   Calendar,
   Edit2,
   Hash,
   ImageOff,
+  Maximize2,
   Package,
   Power,
   RotateCcw,
+  Tag,
   Truck,
   User,
   Warehouse,
+  X,
 } from "lucide-react";
-import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage } from "../utils";
+import { resolveMaterialImage, getMaterialTypeLabel, getMaterialTypeColor } from "../utils";
 import type { Material } from "../api/materials-api";
 
 function formatDate(value: string): string {
@@ -76,6 +84,8 @@ export function MaterialDetailCard({
     material.unit?.nameTh ||
     material.unit?.code ||
     "—";
+  const typeLabel = getMaterialTypeLabel(material.type);
+  const [preview, setPreview] = useState(false);
 
   return (
     <div className={cn("space-y-5", className)}>
@@ -83,13 +93,27 @@ export function MaterialDetailCard({
       <Card className="overflow-hidden border-border/60">
         <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
           {/* Image */}
-          <div className="relative min-h-[220px] overflow-hidden bg-muted/30 border-b md:border-b-0 md:border-r">
+          <div
+            className={cn(
+              "group/img relative min-h-[280px] overflow-hidden bg-muted/30 border-b md:border-b-0 md:border-r",
+              imageUrl && "cursor-pointer",
+            )}
+            onClick={() => imageUrl && setPreview(true)}
+            role={imageUrl ? "button" : undefined}
+            tabIndex={imageUrl ? 0 : undefined}
+            onKeyDown={(event) => {
+              if (imageUrl && (event.key === "Enter" || event.key === " ")) {
+                event.preventDefault();
+                setPreview(true);
+              }
+            }}
+          >
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imageUrl}
                 alt={`รูปอะไหล่ ${material.code}`}
-                className="absolute inset-0 h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3">
@@ -100,7 +124,31 @@ export function MaterialDetailCard({
               </div>
             )}
 
-            {/* Status Badge */}
+            {/* Preview Hint (ซ้อนทับรูป) */}
+            {imageUrl && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover/img:bg-black/30 group-hover/img:opacity-100">
+                <div className="bg-background/90 text-foreground flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium shadow-lg">
+                  <Maximize2 className="size-3.5" />
+                  คลิกเพื่อขยาย
+                </div>
+              </div>
+            )}
+
+            {/* Type Badge - Top Left */}
+            {typeLabel && (
+              <div className="absolute left-3 top-3">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-semibold shadow-md",
+                    getMaterialTypeColor(material.type),
+                  )}
+                >
+                  {typeLabel}
+                </span>
+              </div>
+            )}
+
+            {/* Status Badge - Top Right */}
             <div className="absolute right-3 top-3">
               <Badge
                 variant={material.isActive ? "success" : "secondary"}
@@ -121,6 +169,20 @@ export function MaterialDetailCard({
           <div className="flex flex-col">
             {/* Header */}
             <div className="flex flex-col gap-3 p-5 pb-4">
+              {/* Type — Hero element (เด่น) */}
+              {typeLabel && (
+                <div>
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider shadow-sm",
+                      getMaterialTypeColor(material.type),
+                    )}
+                  >
+                    <Tag className="size-3.5" />
+                    {typeLabel}
+                  </span>
+                </div>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <code className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 font-mono text-sm font-semibold">
                   {material.code}
@@ -128,6 +190,12 @@ export function MaterialDetailCard({
                 <Badge variant="outline" className="text-xs">
                   {material.unit?.nameTh ?? "—"}
                 </Badge>
+                {/* ประเภท (Model) */}
+                {material.model && (
+                  <Badge variant="secondary" className="text-xs">
+                    {material.model.nameTh}
+                  </Badge>
+                )}
               </div>
               <h1 className="text-2xl font-semibold tracking-tight">{material.name}</h1>
               {material.description && (
@@ -169,12 +237,6 @@ export function MaterialDetailCard({
                 <div className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
                   <Truck className="size-3.5" />
                   {material.deliveryType.nameTh}
-                </div>
-              )}
-              {material.model && (
-                <div className="bg-success/10 text-success inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
-                  <Package className="size-3.5" />
-                  {material.model.nameTh}
                 </div>
               )}
               {material.loadingPoint && (
@@ -247,6 +309,9 @@ export function MaterialDetailCard({
             <DetailItem label="รหัสวัสดุ" value={material.code} mono />
             <DetailItem label="ชื่อวัสดุ" value={material.name} />
             <DetailItem label="หน่วยนับ" value={unitLabel} />
+            {material.model && (
+              <DetailItem label="ประเภท (Model)" value={material.model.nameTh} />
+            )}
             {material.packingQuantity && (
               <DetailItem label="จำนวนบรรจุ" value={`${material.packingQuantity} ชิ้น/หน่วย`} />
             )}
@@ -310,6 +375,46 @@ export function MaterialDetailCard({
           </CardContent>
         </Card>
       </div>
+
+      {/* Image Preview Lightbox (manual — avoids nested Radix Dialog) */}
+      {preview && imageUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`รูปอะไหล่ ${material.code}`}
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => setPreview(false)}
+        >
+          <div
+            className="bg-card relative max-h-[90vh] w-full max-w-5xl overflow-hidden rounded-2xl shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="bg-muted relative flex max-h-[80vh] items-center justify-center overflow-hidden p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={imageUrl}
+                alt={`รูปอะไหล่ ${material.code}`}
+                className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain"
+              />
+            </div>
+            <div className="flex items-center justify-between border-t bg-card px-4 py-3">
+              <div>
+                <p className="font-mono text-sm font-semibold">{material.code}</p>
+                <p className="text-muted-foreground text-xs">{material.name}</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPreview(false)}
+              >
+                <X className="size-4" />
+                ปิด
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

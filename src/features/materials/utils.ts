@@ -58,3 +58,27 @@ export function resolveMaterialImage(imagePath: string | null | undefined): stri
   }
   return `${origin}${normalised}`;
 }
+
+/** Map a Material.type code to a human-readable Thai label. */
+const MATERIAL_TYPE_LABELS: Record<string, string> = {
+  PC: "อะไหล่ PC",
+  OF: "อะไหล่ Office",
+  OF_MAT: "วัสดุ Office",
+};
+
+/** Map a Material.type code to its accent color (used for type badges/triangles). */
+const MATERIAL_TYPE_COLORS: Record<string, string> = {
+  PC: "bg-[#8B0000] text-white", // แดงเลือดหมู
+  OF: "bg-emerald-700 text-white", // เขียวเข้ม
+  OF_MAT: "bg-blue-600 text-white", // น้ำเงิน
+};
+
+export function getMaterialTypeLabel(type: string | null | undefined): string | null {
+  if (!type) return null;
+  return MATERIAL_TYPE_LABELS[type] ?? type;
+}
+
+export function getMaterialTypeColor(type: string | null | undefined): string {
+  if (!type) return "bg-muted text-foreground";
+  return MATERIAL_TYPE_COLORS[type] ?? "bg-muted text-foreground";
+}

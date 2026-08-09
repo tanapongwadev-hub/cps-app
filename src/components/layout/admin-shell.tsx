@@ -123,15 +123,19 @@ export function AdminShell({ children, noAuthCheck }: AdminShellProps) {
   }
 
   return (
-    <div className="flex min-h-screen bg-muted/30">
+    <div className="flex h-screen gap-4 overflow-hidden bg-slate-100 p-4 dark:bg-slate-900">
       <Sidebar />
       <div
         className={cn(
-          "flex min-h-screen flex-1 flex-col transition-[padding] duration-300",
+          "flex h-full flex-1 flex-col gap-5 transition-[padding] duration-300",
         )}
       >
         <TopNav />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex flex-1 flex-col overflow-hidden rounded-2xl bg-background shadow-sm">
+          <div className="flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            {children}
+          </div>
+        </main>
       </div>
       <CommandPalette />
     </div>

@@ -347,22 +347,22 @@ body {
    Layout-specific gradients & animations
    ========================================================================== */
 
-/* Subtle vertical gradient for the sidebar — gives a sense of depth without
-   being heavy. Uses the dark sidebar palette. */
+/* Solid background for the sidebar — minimal flat look */
 .sidebar-gradient {
-  background-image: linear-gradient(
-    180deg,
-    hsl(var(--sidebar-background)) 0%,
-    hsl(222 47% 9%) 100%
-  );
+  background-color: hsl(var(--sidebar-background));
 }
 
-.dark .sidebar-gradient {
-  background-image: linear-gradient(
-    180deg,
-    hsl(var(--sidebar-background)) 0%,
-    hsl(222 47% 5%) 100%
-  );
+/* Floating sidebar enhancement - extra shadow for depth */
+.sidebar-floating {
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.04),
+    0 1px 2px -1px rgb(0 0 0 / 0.04);
+}
+
+.dark .sidebar-floating {
+  box-shadow:
+    0 1px 3px 0 rgb(0 0 0 / 0.2),
+    0 1px 2px -1px rgb(0 0 0 / 0.15);
 }
 
 /* Subtle gradient for the top nav — light at the top, slightly transparent
@@ -392,10 +392,9 @@ body {
   -webkit-backdrop-filter: blur(8px) saturate(150%);
 }
 
-/* Active-item glow — used on the active sidebar item. Subtle, not loud. */
+/* Active-item glow — used on the active sidebar item. Sky blue accent. */
 .active-glow {
   box-shadow:
-    inset 0 1px 0 0 hsl(var(--sidebar-primary) / 0.2),
     inset 2px 0 0 0 hsl(var(--sidebar-primary));
 }
 

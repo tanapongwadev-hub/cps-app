@@ -39,7 +39,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage } from "../utils";
+import { resolveMaterialImage, getMaterialTypeLabel, getMaterialTypeColor } from "../utils";
 import type { ListMaterialsParams, Material } from "../api/materials-api";
 
 type MaterialSortBy = NonNullable<ListMaterialsParams["sortBy"]>;
@@ -359,22 +359,14 @@ export function MaterialTable({
                     </TableCell>
                     <TableCell className="py-2">
                       {material.type ? (
-                        <Badge
-                          variant={
-                            material.type === "PC"
-                              ? "default"
-                              : material.type === "OF"
-                                ? "secondary"
-                                : "outline"
-                          }
-                          size="sm"
+                        <span
+                          className={cn(
+                            "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold",
+                            getMaterialTypeColor(material.type),
+                          )}
                         >
-                          {material.type === "PC"
-                            ? "อะไหล่"
-                            : material.type === "OF"
-                              ? "โรงงาน"
-                              : "วัตถุดิบ"}
-                        </Badge>
+                          {getMaterialTypeLabel(material.type) ?? material.type}
+                        </span>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}

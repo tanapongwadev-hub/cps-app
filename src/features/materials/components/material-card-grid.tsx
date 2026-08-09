@@ -10,6 +10,7 @@
  * - Responsive grid layout
  */
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -17,19 +18,26 @@ import {
   Edit2,
   Eye,
   ImageOff,
+  Maximize2,
   Package,
   Power,
   RotateCcw,
   ToggleLeft,
   ToggleRight,
+  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage } from "../utils";
+import { resolveMaterialImage, getMaterialTypeLabel, getMaterialTypeColor } from "../utils";
 import type { Material } from "../api/materials-api";
 
 export interface MaterialCardGridProps {
@@ -72,6 +80,7 @@ export function MaterialCardGrid({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
+  const [preview, setPreview] = useState<{ url: string; code: string; name: string } | null>(null);
 
   return (
     <div className="space-y-4">
@@ -136,6 +145,7 @@ export function MaterialCardGrid({
           {materials.map((material) => {
             const imageUrl = resolveMaterialImage(material.imagePath);
             const href = detailHref?.(material);
+            const typeLabel = getMaterialTypeLabel(material.type);
             return (
               <Card
                 key={material.id}
@@ -146,14 +156,14 @@ export function MaterialCardGrid({
                   href && "cursor-pointer",
                 )}
               >
-                {/* Image Section */}
-                <div className="relative h-36 w-full overflow-hidden bg-muted/30">
+                {/* Image Section - ลดขนาด */}
+                <div className="group/img relative aspect-[4/3] w-full overflow-hidden bg-muted/30">
                   {imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={imageUrl}
                       alt={`รูปอะไหล่ ${material.code}`}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
                       loading="lazy"
                     />
                   ) : (
@@ -162,6 +172,35 @@ export function MaterialCardGrid({
                         <ImageOff className="size-5" />
                       </div>
                       <span className="text-xs">ไม่มีรูป</span>
+                    </div>
+                  )}
+
+                  {/* Preview Button - Bottom Right */}
+                  {imageUrl && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreview({ url: imageUrl, code: material.code, name: material.name });
+                      }}
+                      aria-label={`ขยายรูป ${material.code}`}
+                      className="bg-background/90 hover:bg-primary hover:scale-110 absolute bottom-2 right-2 z-10 flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-all"
+                    >
+                      <Maximize2 className="text-muted-foreground group-hover/img:text-primary-foreground size-3.5 transition-colors" />
+                    </button>
+                  )}
+
+                  {/* Type Badge - Top Left */}
+                  {typeLabel && (
+                    <div className="absolute left-2 top-2">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold shadow-md",
+                          getMaterialTypeColor(material.type),
+                        )}
+                      >
+                        {typeLabel}
+                      </span>
                     </div>
                   )}
 
@@ -190,9 +229,9 @@ export function MaterialCardGrid({
                     </div>
                   )}
 
-                  {/* Quick Actions - Top Left (visible on hover) */}
+                  {/* Quick Actions - shown next to status badge (visible on hover) */}
                   {(onEdit || onStatusChange) && (
-                    <div className="absolute left-2 top-2 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                    <div className="absolute right-2 top-9 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
                       {onEdit && (
                         <button
                           type="button"
@@ -201,9 +240,9 @@ export function MaterialCardGrid({
                             onEdit(material);
                           }}
                           aria-label={`แก้ไข ${material.code}`}
-                          className="bg-background/95 hover:bg-background flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-colors"
+                          className="bg-background/95 hover:bg-primary hover:scale-110 flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-all"
                         >
-                          <Edit2 className="size-3.5 text-muted-foreground" />
+                          <Edit2 className="text-muted-foreground group-hover/btn:text-primary-foreground size-3.5 transition-colors" />
                         </button>
                       )}
                       {onStatusChange && (
@@ -417,6 +456,42 @@ export function MaterialCardGrid({
           </Button>
         </div>
       </div>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={!!preview} onOpenChange={(open) => !open && setPreview(null)}>
+        <DialogContent className="max-w-4xl p-0 sm:max-w-5xl">
+          <DialogTitle className="sr-only">
+            {preview ? `รูป ${preview.code} - ${preview.name}` : "รูปตัวอย่าง"}
+          </DialogTitle>
+          <div className="bg-muted relative flex max-h-[85vh] items-center justify-center overflow-hidden p-4">
+            {preview && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={preview.url}
+                alt={`รูปอะไหล่ ${preview.code}`}
+                className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
+              />
+            )}
+          </div>
+          {preview && (
+            <div className="flex items-center justify-between border-t bg-card px-4 py-3">
+              <div>
+                <p className="font-mono text-sm font-semibold">{preview.code}</p>
+                <p className="text-muted-foreground text-xs">{preview.name}</p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPreview(null)}
+              >
+                <X className="size-4" />
+                ปิด
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

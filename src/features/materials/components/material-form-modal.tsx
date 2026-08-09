@@ -29,7 +29,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage } from "../utils";
+import { resolveMaterialImage, getMaterialTypeLabel } from "../utils";
 import type {
   Material,
   MaterialImageUpload,
@@ -426,9 +426,9 @@ export function MaterialFormModal({
                         )}
                       >
                         <option value="">เลือกประเภท</option>
-                        <option value="PC">PC (อะไหล่)</option>
-                        <option value="OF">OF (วัสดุโรงงาน)</option>
-                        <option value="OF_MAT">OF_MAT (วัตถุดิบ)</option>
+                        <option value="PC">{getMaterialTypeLabel("PC")}</option>
+                        <option value="OF">{getMaterialTypeLabel("OF")}</option>
+                        <option value="OF_MAT">{getMaterialTypeLabel("OF_MAT")}</option>
                       </select>
                     </div>
                     <LookupSelect
@@ -682,7 +682,7 @@ export function MaterialFormModal({
                 type="button"
                 variant="outline"
                 disabled={pending}
-                onClick={() => requestOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
               >
                 ยกเลิก
               </Button>

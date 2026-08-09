@@ -55,7 +55,6 @@ import { SESSION_STORAGE_KEYS } from "@/constants/app";
 import type { MenuItem } from "@/types/menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/lib/toast";
 
@@ -87,8 +86,8 @@ function PinnedRow({ item, onUnpin }: { item: MenuItem; onUnpin: () => void }) {
       aria-current={isActive ? "page" : undefined}
       className={cn(
         "group/pin relative flex items-center gap-3 rounded-md px-2.5 py-1.5 text-sm font-medium transition-all duration-200",
-        "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-        isActive && "bg-gradient-to-r from-sidebar-primary/20 to-sidebar-accent text-sidebar-accent-foreground active-glow",
+        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        isActive && "bg-sidebar-accent text-sidebar-accent-foreground active-glow",
       )}
     >
       <Icon name={item.icon} className="h-3.5 w-3.5 shrink-0" />
@@ -161,9 +160,9 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
             level > 0 && "pl-6",
           )}
         >
-          <span className="h-px flex-1 bg-sidebar-border/40" />
+          <span className="h-px flex-1 bg-sidebar-border/20" />
           <span>{pickMenuName(item)}</span>
-          <span className="h-px flex-1 bg-sidebar-border/40" />
+          <span className="h-px flex-1 bg-sidebar-border/20" />
         </div>
         <div className="space-y-1">
           {item.children?.map((child) => (
@@ -194,11 +193,10 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
     <div
       className={cn(
         "group/menu relative flex items-center gap-3 rounded-md text-sm font-medium transition-all duration-200",
-        "hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground",
-        // Active state: gradient bg + animated left bar
+        "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        // Active state: subtle bg + animated left bar
         isActive && [
-          "bg-gradient-to-r from-sidebar-primary/20 via-sidebar-primary/10 to-transparent",
-          "text-sidebar-accent-foreground",
+          "bg-sidebar-accent text-sidebar-accent-foreground",
           "active-glow",
         ],
         collapsed ? "h-10 w-10 justify-center mx-auto" : "h-9 px-3 py-1",
@@ -209,7 +207,7 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
         name={item.icon}
         className={cn(
           "h-4 w-4 shrink-0 transition-all duration-200",
-          isActive && "text-sidebar-primary drop-shadow-[0_0_6px_hsl(var(--sidebar-primary)/0.4)]",
+          isActive && "text-sidebar-foreground",
         )}
       />
       {!collapsed && (
@@ -406,14 +404,15 @@ export function Sidebar() {
     return (
     <div
       className={cn(
-        "sidebar-gradient flex h-full flex-col text-sidebar-foreground transition-[width] duration-300",
+        "sidebar-gradient sidebar-floating flex h-full flex-col text-sidebar-foreground transition-[width] duration-300",
+        "overflow-hidden",
         isCollapsedView ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width)]",
       )}
     >
       {/* Header — logo + backend indicator */}
       <div
         className={cn(
-          "relative flex h-[var(--header-height)] items-center border-b border-sidebar-border/60",
+          "relative flex h-[var(--header-height)] items-center",
           collapsed ? "justify-center px-2" : "gap-3 px-4",
         )}
       >
@@ -469,12 +468,12 @@ export function Sidebar() {
         <div className="space-y-1.5 px-3 py-2.5">
           {/* Quick filter — narrows the visible menu in-place. */}
           <div className="group/search relative">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sidebar-muted-foreground transition-colors group-focus-within/search:text-sidebar-primary" />
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sidebar-muted-foreground transition-colors group-focus-within/search:text-sidebar-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="ค้นหาเมนู..."
-              className="h-8 border-sidebar-border/60 bg-sidebar-accent/30 pl-8 pr-8 text-sidebar-foreground placeholder:text-sidebar-muted-foreground/70 transition-all focus-visible:bg-sidebar-accent/60 focus-visible:ring-sidebar-ring"
+              className="h-8 border-sidebar-border bg-sidebar-accent/50 pl-8 pr-8 text-sidebar-foreground placeholder:text-sidebar-muted-foreground/70 transition-all focus-visible:bg-sidebar-accent focus-visible:ring-sidebar-ring"
               aria-label="กรองเมนู"
             />
             {search ? (
@@ -509,7 +508,7 @@ export function Sidebar() {
       )}
 
       {/* Body — pinned / recent / main menu */}
-      <ScrollArea className="flex-1 px-3">
+      <div className="flex-1 overflow-y-auto px-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <nav className="space-y-5 py-2" aria-label="Main">
           {/* PINNED */}
           {!collapsed && !showingSearch && pinnedItems.length > 0 && (
@@ -550,11 +549,11 @@ export function Sidebar() {
             )}
           </Section>
         </nav>
-      </ScrollArea>
+      </div>
 
       {/* Footer */}
       {!isMobile && (
-        <div className="space-y-1 border-t border-sidebar-border/60 p-2">
+        <div className="space-y-1 p-2">
           {!collapsed && superAdmin.isSuperAdmin() && (
             <div className="flex items-center gap-1.5 rounded-md bg-gradient-to-r from-emerald-500/10 to-transparent px-2 py-1 text-[10px] font-medium text-sidebar-muted-foreground">
               <span className="relative flex h-1.5 w-1.5">
@@ -665,14 +664,22 @@ export function Sidebar() {
             "transition-[width] duration-300",
           )}
         >
-          {content({ forceCollapsed: true, onNavigate: () => setMobileOpen(false) })}
+          <div className="h-full overflow-hidden rounded-2xl">
+            {content({ forceCollapsed: true, onNavigate: () => setMobileOpen(false) })}
+          </div>
         </aside>
       </>
     );
   }
 
-  // Desktop (≥ 1024px): regular sticky aside with full collapse/expand.
-  return <aside className="sticky top-0 hidden h-screen md:block">{content()}</aside>;
+  // Desktop (≥ 1024px): sticky aside with rounded corners and shadow
+  return (
+    <aside className="sticky top-0 hidden h-screen md:block">
+      <div className="h-full overflow-hidden rounded-2xl">
+        {content()}
+      </div>
+    </aside>
+  );
 }
 
 /* ---------------------------------------------------------------- section header */

@@ -528,9 +528,9 @@ export function TopNav() {
   return (
     <header
       className={cn(
-        "topnav-gradient sticky top-0 z-30 flex h-[var(--topnav-height)] items-center gap-2 border-b border-border/60",
-        "px-3 sm:gap-3 sm:px-4",
-        "shadow-[0_1px_0_0_hsl(var(--border)/0.6),0_2px_8px_-2px_rgb(0_0_0/0.04)]",
+        "topnav-gradient flex h-[var(--topnav-height)] items-center gap-2 rounded-2xl border border-sidebar-border",
+        "px-3 shadow-md sm:gap-3 sm:px-4",
+        "shadow-[0_4px_12px_-2px_rgb(0_0_0/0.08)]",
       )}
     >
       {/* Sidebar toggle (mobile drawer / tablet overlay / desktop collapse) */}
