@@ -2,11 +2,23 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ImagePlus, Package, Save, X } from "lucide-react";
+import {
+  Box,
+  ChevronDown,
+  CircleAlert,
+  FileText,
+  Gauge,
+  Image,
+  Package,
+  Save,
+  Settings,
+  Store,
+  User,
+  X,
+} from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
-import { FormGrid, FormSection } from "@/components/forms/form-section";
 import { TextField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -27,6 +39,7 @@ import type {
   MaterialLookupOption,
   MaterialLookups,
   MaterialPayload,
+  MaterialType,
   UpdateMaterialPayload,
 } from "../api/materials-api";
 
@@ -36,6 +49,7 @@ const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const materialFormSchema = z.object({
   code: z.string().trim().min(1, "กรุณากรอกรหัสวัสดุ"),
   name: z.string().trim().min(1, "กรุณากรอกชื่อวัสดุ"),
+  type: z.string(),
   unitId: z.string().min(1, "กรุณาเลือกหน่วย"),
   deliveryTypeId: z.string(),
   modelId: z.string(),
@@ -44,6 +58,7 @@ const materialFormSchema = z.object({
   scale: z.string(),
   specification: z.string(),
   description: z.string(),
+  packingQuantity: z.string(),
   supplierIds: z.array(z.string()),
   isActive: z.boolean(),
 });
@@ -70,6 +85,7 @@ function formValues(material?: Material | null): MaterialFormValues {
   return {
     code: material?.code ?? "",
     name: material?.name ?? "",
+    type: material?.type ?? "",
     unitId: material?.unitId ?? "",
     deliveryTypeId: material?.deliveryTypeId ?? "",
     modelId: material?.modelId ?? "",
@@ -78,6 +94,7 @@ function formValues(material?: Material | null): MaterialFormValues {
     scale: material?.scale ?? "",
     specification: material?.specification ?? "",
     description: material?.description ?? "",
+    packingQuantity: material?.packingQuantity?.toString() ?? "",
     supplierIds: material?.suppliers.map((supplier) => supplier.id) ?? [],
     isActive: material?.isActive ?? true,
   };
@@ -102,37 +119,71 @@ function LookupSelect({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id}>
+      <Label htmlFor={id} className="text-sm font-medium text-gray-700">
         {label}
-        {required && <span className="text-danger ml-0.5">*</span>}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
       </Label>
-      <select
-        id={id}
-        aria-label={label}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
-        className={cn(
-          "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none",
-          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
-          error && "border-danger focus-visible:ring-danger/20",
-        )}
-      >
-        <option value="">เลือก{label}</option>
-        {options.map((option) => (
-          <option key={option.id} value={option.id}>
-            {option.code} — {option.nameTh}
-          </option>
-        ))}
-      </select>
-      {error && (
-        <p id={`${id}-error`} className="text-danger text-xs">
-          {error}
-        </p>
-      )}
+      <div className="relative">
+        <select
+          id={id}
+          aria-label={label}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={!!error}
+          className={cn(
+            "h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm",
+            "transition-colors duration-150",
+            "hover:border-gray-400",
+            "focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none",
+            error && "border-red-400 focus:border-red-400 focus:ring-red-400/20",
+          )}
+        >
+          <option value="">เลือก{label}</option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.code} — {option.nameTh}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+      </div>
+      {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
+}
+
+function SectionCard({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50/50">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-blue-500 p-1.5 rounded-md">
+            <Icon className="size-4 text-white" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
+        </div>
+      </div>
+      <div className="p-4">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function FieldGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-4">{children}</div>;
+}
+
+function FullWidthField({ children }: { children: React.ReactNode }) {
+  return <div className="col-span-2">{children}</div>;
 }
 
 function errorMessage(error: unknown, staleConflict: boolean): string {
@@ -202,9 +253,6 @@ export function MaterialFormDialog({
 
   const selectedSupplierIds = useWatch({ control: form.control, name: "supplierIds" }) ?? [];
   const unitId = useWatch({ control: form.control, name: "unitId" }) ?? "";
-  const deliveryTypeId = useWatch({ control: form.control, name: "deliveryTypeId" }) ?? "";
-  const modelId = useWatch({ control: form.control, name: "modelId" }) ?? "";
-  const loadingPointId = useWatch({ control: form.control, name: "loadingPointId" }) ?? "";
   const pending = submitting || savePending || uploadPending;
   const dirty = form.formState.isDirty || imageDirty;
 
@@ -277,9 +325,11 @@ export function MaterialFormDialog({
         imagePath = uploaded.imagePath;
       }
 
+      const packingQty = values.packingQuantity.trim();
       const payload: MaterialPayload = {
         code: values.code,
         name: values.name,
+        type: optionalText(values.type) as MaterialType | null ?? null,
         unitId: values.unitId,
         deliveryTypeId: optionalText(values.deliveryTypeId),
         modelId: optionalText(values.modelId),
@@ -290,6 +340,7 @@ export function MaterialFormDialog({
         imagePath,
         specification: optionalText(values.specification),
         description: optionalText(values.description),
+        packingQuantity: packingQty ? parseInt(packingQty, 10) : null,
         isActive: values.isActive,
       };
       await onSave(isEdit ? { ...payload, updatedAt: material.updatedAt } : payload);
@@ -328,60 +379,90 @@ export function MaterialFormDialog({
   return (
     <>
       <Sheet open={open} onOpenChange={requestOpenChange}>
-        <SheetContent size="xl" className="w-full sm:max-w-2xl" hideClose={pending}>
-          <SheetHeader>
-            <SheetTitle className="flex items-center gap-2">
-              <Package className="size-4" />
-              {isEdit ? "แก้ไขวัสดุ" : "เพิ่มวัสดุใหม่"}
-            </SheetTitle>
-            <SheetDescription>
-              {isEdit
-                ? `แก้ไข Material Master — ${material.code}`
-                : "เพิ่มข้อมูลกลางสำหรับฝ่ายคลังสินค้าและฝ่ายผลิต"}
-            </SheetDescription>
+        <SheetContent size="xl" className="w-full sm:max-w-4xl" hideClose={true}>
+          <SheetHeader className="pb-5 border-b border-gray-200">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-500 p-2.5 rounded-lg">
+                <Package className="size-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <SheetTitle className="text-lg font-bold text-gray-900">
+                  {isEdit ? "แก้ไขวัสดุ" : "เพิ่มอะไหล่ PC"}
+                </SheetTitle>
+                <SheetDescription className="text-sm text-gray-500 mt-0.5">
+                  {isEdit ? `รหัส: ${material.code}` : "กรอกข้อมูลวัสดุสำหรับ Material Master"}
+                </SheetDescription>
+              </div>
+              <button
+                onClick={() => requestOpenChange(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                aria-label="ปิด"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
           </SheetHeader>
 
           <form
-            className="mt-6 flex min-h-0 flex-1 flex-col"
+            className="mt-5 flex min-h-0 flex-1 flex-col"
             onSubmit={handleFormSubmit}
             noValidate
           >
-            <div className="flex-1 space-y-7 overflow-y-auto pr-1">
+            <div className="flex-1 overflow-y-auto pr-1 space-y-4">
               {apiError && (
                 <div
                   role="alert"
-                  className="border-danger/30 bg-danger/5 text-danger rounded-md border px-3 py-2 text-sm"
+                  className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center gap-2"
                 >
+                  <CircleAlert className="size-4 shrink-0" />
                   {apiError}
                 </div>
               )}
 
-              <FormSection
-                title="ข้อมูลระบุตัววัสดุ"
-                description="รหัส ชื่อ และหน่วยคือข้อมูลหลักสำหรับค้นหาและตรวจรับ"
-              >
-                <div className="border-primary bg-muted/35 rounded-md border-l-2 p-3">
-                  <FormGrid cols={2}>
-                    <TextField
-                      label="รหัสวัสดุ"
-                      aria-label="รหัสวัสดุ"
-                      required
-                      autoComplete="off"
-                      className="font-mono"
-                      error={form.formState.errors.code?.message}
-                      {...form.register("code")}
-                    />
-                    <TextField
-                      label="ชื่อวัสดุ"
-                      aria-label="ชื่อวัสดุ"
-                      required
-                      error={form.formState.errors.name?.message}
-                      {...form.register("name")}
-                    />
-                  </FormGrid>
+              {/* Section 1: ข้อมูลพื้นฐาน */}
+              <SectionCard icon={FileText} title="ข้อมูลพื้นฐาน">
+                <FieldGrid>
+                  <TextField
+                    label="รหัสวัสดุ"
+                    aria-label="รหัสวัสดุ"
+                    required
+                    autoComplete="off"
+                    className="font-mono"
+                    error={form.formState.errors.code?.message}
+                    {...form.register("code")}
+                  />
+                  <TextField
+                    label="ชื่อวัสดุ"
+                    aria-label="ชื่อวัสดุ"
+                    required
+                    error={form.formState.errors.name?.message}
+                    {...form.register("name")}
+                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="material-type" className="text-sm font-medium text-gray-700">
+                      ประเภท
+                    </Label>
+                    <div className="relative">
+                      <select
+                        id="material-type"
+                        aria-label="ประเภท"
+                        value={form.watch("type")}
+                        onChange={(event) =>
+                          form.setValue("type", event.target.value, { shouldDirty: true })
+                        }
+                        className="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                      >
+                        <option value="">เลือกประเภท</option>
+                        <option value="PC">PC (อะไหล่)</option>
+                        <option value="OF">OF (วัสดุโรงงาน)</option>
+                        <option value="OF_MAT">OF_MAT (วัตถุดิบ)</option>
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                    </div>
+                  </div>
                   <LookupSelect
                     id="material-unit"
-                    label="หน่วย"
+                    label="หน่วยนับ"
                     required
                     options={lookups.units}
                     value={unitId}
@@ -390,16 +471,23 @@ export function MaterialFormDialog({
                       form.setValue("unitId", value, { shouldDirty: true, shouldValidate: true })
                     }
                   />
-                </div>
-              </FormSection>
+                  <TextField
+                    label="จำนวนบรรจุ"
+                    placeholder="เช่น 100"
+                    inputMode="numeric"
+                    {...form.register("packingQuantity")}
+                  />
+                </FieldGrid>
+              </SectionCard>
 
-              <FormSection title="การจำแนกและกระบวนการ">
-                <FormGrid cols={2}>
+              {/* Section 2: การจำแนกและกระบวนการ */}
+              <SectionCard icon={Settings} title="การจำแนกและกระบวนการ">
+                <FieldGrid>
                   <LookupSelect
                     id="material-delivery-type"
                     label="ประเภทการจัดส่ง"
                     options={lookups.deliveryTypes}
-                    value={deliveryTypeId}
+                    value={form.watch("deliveryTypeId")}
                     onChange={(value) =>
                       form.setValue("deliveryTypeId", value, { shouldDirty: true })
                     }
@@ -408,165 +496,209 @@ export function MaterialFormDialog({
                     id="material-model"
                     label="รุ่น"
                     options={lookups.models}
-                    value={modelId}
-                    onChange={(value) => form.setValue("modelId", value, { shouldDirty: true })}
+                    value={form.watch("modelId")}
+                    onChange={(value) =>
+                      form.setValue("modelId", value, { shouldDirty: true })
+                    }
                   />
                   <LookupSelect
                     id="material-loading-point"
                     label="จุดรับสินค้า"
                     options={lookups.loadingPoints}
-                    value={loadingPointId}
+                    value={form.watch("loadingPointId")}
                     onChange={(value) =>
                       form.setValue("loadingPointId", value, { shouldDirty: true })
                     }
                   />
-                  <TextField label="ไลน์กระบวนการ" {...form.register("processLineName")} />
                   <TextField
-                    label="สเกล"
+                    label="ไลน์กระบวนการ"
+                    placeholder="เช่น Line A"
+                    {...form.register("processLineName")}
+                  />
+                  <TextField
+                    label="สเกล/ขนาด"
+                    placeholder="เช่น 10×20×5 ซม."
                     inputMode="decimal"
                     className="font-mono"
                     {...form.register("scale")}
                   />
-                  <label className="flex min-h-9 items-center gap-2 self-end rounded-md border px-3 text-sm">
-                    <input type="checkbox" {...form.register("isActive")} />
-                    เปิดใช้งาน
-                  </label>
-                </FormGrid>
-              </FormSection>
+                </FieldGrid>
+              </SectionCard>
 
-              <FormSection title="ผู้ขาย" description="เลือกได้เฉพาะ Supplier Master ที่เปิดใช้งาน">
-                <div className="space-y-2">
-                  <Label htmlFor="material-supplier">เพิ่มผู้ขาย</Label>
-                  <select
-                    id="material-supplier"
-                    value=""
-                    onChange={(event) => addSupplier(event.target.value)}
-                    className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-2"
-                  >
-                    <option value="">เลือกผู้ขาย</option>
-                    {availableSuppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.code} — {supplier.nameTh}
-                      </option>
-                    ))}
-                  </select>
+              {/* Section 3: ผู้ขาย */}
+              <SectionCard icon={User} title="ผู้ขาย">
+                <div className="space-y-3">
+                  <div className="relative">
+                    <select
+                      id="material-supplier"
+                      value=""
+                      onChange={(event) => addSupplier(event.target.value)}
+                      className="h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                    >
+                      <option value="">+ เพิ่มผู้ขาย</option>
+                      {availableSuppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.code} — {supplier.nameTh}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                  </div>
+                  {selectedSupplierIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSupplierIds.map((supplierId) => {
+                        const supplier = supplierNames.get(supplierId);
+                        if (!supplier) return null;
+                        return (
+                          <div
+                            key={supplierId}
+                            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm"
+                          >
+                            <code className="text-gray-500 font-mono text-xs">{supplier.code}</code>
+                            <span className="font-medium text-gray-700">{supplier.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeSupplier(supplierId)}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                              aria-label={`นำ ${supplier.name} ออก`}
+                            >
+                              <X className="size-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400">ยังไม่ได้เลือกผู้ขาย</p>
+                  )}
                 </div>
-                {selectedSupplierIds.length > 0 ? (
-                  <ul aria-label="ผู้ขายที่เลือก" className="flex flex-wrap gap-2">
-                    {selectedSupplierIds.map((supplierId) => {
-                      const supplier = supplierNames.get(supplierId);
-                      if (!supplier) return null;
-                      return (
-                        <li
-                          key={supplierId}
-                          className="bg-muted/40 inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-sm"
-                        >
-                          <span>
-                            <code className="text-muted-foreground font-mono text-xs">
-                              {supplier.code}
-                            </code>{" "}
-                            {supplier.name}
-                          </span>
+              </SectionCard>
+
+              {/* Section 4: ข้อกำหนดและรูปภาพ */}
+              <SectionCard icon={Gauge} title="ข้อกำหนดและรูปภาพ">
+                <div className="flex gap-5">
+                  {/* Left side - specs */}
+                  <div className="flex-1 space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-gray-700">ข้อกำหนด</Label>
+                      <Textarea
+                        id="material-specification"
+                        rows={2}
+                        placeholder="ระบุข้อกำหนดหรือสเปค..."
+                        className="resize-none rounded-lg border border-gray-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                        {...form.register("specification")}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-gray-700">คำอธิบาย</Label>
+                      <Textarea
+                        id="material-description"
+                        rows={2}
+                        placeholder="รายละเอียดเพิ่มเติม..."
+                        className="resize-none rounded-lg border border-gray-300 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
+                        {...form.register("description")}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right side - image upload */}
+                  <div className="w-48 shrink-0">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm font-medium text-gray-700">รูปภาพ</Label>
+                      <input
+                        id="material-image"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="sr-only"
+                        onChange={(event) => {
+                          selectImage(event.target.files?.[0]);
+                          event.target.value = "";
+                        }}
+                      />
+                      {previewUrl ? (
+                        <div className="relative rounded-lg overflow-hidden border border-gray-200">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewUrl}
+                            alt="ตัวอย่างรูปวัสดุ"
+                            className="aspect-square w-full object-cover"
+                          />
                           <button
                             type="button"
-                            onClick={() => removeSupplier(supplierId)}
-                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
-                            aria-label={`นำ ${supplier.name} ออก`}
+                            onClick={removeImage}
+                            className="absolute right-1 top-1 size-6 flex items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                            aria-label="ลบรูป"
                           >
                             <X className="size-3.5" />
                           </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground text-xs">ยังไม่ได้เลือกผู้ขาย</p>
-                )}
-              </FormSection>
-
-              <FormSection title="ข้อกำหนดและรูปภาพ">
-                <FormGrid cols={2}>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="material-specification">ข้อกำหนด</Label>
-                    <Textarea
-                      id="material-specification"
-                      rows={4}
-                      {...form.register("specification")}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="material-description">คำอธิบาย</Label>
-                    <Textarea
-                      id="material-description"
-                      rows={4}
-                      {...form.register("description")}
-                    />
-                  </div>
-                </FormGrid>
-
-                <div className="space-y-3 rounded-md border border-dashed p-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      id="material-image"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      className="sr-only"
-                      onChange={(event) => {
-                        selectImage(event.target.files?.[0]);
-                        event.target.value = "";
-                      }}
-                    />
-                    <Label
-                      htmlFor="material-image"
-                      className="border-input bg-background hover:bg-accent inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium shadow-xs"
-                    >
-                      <ImagePlus className="size-4" />
-                      เลือกรูปวัสดุ
-                    </Label>
-                    <span className="text-muted-foreground text-xs">
-                      JPEG, PNG หรือ WebP · สูงสุด 5 MiB
-                    </span>
-                  </div>
-                  {imageError && <p className="text-danger text-xs">{imageError}</p>}
-                  {previewUrl && (
-                    <div className="bg-muted/40 flex items-center gap-3 rounded-md p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl}
-                        alt="ตัวอย่างรูปวัสดุ"
-                        className="bg-background size-16 rounded-md border object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {imageFile?.name ?? "รูปปัจจุบัน"}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          สามารถเลือกไฟล์ใหม่เพื่อแทนที่ได้
-                        </p>
-                      </div>
-                      <Button type="button" variant="ghost" size="sm" onClick={removeImage}>
-                        <X className="size-4" />
-                        ลบรูปวัสดุ
-                      </Button>
+                        </div>
+                      ) : (
+                        <label
+                          htmlFor="material-image"
+                          className="border-2 border-dashed border-blue-400 bg-blue-50/50 hover:bg-blue-50 flex aspect-square cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg transition-colors"
+                        >
+                          <Box className="size-8 text-blue-400" />
+                          <span className="text-xs text-blue-500 font-medium">เลือกรูป</span>
+                        </label>
+                      )}
+                      {imageError && <p className="text-xs text-red-500">{imageError}</p>}
                     </div>
-                  )}
+                  </div>
                 </div>
-              </FormSection>
+              </SectionCard>
+
+              {/* Status Toggle */}
+              <div className="flex items-center gap-4 px-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-gray-600">เปิดใช้งาน</span>
+                  <button
+                    type="button"
+                    onClick={() => form.setValue("isActive", !form.watch("isActive"))}
+                    className={cn(
+                      "relative inline-flex h-6 w-11 items-center rounded-full transition-colors",
+                      form.watch("isActive") ? "bg-blue-500" : "bg-gray-300"
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "inline-block size-5 rounded-full bg-white shadow-sm transition-transform",
+                        form.watch("isActive") ? "translate-x-5" : "translate-x-0.5"
+                      )}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <SheetFooter className="mt-6 border-t px-0 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={pending}
-                onClick={() => requestOpenChange(false)}
-              >
-                ยกเลิก
-              </Button>
-              <Button type="submit" loading={pending}>
-                <Save className="size-4" />
-                {isEdit ? "บันทึกการเปลี่ยนแปลง" : "สร้างวัสดุ"}
-              </Button>
+            <SheetFooter className="mt-5 border-t border-gray-200 pt-4 -mx-2 px-2">
+              <div className="flex items-center justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending}
+                  onClick={() => requestOpenChange(false)}
+                  className="min-w-24 border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  ยกเลิก
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={pending}
+                  className="min-w-36 gap-2 bg-blue-600 hover:bg-blue-700"
+                >
+                  {pending ? (
+                    <>
+                      <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      กำลังบันทึก...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="size-4" />
+                      {isEdit ? "บันทึกการเปลี่ยนแปลง" : "สร้างอะไหล่"}
+                    </>
+                  )}
+                </Button>
+              </div>
             </SheetFooter>
           </form>
         </SheetContent>
@@ -575,18 +707,13 @@ export function MaterialFormDialog({
       <ConfirmDialog
         open={discardOpen}
         onOpenChange={setDiscardOpen}
-        title="ทิ้งการเปลี่ยนแปลงที่ยังไม่บันทึก?"
-        description="ข้อมูลที่แก้ไขในแบบฟอร์มนี้จะไม่ถูกบันทึก"
+        title="ทิ้งการเปลี่ยนแปลง?"
+        description="ข้อมูลที่กรอกไปจะไม่ถูกบันทึก"
+        cancelText="ยกเลิก"
         confirmText="ทิ้งการเปลี่ยนแปลง"
-        cancelText="กลับไปแก้ไข"
-        variant="danger"
+        variant="warning"
         onConfirm={() => {
-          revokeObjectUrl();
           setDiscardOpen(false);
-          form.reset(formValues(material));
-          setImageFile(null);
-          setPreviewUrl(resolveMaterialImage(material?.imagePath ?? null));
-          setImageDirty(false);
           onOpenChange(false);
         }}
       />

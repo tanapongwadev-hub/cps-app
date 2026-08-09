@@ -44,6 +44,7 @@ export interface Material {
   id: string;
   code: string;
   name: string;
+  type: string | null;
   unitId: string;
   deliveryTypeId: string | null;
   modelId: string | null;
@@ -53,6 +54,7 @@ export interface Material {
   imagePath: string | null;
   specification: string | null;
   description: string | null;
+  packingQuantity: number | null;
   isActive: boolean;
   createdBy: string | null;
   updatedBy: string | null;
@@ -66,9 +68,12 @@ export interface Material {
   suppliers: MaterialSupplierIdentity[];
 }
 
+export type MaterialType = "PC" | "OF" | "OF_MAT";
+
 export interface MaterialPayload {
   code: string;
   name: string;
+  type?: MaterialType | null;
   unitId: string;
   deliveryTypeId?: string | null;
   modelId?: string | null;
@@ -78,6 +83,7 @@ export interface MaterialPayload {
   imagePath?: string | null;
   specification?: string | null;
   description?: string | null;
+  packingQuantity?: number | null;
   supplierIds?: string[];
   isActive?: boolean;
 }
@@ -91,6 +97,7 @@ export interface ListMaterialsParams {
   pageSize: number;
   search?: string;
   isActive?: boolean;
+  type?: MaterialType;
   unitId?: string;
   modelId?: string;
   deliveryTypeId?: string;
@@ -121,6 +128,7 @@ export const materialsApi = {
     };
     if (params.search) query.search = params.search;
     if (params.isActive !== undefined) query.isActive = params.isActive;
+    if (params.type) query.type = params.type;
     if (params.unitId) query.unitId = params.unitId;
     if (params.modelId) query.modelId = params.modelId;
     if (params.deliveryTypeId) query.deliveryTypeId = params.deliveryTypeId;

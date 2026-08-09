@@ -2,13 +2,17 @@
 
 /**
  * Materials — PC detail page (`/materials/pc/[id]`)
- * Displays material detail in a modal dialog
+ *
+ * Displays material detail in a modal overlay.
+ * - Modal opens on page load
+ * - Close button hides modal without navigation
+ * - Back button navigates to list
  */
 
 import * as React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Cpu, RefreshCw, Slash, X } from "lucide-react";
+import { ArrowLeft, Cpu, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -53,6 +57,7 @@ export default function MaterialPCDetailPage() {
   const restoreMutation = useRestoreMaterial();
   const uploadMutation = useUploadMaterialImage();
 
+  const [detailOpen, setDetailOpen] = React.useState(true);
   const [editOpen, setEditOpen] = React.useState(false);
   const [statusChangeOpen, setStatusChangeOpen] = React.useState(false);
 
@@ -67,15 +72,23 @@ export default function MaterialPCDetailPage() {
 
   const isError = detailQuery.isError;
   const isLoading = detailQuery.isLoading;
+  const isFetching = detailQuery.isFetching;
 
-  const handleClose = React.useCallback(() => {
-    router.push("/materials/pc");
-  }, [router]);
-
+  // Navigate back to list
   const handleBack = React.useCallback(() => {
-    router.push("/materials/pc");
+    router.back();
   }, [router]);
 
+  // Close modal and navigate back
+  const handleClose = React.useCallback(() => {
+    setDetailOpen(false);
+    // Small delay to allow modal animation before navigation
+    setTimeout(() => {
+      router.back();
+    }, 150);
+  }, [router]);
+
+  // Toggle edit modal
   const handleEdit = React.useCallback(() => setEditOpen(true), []);
   const handleStatusChange = React.useCallback(
     () => setStatusChangeOpen(true),
@@ -107,13 +120,26 @@ export default function MaterialPCDetailPage() {
     setStatusChangeOpen(false);
   }, [deactivateMutation, material, restoreMutation]);
 
+  // Determine what content to show
+  const showSkeleton = isLoading && !material;
+  const showDetail = !isLoading && material !== null && !isError;
+  const showError = isError && !isLoading && material === null;
+  const showPermissionError = !hasPermission(PERMISSIONS.MATERIAL_VIEW) && !isLoading && !isError && material === null;
+
   return (
     <>
       {/* Detail Modal */}
-      <Dialog open={!isLoading} onOpenChange={(open) => !open && handleClose()}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
-          {/* Custom header with back button */}
-          <div className="flex items-center justify-between border-b px-6 py-4">
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent
+          className="max-w-5xl max-h-[92vh] overflow-hidden p-0"
+          hideClose={true}
+          onPointerDownOutside={(e) => {
+            // Prevent close on backdrop click - user must use buttons
+            e.preventDefault();
+          }}
+        >
+          {/* Custom Header */}
+          <div className="flex items-center justify-between border-b bg-card px-6 py-4">
             <div className="flex items-center gap-3">
               <Button
                 type="button"
@@ -126,22 +152,27 @@ export default function MaterialPCDetailPage() {
                 กลับ
               </Button>
               <div className="h-4 w-px bg-border" />
-              <DialogTitle className="text-base font-semibold">
-                รายละเอียดวัสดุ
-              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg">
+                  <Cpu className="size-4" />
+                </div>
+                <DialogTitle className="text-base font-semibold">
+                  รายละเอียดอะไหล่ PC
+                </DialogTitle>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => detailQuery.refetch()}
-                disabled={detailQuery.isFetching}
+                disabled={isFetching}
+                className="h-8 w-8 p-0"
+                aria-label="รีเฟรชข้อมูล"
               >
                 <RefreshCw
-                  className={
-                    detailQuery.isFetching ? "size-4 animate-spin" : "size-4"
-                  }
+                  className={isFetching ? "size-4 animate-spin" : "size-4"}
                 />
               </Button>
               <Button
@@ -150,6 +181,7 @@ export default function MaterialPCDetailPage() {
                 size="sm"
                 onClick={handleClose}
                 className="h-8 w-8 p-0"
+                aria-label="ปิด"
               >
                 <X className="size-4" />
               </Button>
@@ -157,27 +189,36 @@ export default function MaterialPCDetailPage() {
           </div>
 
           {/* Content */}
-          <div className="p-6">
-            {isError && !isLoading ? (
+          <div className="h-[calc(92vh-65px)] overflow-y-auto p-6">
+            {showSkeleton && <MaterialDetailCardSkeleton />}
+            {showDetail && (
+              <MaterialDetailCard
+                material={material}
+                onEdit={canEdit ? handleEdit : undefined}
+                onStatusChange={canEdit ? handleStatusChange : undefined}
+              />
+            )}
+            {showError && (
               <Card className="border-danger/30 bg-danger/5">
-                <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-                  <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
-                    <Slash className="size-5" />
+                <CardContent className="flex flex-col items-center gap-4 py-12 text-center">
+                  <div className="bg-danger/10 text-danger flex size-14 items-center justify-center rounded-xl">
+                    <X className="size-6" />
                   </div>
-                  <p className="font-semibold">โหลดข้อมูลวัสดุไม่สำเร็จ</p>
-                  <p className="text-muted-foreground text-sm">
-                    ไม่พบวัสดุรหัสนี้ หรือเซิร์ฟเวอร์มีปัญหา
-                  </p>
+                  <div>
+                    <p className="text-lg font-semibold text-danger">โหลดข้อมูลวัสดุไม่สำเร็จ</p>
+                    <p className="text-muted-foreground mt-1">
+                      ไม่พบวัสดุรหัสนี้ หรือเซิร์ฟเวอร์มีปัญหา
+                    </p>
+                  </div>
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
                       onClick={() => detailQuery.refetch()}
                     >
                       ลองใหม่
                     </Button>
-                    <Button asChild type="button" variant="ghost" size="sm">
+                    <Button asChild type="button" variant="ghost">
                       <Link href="/materials/pc">
                         <Cpu className="size-4" />
                         กลับไปรายการ
@@ -186,15 +227,8 @@ export default function MaterialPCDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-            ) : isLoading || !material ? (
-              <MaterialDetailCardSkeleton />
-            ) : (
-              <MaterialDetailCard
-                material={material}
-                onEdit={canEdit ? handleEdit : undefined}
-                onStatusChange={canEdit ? handleStatusChange : undefined}
-              />
             )}
+            {showPermissionError && <MaterialDetailEmpty message="คุณไม่มีสิทธิ์เข้าถึงข้อมูลวัสดุนี้" />}
           </div>
         </DialogContent>
       </Dialog>
@@ -223,10 +257,6 @@ export default function MaterialPCDetailPage() {
           onConfirm={handleConfirmStatusChange}
           pending={deactivateMutation.isPending || restoreMutation.isPending}
         />
-      )}
-
-      {!hasPermission(PERMISSIONS.MATERIAL_VIEW) && !isLoading && !isError && (
-        <MaterialDetailEmpty message="คุณไม่มีสิทธิ์เข้าถึงข้อมูลวัสดุนี้" />
       )}
     </>
   );

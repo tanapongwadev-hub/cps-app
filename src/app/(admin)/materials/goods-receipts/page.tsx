@@ -29,6 +29,8 @@ import { GoodsReceiptFormDialog } from "@/features/goods-receipts/components/goo
 import { GoodsReceiptDetailDialog } from "@/features/goods-receipts/components/goods-receipt-detail-dialog";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import type {
+  CreateGoodsReceiptPayload,
+  UpdateGoodsReceiptPayload,
   GoodsReceipt,
   GoodsReceiptDetail,
   ListGoodsReceiptsParams,
@@ -145,11 +147,11 @@ export default function GoodsReceiptsPage() {
     });
   };
 
-  const handleSave = async (payload: Parameters<typeof createMutation.mutateAsync>[0]) => {
+  const handleSave = async (payload: CreateGoodsReceiptPayload | UpdateGoodsReceiptPayload) => {
     if (editingReceipt) {
-      await updateMutation.mutateAsync({ id: editingReceipt.id, data: payload });
+      await updateMutation.mutateAsync({ id: editingReceipt.id, data: { ...payload, updatedAt: editingReceipt.updatedAt } });
     } else {
-      await createMutation.mutateAsync(payload as Parameters<typeof createMutation.mutateAsync>[0]);
+      await createMutation.mutateAsync(payload as CreateGoodsReceiptPayload);
     }
   };
 
@@ -161,7 +163,7 @@ export default function GoodsReceiptsPage() {
 
   return (
     <PermissionGuard
-      requiredPermissions={[
+      anyPermission={[
         PERMISSIONS.GOODS_RECEIPT_VIEW,
         PERMISSIONS.GOODS_RECEIPT_CREATE,
         PERMISSIONS.GOODS_RECEIPT_UPDATE,
@@ -179,7 +181,7 @@ export default function GoodsReceiptsPage() {
         <PageHeader
           title="รายการรับวัสดุ"
           description="จัดการรายการรับวัสดุ (Goods Receipts)"
-          actions={
+          primaryAction={
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -192,7 +194,7 @@ export default function GoodsReceiptsPage() {
                 />
                 รีเฟรช
               </Button>
-              <PermissionGuard requiredPermissions={[PERMISSIONS.GOODS_RECEIPT_CREATE]}>
+              <PermissionGuard permission={PERMISSIONS.GOODS_RECEIPT_CREATE}>
                 <Button size="sm" onClick={handleCreate}>
                   <Plus className="h-4 w-4 mr-2" />
                   สร้างรายการรับวัสดุ

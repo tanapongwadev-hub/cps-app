@@ -46,6 +46,7 @@ const material = {
   imagePath: null,
   specification: null,
   description: null,
+  packingQuantity: null,
   isActive: true,
   createdBy: "1",
   updatedBy: "1",

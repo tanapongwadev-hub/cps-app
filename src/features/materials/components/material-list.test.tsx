@@ -44,6 +44,7 @@ const material: Material = {
   imagePath: "/uploads/materials/steel.webp",
   specification: "SS400",
   description: null,
+  packingQuantity: null,
   isActive: true,
   createdBy: "1",
   updatedBy: "1",

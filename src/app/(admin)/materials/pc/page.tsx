@@ -3,21 +3,21 @@
 /**
  * Materials — PC (อะไหล่ PC) page
  *
- * Redesigned for the PC subset of the Material Master:
- *  - "เพิ่มอะไหล่" / "แก้ไข" now opens a centered `Dialog` modal
- *    (`MaterialFormModal`) instead of the side-drawer used on /materials.
- *  - The list is rendered as a responsive card grid (`MaterialCardGrid`)
- *    so each part is shown with its image, units, and quick actions.
- *  - Material images are resolved through `resolveMaterialImage` so the
- *    API's bare `/uploads/...` paths load through the Next.js rewrite
- *    to the backend origin (see `next.config.ts`).
+ * Redesigned page for PC parts management:
+ * - Modern header with stats
+ * - Clean filter section
+ * - Card grid view (default)
+ * - View toggle (card/table)
  */
+
 import * as React from "react";
 import {
+  Cpu,
+  Package,
   Plus,
   RefreshCw,
-  Construction,
-  Cpu,
+  Settings2,
+  TrendingUp,
 } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -74,6 +74,7 @@ export default function MaterialsPCPage() {
 
   const items = listQuery.data?.items ?? [];
   const totalItems = listQuery.data?.meta?.totalItems ?? 0;
+  const activeItems = items.filter((m) => m.isActive).length;
   const lookups = lookupsQuery.data ?? {
     units: [],
     suppliers: [],
@@ -121,12 +122,19 @@ export default function MaterialsPCPage() {
 
   const handleSave = React.useCallback(
     async (payload: MaterialPayload | UpdateMaterialPayload) => {
-      if ("updatedAt" in payload) {
-        const editing = editingMaterial;
-        if (!editing) return;
-        await updateMutation.mutateAsync({ id: editing.id, data: payload });
-      } else {
-        await createMutation.mutateAsync(payload as MaterialPayload);
+      try {
+        if ("updatedAt" in payload) {
+          const editing = editingMaterial;
+          if (!editing) return;
+          await updateMutation.mutateAsync({ id: editing.id, data: payload });
+        } else {
+          await createMutation.mutateAsync(payload as MaterialPayload);
+        }
+        // Close modal without redirect
+        setFormOpen(false);
+        setEditingMaterial(null);
+      } catch {
+        // Error is handled by mutation
       }
     },
     [createMutation, editingMaterial, updateMutation],
@@ -154,6 +162,7 @@ export default function MaterialsPCPage() {
   return (
     <>
       <PageContainer>
+        {/* Header */}
         <PageHeader
           title="จัดการอะไหล่ PC"
           description="Material Master — อะไหล่และวัสดุสิ้นเปลืองสำหรับฝ่าย PC"
@@ -167,9 +176,9 @@ export default function MaterialsPCPage() {
               <Button
                 onClick={handleCreate}
                 disabled={!canSave}
-                aria-label="เพิ่มอะไหล่ PC ใหม่"
+                className="gap-2"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="size-4" />
                 เพิ่มอะไหล่ PC
               </Button>
             </PermissionGuard>
@@ -180,94 +189,120 @@ export default function MaterialsPCPage() {
               size="sm"
               onClick={() => listQuery.refetch()}
               disabled={listQuery.isFetching}
-              aria-label="รีเฟรชรายการอะไหล่ PC"
             >
               <RefreshCw
-                className={listQuery.isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+                className={listQuery.isFetching ? "size-4 animate-spin" : "size-4"}
               />
               <span className="hidden sm:inline">รีเฟรช</span>
             </Button>
           }
         />
 
-        {lookupsError && !lookupsLoading && (
-          <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
-            <CardContent className="flex items-start gap-3 p-4 text-sm">
-              <Construction className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        {/* Stats Row */}
+        <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Card className="border-border/60">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="bg-primary/10 text-primary flex size-10 items-center justify-center rounded-lg">
+                <Package className="size-5" />
+              </div>
               <div>
-                <p className="font-medium text-amber-700 dark:text-amber-300">
-                  โหลดข้อมูลตัวเลือกไม่สำเร็จ
-                </p>
-                <p className="mt-1 text-muted-foreground">
-                  ไม่สามารถดึงรายการหน่วย/รุ่น/ประเภทการจัดส่ง/จุดรับสินค้า/ผู้ขาย —{" "}
-                  ฟอร์มเพิ่ม/แก้ไขจะใช้งานไม่ได้จนกว่าจะโหลดสำเร็จ
+                <p className="text-muted-foreground text-xs">ทั้งหมด</p>
+                <p className="text-2xl font-semibold">{totalItems}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="bg-success/10 text-success flex size-10 items-center justify-center rounded-lg">
+                <TrendingUp className="size-5" />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">กำลังใช้งาน</p>
+                <p className="text-2xl font-semibold">{activeItems}</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border-border/60">
+            <CardContent className="flex items-center gap-3 p-4">
+              <div className="bg-muted text-muted-foreground flex size-10 items-center justify-center rounded-lg">
+                <Cpu className="size-5" />
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs">ประเภทอะไหล่</p>
+                <p className="text-2xl font-semibold">
+                  {lookups.models.length > 0 ? lookups.models.length : "—"}
                 </p>
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
 
+        {/* Filters */}
         <MaterialFilters
           value={filters}
           lookups={lookups}
           onChange={setFilters}
         />
 
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        {/* View Toggle & Count */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Cpu className="h-3.5 w-3.5" />
+            <Cpu className="size-4" />
             <span>
-              แสดง {items.length} จาก {totalItems} รายการ (PC)
+              แสดง {items.length} รายการ {totalItems > 0 && `จาก ${totalItems}`}
             </span>
           </div>
           <ViewToggle
             value={viewMode}
             onValueChange={setViewMode}
             storageKey="materials:view-mode"
-            ariaLabel="สลับมุมมองรายการอะไหล่ PC"
           />
         </div>
 
-        {viewMode === "card" ? (
-          <MaterialCardGrid
-            materials={items}
-            page={filters.page}
-            pageSize={filters.pageSize ?? PC_PAGE_SIZE}
-            totalItems={totalItems}
-            isLoading={listQuery.isLoading || lookupsLoading}
-            isError={listQuery.isError}
-            onRetry={() => listQuery.refetch()}
-            onCreate={canSave ? handleCreate : undefined}
-            onEdit={canSave ? handleEdit : undefined}
-            onStatusChange={canSave ? handleStatusChange : undefined}
-            detailHref={(material) => `/materials/pc/${material.id}`}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        ) : (
-          <MaterialTable
-            materials={items}
-            page={filters.page}
-            pageSize={filters.pageSize ?? PC_PAGE_SIZE}
-            totalItems={totalItems}
-            sortBy={filters.sortBy}
-            sortOrder={filters.sortOrder}
-            isLoading={listQuery.isLoading || lookupsLoading}
-            isError={listQuery.isError}
-            onRetry={() => listQuery.refetch()}
-            onCreate={canSave ? handleCreate : undefined}
-            onEdit={canSave ? handleEdit : undefined}
-            onStatusChange={canSave ? handleStatusChange : undefined}
-            detailHref={(material) => `/materials/pc/${material.id}`}
-            onSortChange={handleSortChange}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        )}
+        {/* Content */}
+        <div className="mt-4">
+          {viewMode === "card" ? (
+            <MaterialCardGrid
+              materials={items}
+              page={filters.page}
+              pageSize={filters.pageSize ?? PC_PAGE_SIZE}
+              totalItems={totalItems}
+              isLoading={listQuery.isLoading || lookupsLoading}
+              isError={listQuery.isError}
+              onRetry={() => listQuery.refetch()}
+              onCreate={canSave ? handleCreate : undefined}
+              onEdit={canSave ? handleEdit : undefined}
+              onStatusChange={canSave ? handleStatusChange : undefined}
+              detailHref={(material) => `/materials/pc/${material.id}`}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          ) : (
+            <MaterialTable
+              materials={items}
+              page={filters.page}
+              pageSize={filters.pageSize ?? PC_PAGE_SIZE}
+              totalItems={totalItems}
+              sortBy={filters.sortBy}
+              sortOrder={filters.sortOrder}
+              isLoading={listQuery.isLoading || lookupsLoading}
+              isError={listQuery.isError}
+              onRetry={() => listQuery.refetch()}
+              onCreate={canSave ? handleCreate : undefined}
+              onEdit={canSave ? handleEdit : undefined}
+              onStatusChange={canSave ? handleStatusChange : undefined}
+              detailHref={(material) => `/materials/pc/${material.id}`}
+              onSortChange={handleSortChange}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          )}
+        </div>
       </PageContainer>
 
       <PageFooter />
 
+      {/* Form Modal */}
       <MaterialFormModal
         open={formOpen}
         onOpenChange={handleFormOpenChange}
@@ -279,6 +314,7 @@ export default function MaterialsPCPage() {
         uploadPending={uploadMutation.isPending}
       />
 
+      {/* Status Dialog */}
       <MaterialStatusDialog
         open={!!statusChange}
         material={statusChange?.material ?? null}

@@ -102,6 +102,22 @@ export function MaterialFilters({
           </select>
         </div>
         <div className="space-y-1.5">
+          <Label htmlFor="material-type-filter">ประเภท</Label>
+          <select
+            id="material-type-filter"
+            value={value.type ?? ""}
+            onChange={(event) =>
+              update("type", event.target.value || undefined)
+            }
+            className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-2"
+          >
+            <option value="">ทุกประเภท</option>
+            <option value="PC">PC (อะไหล่)</option>
+            <option value="OF">OF (วัสดุโรงงาน)</option>
+            <option value="OF_MAT">OF_MAT (วัตถุดิบ)</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
           <Label htmlFor="material-unit-filter">หน่วย</Label>
           <select
             id="material-unit-filter"

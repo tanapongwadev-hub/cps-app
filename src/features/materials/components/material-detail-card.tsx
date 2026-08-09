@@ -1,18 +1,23 @@
 "use client";
 
 /**
- * MaterialDetailCard — Modern, clean redesign
+ * MaterialDetailCard — Redesigned
  *
- * Layout: Hero image (left) + Info panel (right)
- * Style: Minimal, clean borders, good hierarchy, no gradient noise
+ * Modern, clean detail view for a single Material.
+ * - Hero section with image and key info
+ * - Organized detail cards
+ * - Clear visual hierarchy
  */
 
 import {
   AlertCircle,
   Calendar,
+  Edit2,
   Hash,
   ImageOff,
   Package,
+  Power,
+  RotateCcw,
   Truck,
   User,
   Warehouse,
@@ -73,12 +78,12 @@ export function MaterialDetailCard({
     "—";
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* ===== Hero Card ===== */}
-      <Card className="overflow-hidden border-border/80 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
+    <div className={cn("space-y-5", className)}>
+      {/* ===== Hero Section ===== */}
+      <Card className="overflow-hidden border-border/60">
+        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
           {/* Image */}
-          <div className="relative bg-muted/40 flex min-h-[240px] items-center justify-center overflow-hidden border-b md:border-b-0 md:border-r">
+          <div className="relative min-h-[220px] overflow-hidden bg-muted/30 border-b md:border-b-0 md:border-r">
             {imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -87,43 +92,44 @@ export function MaterialDetailCard({
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <div className="bg-background flex size-14 items-center justify-center rounded-full border shadow-sm">
-                  <ImageOff className="size-6" />
+              <div className="flex h-full flex-col items-center justify-center gap-3">
+                <div className="bg-muted/50 flex size-14 items-center justify-center rounded-xl">
+                  <ImageOff className="size-6 text-muted-foreground" />
                 </div>
-                <span className="text-xs">ไม่มีรูปตัวอย่าง</span>
+                <span className="text-muted-foreground text-sm">ไม่มีรูปตัวอย่าง</span>
               </div>
             )}
 
-            {/* Status badge */}
+            {/* Status Badge */}
             <div className="absolute right-3 top-3">
               <Badge
-                variant={material.isActive ? "default" : "secondary"}
-                className={cn(
-                  "shadow-sm",
-                  material.isActive
-                    ? "bg-success text-success-foreground"
-                    : "bg-muted text-muted-foreground"
-                )}
+                variant={material.isActive ? "success" : "secondary"}
+                className="gap-1.5 px-2.5 py-1"
               >
+                <span
+                  className={cn(
+                    "size-1.5 rounded-full",
+                    material.isActive ? "bg-white/90" : "bg-muted-foreground/60",
+                  )}
+                />
                 {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
               </Badge>
             </div>
           </div>
 
-          {/* Info */}
+          {/* Info Panel */}
           <div className="flex flex-col">
             {/* Header */}
-            <div className="flex flex-col gap-2 p-5 pb-4">
-              <div className="flex items-center gap-2">
-                <code className="bg-muted text-foreground rounded px-2 py-0.5 font-mono text-xs font-semibold">
+            <div className="flex flex-col gap-3 p-5 pb-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <code className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 font-mono text-sm font-semibold">
                   {material.code}
                 </code>
                 <Badge variant="outline" className="text-xs">
                   {material.unit?.nameTh ?? "—"}
                 </Badge>
               </div>
-              <h1 className="text-xl font-semibold tracking-tight">{material.name}</h1>
+              <h1 className="text-2xl font-semibold tracking-tight">{material.name}</h1>
               {material.description && (
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {material.description}
@@ -133,42 +139,53 @@ export function MaterialDetailCard({
 
             <Separator />
 
-            {/* Meta */}
-            <div className="flex flex-wrap items-center gap-4 border-b px-5 py-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="size-3.5" />
+            {/* Meta Info */}
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b px-5 py-3 text-sm">
+              <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                <Calendar className="size-4" />
                 สร้าง {formatDate(material.createdAt)}
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Calendar className="size-3.5" />
+              <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                <Calendar className="size-4" />
                 อัปเดต {formatDateTime(material.updatedAt)}
               </span>
               {material.updatedBy && (
-                <span className="inline-flex items-center gap-1.5">
-                  <User className="size-3.5" />
+                <span className="text-muted-foreground inline-flex items-center gap-1.5">
+                  <User className="size-4" />
                   โดย {material.updatedBy}
                 </span>
               )}
             </div>
 
-            {/* Quick info pills */}
+            {/* Quick Tags */}
             <div className="flex flex-wrap gap-2 border-b px-5 py-3">
+              {material.packingQuantity && (
+                <div className="bg-warning/10 text-warning inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                  <Package className="size-3.5" />
+                  {material.packingQuantity} ชิ้น/หน่วย
+                </div>
+              )}
               {material.deliveryType && (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                  <Truck className="size-3" />
+                <div className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                  <Truck className="size-3.5" />
                   {material.deliveryType.nameTh}
                 </div>
               )}
               {material.model && (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                  <Package className="size-3" />
+                <div className="bg-success/10 text-success inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                  <Package className="size-3.5" />
                   {material.model.nameTh}
                 </div>
               )}
               {material.loadingPoint && (
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                  <Warehouse className="size-3" />
+                <div className="bg-info/10 text-info inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                  <Warehouse className="size-3.5" />
                   {material.loadingPoint.nameTh}
+                </div>
+              )}
+              {material.processLineName && (
+                <div className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                  {material.processLineName}
                 </div>
               )}
             </div>
@@ -177,17 +194,32 @@ export function MaterialDetailCard({
             {(onEdit || onStatusChange) && (
               <div className="mt-auto flex items-center gap-2 border-t p-4">
                 {onEdit && (
-                  <Button size="sm" variant="outline" onClick={onEdit}>
+                  <Button size="sm" onClick={onEdit} className="gap-1.5">
+                    <Edit2 className="size-3.5" />
                     แก้ไขข้อมูล
                   </Button>
                 )}
                 {onStatusChange && (
                   <Button
                     size="sm"
-                    variant={material.isActive ? "destructive" : "default"}
+                    variant={material.isActive ? "outline" : "default"}
                     onClick={onStatusChange}
+                    className={cn(
+                      "gap-1.5",
+                      material.isActive && "text-danger hover:text-danger",
+                    )}
                   >
-                    {material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                    {material.isActive ? (
+                      <>
+                        <Power className="size-3.5" />
+                        ปิดใช้งาน
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="size-3.5" />
+                        เปิดใช้งาน
+                      </>
+                    )}
                   </Button>
                 )}
               </div>
@@ -197,64 +229,81 @@ export function MaterialDetailCard({
       </Card>
 
       {/* ===== Detail Cards ===== */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {/* Specs */}
-        <Card className="shadow-sm">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {/* Material Info Card */}
+        <Card className="border-border/60">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <div className="bg-primary/10 text-primary flex size-6 items-center justify-center rounded">
-                <Hash className="size-3.5" />
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 text-primary flex size-8 items-center justify-center rounded-lg">
+                <Hash className="size-4" />
               </div>
-              ข้อมูลวัสดุ
+              <div>
+                <h3 className="font-semibold">ข้อมูลวัสดุ</h3>
+                <p className="text-muted-foreground text-xs">รายละเอียดพื้นฐาน</p>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
             <DetailItem label="รหัสวัสดุ" value={material.code} mono />
             <DetailItem label="ชื่อวัสดุ" value={material.name} />
             <DetailItem label="หน่วยนับ" value={unitLabel} />
+            {material.packingQuantity && (
+              <DetailItem label="จำนวนบรรจุ" value={`${material.packingQuantity} ชิ้น/หน่วย`} />
+            )}
             {material.specification && (
               <DetailItem label="สเปค" value={material.specification} />
             )}
             {material.scale && (
               <DetailItem label="Scale" value={material.scale} />
             )}
-            {material.processLineName && (
-              <DetailItem label="Process Line" value={material.processLineName} />
-            )}
           </CardContent>
         </Card>
 
-        {/* Suppliers */}
-        <Card className="shadow-sm">
+        {/* Suppliers Card */}
+        <Card className="border-border/60">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2 text-sm font-semibold">
-              <div className="bg-success/10 text-success flex size-6 items-center justify-center rounded">
-                <Truck className="size-3.5" />
+            <div className="flex items-center gap-2">
+              <div className="bg-success/10 text-success flex size-8 items-center justify-center rounded-lg">
+                <Truck className="size-4" />
               </div>
-              ผู้จัดจำหน่าย ({material.suppliers.length})
+              <div>
+                <h3 className="font-semibold">ผู้จัดจำหน่าย</h3>
+                <p className="text-muted-foreground text-xs">
+                  {material.suppliers.length > 0
+                    ? `${material.suppliers.length} รายการ`
+                    : "ไม่มีผู้จัดจำหน่าย"}
+                </p>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
             {material.suppliers.length === 0 ? (
-              <p className="text-muted-foreground flex items-center gap-2 text-sm">
+              <div className="text-muted-foreground flex items-center gap-2 rounded-lg border border-dashed p-4 text-sm">
                 <AlertCircle className="size-4" />
                 ไม่มีผู้จัดจำหน่ายที่เชื่อมโยง
-              </p>
+              </div>
             ) : (
               material.suppliers.map((s) => (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between rounded-lg border p-3 text-sm"
+                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/30"
                 >
-                  <div>
-                    <p className="font-medium">{s.nameTh}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{s.nameTh}</p>
                     {s.code && (
-                      <p className="text-muted-foreground text-xs">{s.code}</p>
+                      <p className="text-muted-foreground font-mono text-xs">{s.code}</p>
                     )}
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {s.telephone ?? "—"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    {s.telephone && (
+                      <Badge variant="outline" className="text-xs font-mono">
+                        {s.telephone}
+                      </Badge>
+                    )}
+                    <Badge variant={s.isActive ? "success" : "secondary"} className="text-xs">
+                      {s.isActive ? "ใช้งาน" : "ปิด"}
+                    </Badge>
+                  </div>
                 </div>
               ))
             )}
@@ -276,13 +325,13 @@ function DetailItem({
 }) {
   if (!value) return null;
   return (
-    <div className="flex items-start justify-between gap-4 text-sm">
-      <span className="text-muted-foreground shrink-0">{label}</span>
+    <div className="flex items-start justify-between gap-4 rounded-md px-2 py-1.5 hover:bg-muted/30">
+      <span className="text-muted-foreground shrink-0 text-sm">{label}</span>
       <span
         className={cn(
           "text-right font-medium",
-          mono && "font-mono text-xs",
-          !mono && "text-foreground"
+          mono && "font-mono text-xs bg-muted px-1.5 py-0.5 rounded",
+          !mono && "text-foreground",
         )}
       >
         {value}
@@ -293,29 +342,31 @@ function DetailItem({
 
 export function MaterialDetailCardSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Hero Skeleton */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr]">
-          <div className="bg-muted min-h-[240px] animate-pulse" />
+        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
+          <div className="bg-muted min-h-[220px] animate-pulse" />
           <div className="space-y-4 p-5">
-            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-            <div className="h-7 w-2/3 animate-pulse rounded bg-muted" />
+            <div className="h-6 w-32 animate-pulse rounded bg-muted" />
+            <div className="h-8 w-2/3 animate-pulse rounded bg-muted" />
             <div className="h-4 w-full animate-pulse rounded bg-muted" />
           </div>
         </div>
       </Card>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/* Detail Cards Skeleton */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <Card>
           <CardContent className="space-y-3 p-5">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-4 animate-pulse rounded bg-muted" />
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-8 animate-pulse rounded bg-muted" />
             ))}
           </CardContent>
         </Card>
         <Card>
           <CardContent className="space-y-2 p-5">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 animate-pulse rounded bg-muted" />
+              <div key={i} className="h-14 animate-pulse rounded bg-muted" />
             ))}
           </CardContent>
         </Card>
@@ -328,10 +379,10 @@ export function MaterialDetailEmpty({ message }: { message: string }) {
   return (
     <Card className="border-dashed">
       <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-        <div className="bg-muted flex size-12 items-center justify-center rounded-full">
-          <Package className="size-5 text-muted-foreground" />
+        <div className="bg-muted flex size-14 items-center justify-center rounded-xl">
+          <Package className="size-6 text-muted-foreground" />
         </div>
-        <div className="text-sm font-semibold">ไม่พบข้อมูลวัสดุ</div>
+        <div className="text-base font-semibold">ไม่พบข้อมูลวัสดุ</div>
         <div className="text-muted-foreground text-sm">{message}</div>
       </CardContent>
     </Card>

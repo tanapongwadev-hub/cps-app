@@ -1,23 +1,17 @@
 "use client";
 
 /**
- * MaterialFormModal
+ * MaterialFormModal — Redesigned
  *
- * Centered modal variant of the Material create / edit form. Used by
- * `/materials/pc` (and any other page that prefers a true modal over a
- * side-drawer).
- *
- * Shares the same form behaviour, validation, image-upload flow, and
- * dirty-state guard as `MaterialFormDialog` — only the shell differs.
- *
- * The image preview URL is resolved through `resolveMaterialImage` so
- * that bare `/uploads/...` paths returned by the API are loadable
- * through the Next.js rewrite (see `next.config.ts`).
+ * Modern form modal for creating/editing Materials (PC parts).
+ * - Clean 2-column layout
+ * - Organized sections
+ * - Better image upload UX
  */
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ImagePlus, Package, Save, X } from "lucide-react";
+import { Camera, Edit2, ImagePlus, Package, Save, X } from "lucide-react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
@@ -42,6 +36,7 @@ import type {
   MaterialLookupOption,
   MaterialLookups,
   MaterialPayload,
+  MaterialType,
   UpdateMaterialPayload,
 } from "../api/materials-api";
 
@@ -51,6 +46,7 @@ const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const materialFormSchema = z.object({
   code: z.string().trim().min(1, "กรุณากรอกรหัสวัสดุ"),
   name: z.string().trim().min(1, "กรุณากรอกชื่อวัสดุ"),
+  type: z.string(),
   unitId: z.string().min(1, "กรุณาเลือกหน่วย"),
   deliveryTypeId: z.string(),
   modelId: z.string(),
@@ -61,6 +57,7 @@ const materialFormSchema = z.object({
   description: z.string(),
   supplierIds: z.array(z.string()),
   isActive: z.boolean(),
+  packingQuantity: z.string(),
 });
 
 type MaterialFormValues = z.infer<typeof materialFormSchema>;
@@ -81,10 +78,18 @@ function optionalText(value: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function optionalNumber(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return null;
+  const num = parseInt(trimmed, 10);
+  return isNaN(num) ? null : num;
+}
+
 function formValues(material?: Material | null): MaterialFormValues {
   return {
     code: material?.code ?? "",
     name: material?.name ?? "",
+    type: material?.type ?? "",
     unitId: material?.unitId ?? "",
     deliveryTypeId: material?.deliveryTypeId ?? "",
     modelId: material?.modelId ?? "",
@@ -95,6 +100,7 @@ function formValues(material?: Material | null): MaterialFormValues {
     description: material?.description ?? "",
     supplierIds: material?.suppliers.map((supplier) => supplier.id) ?? [],
     isActive: material?.isActive ?? true,
+    packingQuantity: material?.packingQuantity?.toString() ?? "",
   };
 }
 
@@ -129,9 +135,9 @@ function LookupSelect({
         aria-invalid={!!error}
         aria-describedby={error ? `${id}-error` : undefined}
         className={cn(
-          "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none",
-          "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2",
-          error && "border-danger focus-visible:ring-danger/20",
+          "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none transition-colors",
+          "focus:border-primary focus:ring-2 focus:ring-primary/20",
+          error && "border-danger focus:border-danger focus:ring-danger/20",
         )}
       >
         <option value="">เลือก{label}</option>
@@ -203,9 +209,6 @@ export function MaterialFormModal({
     revokeObjectUrl();
     form.reset(formValues(material));
     setImageFile(null);
-    // Resolve the preview URL so the browser can load it (the API returns
-    // a bare `/uploads/...` path; the Next.js rewrite at `/uploads/:path*`
-    // proxies to the backend).
     setPreviewUrl(resolveMaterialImage(material?.imagePath ?? null));
     setImageRemoved(false);
     setImageDirty(false);
@@ -217,24 +220,26 @@ export function MaterialFormModal({
   }, [form, material, open, revokeObjectUrl]);
 
   const selectedSupplierIds = useWatch({ control: form.control, name: "supplierIds" }) ?? [];
-  const unitId = useWatch({ control: form.control, name: "unitId" }) ?? "";
-  const deliveryTypeId = useWatch({ control: form.control, name: "deliveryTypeId" }) ?? "";
-  const modelId = useWatch({ control: form.control, name: "modelId" }) ?? "";
-  const loadingPointId = useWatch({ control: form.control, name: "loadingPointId" }) ?? "";
   const pending = submitting || savePending || uploadPending;
   const dirty = form.formState.isDirty || imageDirty;
 
-  const requestOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      onOpenChange(true);
-      return;
-    }
-    if (dirty && !pending) {
-      setDiscardOpen(true);
-      return;
-    }
-    if (!pending) onOpenChange(false);
-  };
+  // Stable callback for dialog open state
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        onOpenChange(true);
+        return;
+      }
+      if (dirty && !pending) {
+        setDiscardOpen(true);
+        return;
+      }
+      if (!pending) {
+        onOpenChange(false);
+      }
+    },
+    [onOpenChange, dirty, pending],
+  );
 
   const selectImage = (file: File | undefined) => {
     if (!file) return;
@@ -296,6 +301,7 @@ export function MaterialFormModal({
       const payload: MaterialPayload = {
         code: values.code,
         name: values.name,
+        type: optionalText(values.type) as MaterialType | null ?? null,
         unitId: values.unitId,
         deliveryTypeId: optionalText(values.deliveryTypeId),
         modelId: optionalText(values.modelId),
@@ -307,6 +313,7 @@ export function MaterialFormModal({
         specification: optionalText(values.specification),
         description: optionalText(values.description),
         isActive: values.isActive,
+        packingQuantity: optionalNumber(values.packingQuantity),
       };
       await onSave(isEdit ? { ...payload, updatedAt: material!.updatedAt } : payload);
 
@@ -343,18 +350,24 @@ export function MaterialFormModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={requestOpenChange}>
-        <DialogContent size="xl" className="w-full sm:max-w-3xl" hideClose={pending}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Package className="size-4" />
-              {isEdit ? "แก้ไขอะไหล่ PC" : "เพิ่มอะไหล่ PC"}
-            </DialogTitle>
-            <DialogDescription>
-              {isEdit
-                ? `แก้ไข Material Master — ${material!.code}`
-                : "เพิ่มข้อมูลอะไหล่สำหรับฝ่าย PC"}
-            </DialogDescription>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent size="xl" className="w-full sm:max-w-4xl" hideClose={true}>
+          <DialogHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
+                {isEdit ? <Edit2 className="size-4" /> : <Package className="size-4" />}
+              </div>
+              <div>
+                <DialogTitle className="text-lg">
+                  {isEdit ? "แก้ไขอะไหล่ PC" : "เพิ่มอะไหล่ PC ใหม่"}
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  {isEdit
+                    ? `แก้ไข Material Master — ${material!.code}`
+                    : "กรอกข้อมูลอะไหล่สำหรับฝ่าย PC"}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <form
@@ -363,20 +376,22 @@ export function MaterialFormModal({
             noValidate
           >
             <div className="flex-1 space-y-6 overflow-y-auto pr-1">
+              {/* API Error */}
               {apiError && (
                 <div
                   role="alert"
-                  className="border-danger/30 bg-danger/5 text-danger rounded-md border px-3 py-2 text-sm"
+                  className="border-danger/30 bg-danger/5 text-danger rounded-lg border px-4 py-3 text-sm"
                 >
                   {apiError}
                 </div>
               )}
 
+              {/* Section 1: Basic Info */}
               <FormSection
-                title="ข้อมูลระบุตัววัสดุ"
+                title="ข้อมูลพื้นฐาน"
                 description="รหัส ชื่อ และหน่วยคือข้อมูลหลักสำหรับค้นหาและตรวจรับ"
               >
-                <div className="border-primary bg-muted/35 rounded-md border-l-2 p-3">
+                <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
                   <FormGrid cols={2}>
                     <TextField
                       label="รหัสวัสดุ"
@@ -395,133 +410,203 @@ export function MaterialFormModal({
                       {...form.register("name")}
                     />
                   </FormGrid>
-                  <LookupSelect
-                    id="material-unit"
-                    label="หน่วย"
-                    required
-                    options={lookups.units}
-                    value={unitId}
-                    error={form.formState.errors.unitId?.message}
-                    onChange={(value) =>
-                      form.setValue("unitId", value, { shouldDirty: true, shouldValidate: true })
-                    }
-                  />
+                  <FormGrid cols={3}>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="material-type">ประเภท</Label>
+                      <select
+                        id="material-type"
+                        aria-label="ประเภท"
+                        value={form.watch("type")}
+                        onChange={(event) =>
+                          form.setValue("type", event.target.value, { shouldDirty: true })
+                        }
+                        className={cn(
+                          "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none transition-colors",
+                          "focus:border-primary focus:ring-2 focus:ring-primary/20",
+                        )}
+                      >
+                        <option value="">เลือกประเภท</option>
+                        <option value="PC">PC (อะไหล่)</option>
+                        <option value="OF">OF (วัสดุโรงงาน)</option>
+                        <option value="OF_MAT">OF_MAT (วัตถุดิบ)</option>
+                      </select>
+                    </div>
+                    <LookupSelect
+                      id="material-unit"
+                      label="หน่วย"
+                      required
+                      options={lookups.units}
+                      value={form.watch("unitId")}
+                      error={form.formState.errors.unitId?.message}
+                      onChange={(value) =>
+                        form.setValue("unitId", value, { shouldDirty: true, shouldValidate: true })
+                      }
+                    />
+                    <TextField
+                      label="จำนวนต่อหน่วยบรรจุ"
+                      aria-label="จำนวนต่อหน่วยบรรจุ"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      placeholder="เช่น 25"
+                      className="font-mono"
+                      description="จำนวนชิ้นต่อหน่วยบรรจุ"
+                      {...form.register("packingQuantity")}
+                    />
+                  </FormGrid>
                 </div>
               </FormSection>
 
+              {/* Section 2: Classification & Process */}
               <FormSection title="การจำแนกและกระบวนการ">
-                <FormGrid cols={2}>
-                  <LookupSelect
-                    id="material-delivery-type"
-                    label="ประเภทการจัดส่ง"
-                    options={lookups.deliveryTypes}
-                    value={deliveryTypeId}
-                    onChange={(value) =>
-                      form.setValue("deliveryTypeId", value, { shouldDirty: true })
-                    }
-                  />
-                  <LookupSelect
-                    id="material-model"
-                    label="รุ่น"
-                    options={lookups.models}
-                    value={modelId}
-                    onChange={(value) => form.setValue("modelId", value, { shouldDirty: true })}
-                  />
-                  <LookupSelect
-                    id="material-loading-point"
-                    label="จุดรับสินค้า"
-                    options={lookups.loadingPoints}
-                    value={loadingPointId}
-                    onChange={(value) =>
-                      form.setValue("loadingPointId", value, { shouldDirty: true })
-                    }
-                  />
-                  <TextField label="ไลน์กระบวนการ" {...form.register("processLineName")} />
-                  <TextField
-                    label="สเกล"
-                    inputMode="decimal"
-                    className="font-mono"
-                    {...form.register("scale")}
-                  />
-                  <label className="flex min-h-9 items-center gap-2 self-end rounded-md border px-3 text-sm">
-                    <input type="checkbox" {...form.register("isActive")} />
-                    เปิดใช้งาน
-                  </label>
-                </FormGrid>
-              </FormSection>
-
-              <FormSection title="ผู้ขาย" description="เลือกได้เฉพาะ Supplier Master ที่เปิดใช้งาน">
-                <div className="space-y-2">
-                  <Label htmlFor="material-supplier">เพิ่มผู้ขาย</Label>
-                  <select
-                    id="material-supplier"
-                    value=""
-                    onChange={(event) => addSupplier(event.target.value)}
-                    className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-2"
-                  >
-                    <option value="">เลือกผู้ขาย</option>
-                    {availableSuppliers.map((supplier) => (
-                      <option key={supplier.id} value={supplier.id}>
-                        {supplier.code} — {supplier.nameTh}
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+                  <FormGrid cols={3}>
+                    <LookupSelect
+                      id="material-delivery-type"
+                      label="ประเภทการจัดส่ง"
+                      options={lookups.deliveryTypes}
+                      value={form.watch("deliveryTypeId")}
+                      onChange={(value) =>
+                        form.setValue("deliveryTypeId", value, { shouldDirty: true })
+                      }
+                    />
+                    <LookupSelect
+                      id="material-model"
+                      label="รุ่น"
+                      options={lookups.models}
+                      value={form.watch("modelId")}
+                      onChange={(value) =>
+                        form.setValue("modelId", value, { shouldDirty: true })
+                      }
+                    />
+                    <LookupSelect
+                      id="material-loading-point"
+                      label="จุดรับสินค้า"
+                      options={lookups.loadingPoints}
+                      value={form.watch("loadingPointId")}
+                      onChange={(value) =>
+                        form.setValue("loadingPointId", value, { shouldDirty: true })
+                      }
+                    />
+                  </FormGrid>
+                  <FormGrid cols={3}>
+                    <TextField
+                      label="ไลน์กระบวนการ"
+                      {...form.register("processLineName")}
+                    />
+                    <TextField
+                      label="สเกล"
+                      inputMode="decimal"
+                      className="font-mono"
+                      {...form.register("scale")}
+                    />
+                    <div className="space-y-1.5">
+                      <Label htmlFor="material-active">สถานะ</Label>
+                      <div className="flex h-9 items-center gap-3">
+                        <label className="relative inline-flex cursor-pointer items-center">
+                          <input
+                            type="checkbox"
+                            {...form.register("isActive")}
+                            className="peer sr-only"
+                          />
+                          <div className="peer-checked:bg-primary bg-muted h-5 w-9 rounded-full transition-colors peer-checked:after:translate-x-full peer-checked:after:border-white after:bg-white after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:transition-all" />
+                        </label>
+                        <span className="text-sm">
+                          {form.watch("isActive") ? "เปิดใช้งาน" : "ปิดใช้งาน"}
+                        </span>
+                      </div>
+                    </div>
+                  </FormGrid>
                 </div>
-                {selectedSupplierIds.length > 0 ? (
-                  <ul aria-label="ผู้ขายที่เลือก" className="flex flex-wrap gap-2">
-                    {selectedSupplierIds.map((supplierId) => {
-                      const supplier = supplierNames.get(supplierId);
-                      if (!supplier) return null;
-                      return (
-                        <li
-                          key={supplierId}
-                          className="bg-muted/40 inline-flex items-center gap-2 rounded-md border px-2.5 py-1 text-sm"
-                        >
-                          <span>
-                            <code className="text-muted-foreground font-mono text-xs">
-                              {supplier.code}
-                            </code>{" "}
-                            {supplier.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeSupplier(supplierId)}
-                            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring rounded-sm outline-none focus-visible:ring-2"
-                            aria-label={`นำ ${supplier.name} ออก`}
-                          >
-                            <X className="size-3.5" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground text-xs">ยังไม่ได้เลือกผู้ขาย</p>
-                )}
               </FormSection>
 
-              <FormSection title="ข้อกำหนดและรูปภาพ">
-                <FormGrid cols={2}>
+              {/* Section 3: Suppliers */}
+              <FormSection
+                title="ผู้ขาย"
+                description="เลือกได้เฉพาะ Supplier Master ที่เปิดใช้งาน"
+              >
+                <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="material-specification">ข้อกำหนด</Label>
-                    <Textarea
-                      id="material-specification"
-                      rows={4}
-                      {...form.register("specification")}
-                    />
+                    <Label htmlFor="material-supplier">เพิ่มผู้ขาย</Label>
+                    <select
+                      id="material-supplier"
+                      value=""
+                      onChange={(event) => addSupplier(event.target.value)}
+                      className="border-input bg-background focus-visible:ring-ring h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none focus-visible:ring-2"
+                    >
+                      <option value="">+ เลือกผู้ขาย</option>
+                      {availableSuppliers.map((supplier) => (
+                        <option key={supplier.id} value={supplier.id}>
+                          {supplier.code} — {supplier.nameTh}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="material-description">คำอธิบาย</Label>
-                    <Textarea
-                      id="material-description"
-                      rows={4}
-                      {...form.register("description")}
-                    />
-                  </div>
-                </FormGrid>
+                  {selectedSupplierIds.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {selectedSupplierIds.map((supplierId) => {
+                        const supplier = supplierNames.get(supplierId);
+                        if (!supplier) return null;
+                        return (
+                          <div
+                            key={supplierId}
+                            className="bg-background inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm"
+                          >
+                            <span>
+                              <code className="text-muted-foreground font-mono text-xs">
+                                {supplier.code}
+                              </code>{" "}
+                              <span className="font-medium">{supplier.name}</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => removeSupplier(supplierId)}
+                              className="text-muted-foreground hover:text-foreground flex size-5 items-center justify-center rounded-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                              aria-label={`นำ ${supplier.name} ออก`}
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">
+                      ยังไม่ได้เลือกผู้ขาย — สามารถเพิ่มได้จากด้านบน
+                    </p>
+                  )}
+                </div>
+              </FormSection>
 
-                <div className="space-y-3 rounded-md border border-dashed p-3">
-                  <div className="flex flex-wrap items-center gap-2">
+              {/* Section 4: Specs & Image */}
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Specifications */}
+                <FormSection title="ข้อกำหนดและรายละเอียด">
+                  <div className="space-y-4 rounded-lg border bg-muted/20 p-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="material-specification">ข้อกำหนด</Label>
+                      <Textarea
+                        id="material-specification"
+                        rows={3}
+                        placeholder="ระบุสเปคของวัสดุ..."
+                        {...form.register("specification")}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="material-description">คำอธิบาย</Label>
+                      <Textarea
+                        id="material-description"
+                        rows={3}
+                        placeholder="คำอธิบายเพิ่มเติม..."
+                        {...form.register("description")}
+                      />
+                    </div>
+                  </div>
+                </FormSection>
+
+                {/* Image Upload */}
+                <FormSection title="รูปภาพวัสดุ">
+                  <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
                     <input
                       id="material-image"
                       type="file"
@@ -534,43 +619,65 @@ export function MaterialFormModal({
                     />
                     <Label
                       htmlFor="material-image"
-                      className="border-input bg-background hover:bg-accent inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border px-3 text-sm font-medium shadow-xs"
+                      className={cn(
+                        "bg-background hover:bg-accent flex h-32 w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors",
+                        previewUrl ? "border-primary/50" : "border-border",
+                      )}
                     >
-                      <ImagePlus className="size-4" />
-                      เลือกรูปวัสดุ
+                      {previewUrl ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewUrl}
+                            alt="ตัวอย่างรูปวัสดุ"
+                            className="h-20 w-20 rounded-lg border object-cover"
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            คลิกเพื่อเปลี่ยนรูป
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="bg-muted flex size-12 items-center justify-center rounded-lg">
+                            <Camera className="size-5 text-muted-foreground" />
+                          </div>
+                          <span className="text-sm font-medium">
+                            คลิกเพื่อเลือกรูป
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            JPEG, PNG หรือ WebP · สูงสุด 5 MiB
+                          </span>
+                        </>
+                      )}
                     </Label>
-                    <span className="text-muted-foreground text-xs">
-                      JPEG, PNG หรือ WebP · สูงสุด 5 MiB
-                    </span>
-                  </div>
-                  {imageError && <p className="text-danger text-xs">{imageError}</p>}
-                  {previewUrl && (
-                    <div className="bg-muted/40 flex items-center gap-3 rounded-md p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewUrl}
-                        alt="ตัวอย่างรูปวัสดุ"
-                        className="bg-background size-16 rounded-md border object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {imageFile?.name ?? "รูปปัจจุบัน"}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          สามารถเลือกไฟล์ใหม่เพื่อแทนที่ได้
-                        </p>
+                    {imageError && (
+                      <p className="text-danger text-xs">{imageError}</p>
+                    )}
+                    {previewUrl && (
+                      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-2">
+                        <div className="flex items-center gap-2">
+                          <ImagePlus className="text-muted-foreground size-4" />
+                          <span className="text-sm">
+                            {imageFile?.name ?? "รูปปัจจุบัน"}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removeImage}
+                          className="h-7 text-xs text-muted-foreground hover:text-danger"
+                        >
+                          ลบ
+                        </Button>
                       </div>
-                      <Button type="button" variant="ghost" size="sm" onClick={removeImage}>
-                        <X className="size-4" />
-                        ลบรูปวัสดุ
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </FormSection>
+                    )}
+                  </div>
+                </FormSection>
+              </div>
             </div>
 
-            <DialogFooter className="mt-6 border-t px-0 pt-4">
+            <DialogFooter className="mt-6 border-t pt-4">
               <Button
                 type="button"
                 variant="outline"
@@ -580,7 +687,7 @@ export function MaterialFormModal({
                 ยกเลิก
               </Button>
               <Button type="submit" loading={pending} disabled={pending}>
-                <Save className="size-4" />
+                <Save className="mr-2 size-4" />
                 {isEdit ? "บันทึกการเปลี่ยนแปลง" : "สร้างอะไหล่"}
               </Button>
             </DialogFooter>
@@ -603,7 +710,8 @@ export function MaterialFormModal({
           setImageFile(null);
           setPreviewUrl(resolveMaterialImage(material?.imagePath ?? null));
           setImageDirty(false);
-          onOpenChange(false);
+          // Use setTimeout to avoid state update during render
+          setTimeout(() => onOpenChange(false), 0);
         }}
       />
     </>

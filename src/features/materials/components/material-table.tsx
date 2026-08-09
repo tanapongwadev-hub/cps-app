@@ -11,6 +11,7 @@
  *  - รวมสอง column ที่ซ้ำซ้อน (หน่วย) ไว้ใน chip ภายใน cell "วัสดุ"
  */
 
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ChevronLeft,
@@ -156,6 +157,7 @@ export function MaterialTable({
   onPageChange,
   onPageSizeChange,
 }: MaterialTableProps) {
+  const router = useRouter();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
@@ -176,6 +178,7 @@ export function MaterialTable({
                   ariaLabel="เรียงตามรหัสวัสดุ"
                 />
               </TableHead>
+              <TableHead className="w-[100px]">ประเภท</TableHead>
               <TableHead>ผู้ขาย</TableHead>
               <TableHead>
                 <SortableHeader
@@ -204,14 +207,14 @@ export function MaterialTable({
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
                 <TableRow key={`skel-${index}`} className="hover:bg-transparent">
-                  <TableCell colSpan={5} className="py-2">
+                  <TableCell colSpan={6} className="py-2">
                     <Skeleton className="h-14 w-full" />
                   </TableCell>
                 </TableRow>
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center">
+                <TableCell colSpan={6} className="py-12 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                     <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
                       <Slash className="size-5" />
@@ -230,7 +233,7 @@ export function MaterialTable({
               </TableRow>
             ) : materials.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="p-0">
+                <TableCell colSpan={6} className="p-0">
                   <EmptyState
                     icon={<Package className="size-6" />}
                     title="ยังไม่มีข้อมูลวัสดุ"
@@ -265,7 +268,7 @@ export function MaterialTable({
                             // inside the row — let those handlers run instead.
                             const target = event.target as HTMLElement;
                             if (target.closest("button, a")) return;
-                            window.location.href = href;
+                            router.push(href);
                           }
                         : undefined
                     }
@@ -355,6 +358,28 @@ export function MaterialTable({
                       </div>
                     </TableCell>
                     <TableCell className="py-2">
+                      {material.type ? (
+                        <Badge
+                          variant={
+                            material.type === "PC"
+                              ? "default"
+                              : material.type === "OF"
+                                ? "secondary"
+                                : "outline"
+                          }
+                          size="sm"
+                        >
+                          {material.type === "PC"
+                            ? "อะไหล่"
+                            : material.type === "OF"
+                              ? "โรงงาน"
+                              : "วัตถุดิบ"}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
                       <div className="flex max-w-[220px] flex-wrap items-center gap-1">
                         {material.suppliers.length > 0 ? (
                           <>
@@ -405,7 +430,7 @@ export function MaterialTable({
                             variant="ghost"
                             size="icon-sm"
                             onClick={() => {
-                              window.location.href = href;
+                              router.push(href);
                             }}
                             aria-label={`ดูรายละเอียด ${material.code}`}
                             title="ดูรายละเอียด"

@@ -1,28 +1,27 @@
 "use client";
 
 /**
- * MaterialCardGrid
+ * MaterialCardGrid — Redesigned
  *
- * Card-based grid view of Materials. Each card shows the image (resolved
- * through `resolveMaterialImage` so the API's bare `/uploads/...` paths
- * load through the Next.js rewrite), key fields, status, and per-card
- * actions.
- *
- * Designed for `/materials/pc` and any page that prefers a tiled view
- * over the row-based `MaterialTable`. Sort and pagination live in the
- * page; this component renders a single, already-filtered page of
- * materials.
+ * Modern, clean card grid for Materials/PC parts.
+ * - Compact card design with subtle borders
+ * - Clear visual hierarchy
+ * - Quick actions on hover
+ * - Responsive grid layout
  */
 
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
+  Edit2,
   Eye,
   ImageOff,
-  Pencil,
+  Package,
   Power,
   RotateCcw,
-  Slash,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,11 +40,6 @@ export interface MaterialCardGridProps {
   onCreate?: () => void;
   onEdit?: (material: Material) => void;
   onStatusChange?: (material: Material) => void;
-  /**
-   * If provided, each card becomes clickable and navigates to this URL
-   * (with the material id appended). When undefined, the whole card is
-   * non-interactive and only the per-card action buttons are clickable.
-   */
   detailHref?: (material: Material) => string;
   page: number;
   pageSize: number;
@@ -74,19 +68,21 @@ export function MaterialCardGrid({
   onPageChange,
   onPageSizeChange,
 }: MaterialCardGridProps) {
+  const router = useRouter();
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
 
   return (
     <div className="space-y-4">
+      {/* Error State */}
       {isError ? (
-        <Card>
+        <Card className="border-danger/30 bg-danger/5">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
-              <Slash className="size-5" />
+            <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-lg">
+              <Package className="size-5" />
             </div>
-            <p className="font-semibold">โหลดรายการอะไหล่ไม่สำเร็จ</p>
+            <p className="font-semibold text-danger">โหลดรายการอะไหล่ไม่สำเร็จ</p>
             <p className="text-muted-foreground text-sm">
               ตรวจสอบการเชื่อมต่อแล้วลองใหม่อีกครั้ง
             </p>
@@ -98,15 +94,16 @@ export function MaterialCardGrid({
           </CardContent>
         </Card>
       ) : isLoading ? (
+        /* Loading Skeleton */
         <div
           role="status"
           aria-label="กำลังโหลดรายการอะไหล่"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         >
           <span className="sr-only">กำลังโหลดรายการอะไหล่</span>
           {Array.from({ length: Math.max(pageSize, 8) }).map((_, index) => (
-            <Card key={index} className="overflow-hidden">
-              <Skeleton className="aspect-[4/3] w-full rounded-none" />
+            <Card key={index} className="overflow-hidden border-border/60">
+              <Skeleton className="h-36 w-full rounded-none" />
               <CardContent className="space-y-2 p-3">
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-1/2" />
@@ -116,15 +113,16 @@ export function MaterialCardGrid({
           ))}
         </div>
       ) : materials.length === 0 ? (
-        <Card>
+        /* Empty State */
+        <Card className="border-dashed">
           <CardContent className="p-0">
             <EmptyState
-              icon={<ImageOff className="size-6" />}
+              icon={<Package className="size-8 text-muted-foreground/50" />}
               title="ยังไม่มีข้อมูลอะไหล่ PC"
-              description="เพิ่มอะไหล่รายการแรก หรือปรับเงื่อนไขการค้นหา"
+              description="เริ่มต้นโดยการเพิ่มอะไหล่รายการแรกของคุณ"
               action={
                 onCreate ? (
-                  <Button type="button" size="sm" onClick={onCreate}>
+                  <Button type="button" onClick={onCreate}>
                     เพิ่มอะไหล่ PC
                   </Button>
                 ) : undefined
@@ -133,7 +131,8 @@ export function MaterialCardGrid({
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        /* Material Cards Grid */
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {materials.map((material) => {
             const imageUrl = resolveMaterialImage(material.imagePath);
             const href = detailHref?.(material);
@@ -142,19 +141,13 @@ export function MaterialCardGrid({
                 key={material.id}
                 data-testid={`material-card-${material.code}`}
                 className={cn(
-                  "group flex h-full flex-col overflow-hidden transition-all duration-200",
-                  "hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-primary/20",
+                  "group relative flex flex-col overflow-hidden border-border/60 transition-all duration-200",
+                  "hover:border-primary/30 hover:shadow-md",
                   href && "cursor-pointer",
                 )}
-                onClick={
-                  href
-                    ? () => {
-                        window.location.href = href;
-                      }
-                    : undefined
-                }
               >
-                <div className="bg-muted relative aspect-[4/3] w-full overflow-hidden">
+                {/* Image Section */}
+                <div className="relative h-36 w-full overflow-hidden bg-muted/30">
                   {imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -164,84 +157,93 @@ export function MaterialCardGrid({
                       loading="lazy"
                     />
                   ) : (
-                    <div className="text-muted-foreground flex h-full w-full flex-col items-center justify-center gap-1 text-xs">
-                      <ImageOff className="size-6" aria-hidden="true" />
-                      <span>ไม่มีรูป</span>
+                    <div className="text-muted-foreground flex h-full w-full flex-col items-center justify-center gap-2">
+                      <div className="bg-muted/50 flex size-12 items-center justify-center rounded-lg">
+                        <ImageOff className="size-5" />
+                      </div>
+                      <span className="text-xs">ไม่มีรูป</span>
                     </div>
                   )}
 
-                  {/* Top-right: status pill */}
+                  {/* Status Badge - Top Right */}
                   <div className="absolute right-2 top-2">
                     <Badge
-                      variant={material.isActive ? "success" : "muted"}
-                      className="shadow-sm backdrop-blur-sm"
+                      variant={material.isActive ? "success" : "secondary"}
+                      className="gap-1 px-2 py-0.5 text-xs"
                     >
+                      <span
+                        className={cn(
+                          "size-1.5 rounded-full",
+                          material.isActive ? "bg-white/80" : "bg-muted-foreground/50",
+                        )}
+                      />
                       {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                     </Badge>
                   </div>
 
-                  {/* Top-left: action buttons (visible on hover) */}
+                  {/* Unit Badge - Bottom Left */}
+                  {material.unit && (
+                    <div className="absolute bottom-2 left-2">
+                      <span className="bg-background/95 text-foreground rounded-md border px-2 py-0.5 font-mono text-xs font-medium shadow-sm backdrop-blur-sm">
+                        {unitLabel(material)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Quick Actions - Top Left (visible on hover) */}
                   {(onEdit || onStatusChange) && (
-                    <div className="absolute left-2 top-2 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100">
+                    <div className="absolute left-2 top-2 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
                       {onEdit && (
-                        <Button
+                        <button
                           type="button"
-                          variant="secondary"
-                          size="icon"
-                          onClick={() => onEdit(material)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(material);
+                          }}
                           aria-label={`แก้ไข ${material.code}`}
-                          className="bg-background/85 hover:bg-background size-8 rounded-full border shadow-sm backdrop-blur-sm"
+                          className="bg-background/95 hover:bg-background flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-colors"
                         >
-                          <Pencil className="size-3.5" />
-                        </Button>
+                          <Edit2 className="size-3.5 text-muted-foreground" />
+                        </button>
                       )}
                       {onStatusChange && (
-                        <Button
+                        <button
                           type="button"
-                          variant="secondary"
-                          size="icon"
-                          onClick={() => onStatusChange(material)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onStatusChange(material);
+                          }}
                           aria-label={
                             material.isActive
                               ? `ปิดใช้งาน ${material.code}`
                               : `เปิดใช้งาน ${material.code}`
                           }
                           className={cn(
-                            "size-8 rounded-full border bg-background/85 shadow-sm backdrop-blur-sm hover:bg-background",
+                            "flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-colors",
                             material.isActive
-                              ? "text-muted-foreground hover:text-danger"
-                              : "text-success hover:text-success",
+                              ? "bg-background/95 hover:bg-danger/10"
+                              : "bg-success/10 hover:bg-success/20",
                           )}
                         >
                           {material.isActive ? (
-                            <Power className="size-3.5" aria-hidden="true" />
+                            <Power className="size-3.5 text-muted-foreground" />
                           ) : (
-                            <RotateCcw className="size-3.5" aria-hidden="true" />
+                            <RotateCcw className="size-3.5 text-success" />
                           )}
-                        </Button>
+                        </button>
                       )}
-                    </div>
-                  )}
-
-                  {/* Bottom gradient + unit badge for clearer visual hierarchy */}
-                  {imageUrl && (
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/40 to-transparent" />
-                  )}
-                  {material.unit && (
-                    <div className="absolute bottom-2 left-2">
-                      <span className="bg-background/90 text-foreground rounded-md border px-1.5 py-0.5 font-mono text-[10px] font-medium shadow-sm backdrop-blur-sm">
-                        {unitLabel(material)}
-                      </span>
                     </div>
                   )}
                 </div>
 
+                {/* Content Section */}
                 <CardContent className="flex flex-1 flex-col gap-2 p-3">
+                  {/* Code & Date */}
                   <div className="flex items-start justify-between gap-2">
                     <code className="text-primary font-mono text-xs font-semibold">
                       {material.code}
                     </code>
-                    <span className="text-muted-foreground text-[10px]">
+                    <span className="text-muted-foreground shrink-0 text-[10px]">
                       {new Date(material.updatedAt).toLocaleDateString("th-TH", {
                         year: "numeric",
                         month: "short",
@@ -250,55 +252,74 @@ export function MaterialCardGrid({
                     </span>
                   </div>
 
-                  <p className="line-clamp-2 text-sm font-medium" title={material.name}>
+                  {/* Name */}
+                  <p
+                    className="line-clamp-2 text-sm font-medium leading-snug"
+                    title={material.name}
+                  >
                     {material.name}
                   </p>
 
-                  <dl className="text-muted-foreground grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                    <div>
-                      <dt className="text-foreground/60">รุ่น</dt>
-                      <dd className="truncate">{material.model?.nameTh ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-foreground/60">การจัดส่ง</dt>
-                      <dd className="truncate">{material.deliveryType?.nameTh ?? "—"}</dd>
-                    </div>
-                    <div className="col-span-2">
-                      <dt className="text-foreground/60">ผู้ขาย</dt>
-                      <dd className="truncate">
-                        {material.suppliers.length > 0
-                          ? material.suppliers
-                              .slice(0, 2)
-                              .map((supplier) => supplier.nameTh)
-                              .join(", ") +
-                            (material.suppliers.length > 2
-                              ? ` +${material.suppliers.length - 2}`
-                              : "")
-                          : "—"}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {/* Bottom action bar (always visible for mobile / no-hover devices) */}
-                  {(onEdit || onStatusChange || href) && (
-                    <div className="mt-auto flex items-center justify-between gap-1 border-t pt-2">
-                      {href && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            window.location.href = href;
-                          }}
-                          aria-label={`ดูรายละเอียด ${material.code}`}
-                          className="h-8 px-2"
-                        >
-                          <Eye className="size-3.5" />
-                          <span className="hidden sm:inline">ดู</span>
-                        </Button>
+                  {/* Meta Info */}
+                  <div className="mt-auto space-y-1.5">
+                    {/* Tags Row */}
+                    <div className="flex flex-wrap gap-1.5">
+                      {material.packingQuantity && (
+                        <span className="bg-warning/10 text-warning inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium">
+                          <Package className="size-2.5" />
+                          {material.packingQuantity} ชิ้น
+                        </span>
                       )}
-                      <div className="ml-auto flex items-center gap-1">
+                      {material.model && (
+                        <span className="bg-muted/50 text-muted-foreground inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]">
+                          <Package className="size-2.5" />
+                          {material.model.nameTh}
+                        </span>
+                      )}
+                      {material.deliveryType && (
+                        <span className="bg-muted/50 text-muted-foreground inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px]">
+                          {material.deliveryType.nameTh}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Suppliers */}
+                    {material.suppliers.length > 0 && (
+                      <p className="text-muted-foreground truncate text-xs">
+                        <span className="text-muted-foreground/60">ผู้ขาย: </span>
+                        {material.suppliers
+                          .slice(0, 2)
+                          .map((s) => s.nameTh)
+                          .join(", ")}
+                        {material.suppliers.length > 2 && (
+                          <span className="text-muted-foreground/60">
+                            {" "}
+                            +{material.suppliers.length - 2}
+                          </span>
+                        )}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Bottom Actions Bar */}
+                  <div className="mt-2 flex items-center justify-between gap-2 border-t pt-2">
+                    {href ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          router.push(href);
+                        }}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Eye className="mr-1 size-3.5" />
+                        ดูรายละเอียด
+                      </Button>
+                    ) : (
+                      <div />
+                    )}
+                    <div className="flex items-center gap-1">
                       {onEdit && (
                         <Button
                           type="button"
@@ -306,10 +327,9 @@ export function MaterialCardGrid({
                           size="sm"
                           onClick={() => onEdit(material)}
                           aria-label={`แก้ไข ${material.code}`}
-                          className="h-8 px-2"
+                          className="h-7 w-7 p-0"
                         >
-                          <Pencil className="size-3.5" />
-                          <span className="hidden sm:inline">แก้ไข</span>
+                          <Edit2 className="size-3.5" />
                         </Button>
                       )}
                       {onStatusChange && (
@@ -324,28 +344,21 @@ export function MaterialCardGrid({
                               : `เปิดใช้งาน ${material.code}`
                           }
                           className={cn(
-                            "h-8 px-2",
+                            "h-7 w-7 p-0",
                             material.isActive
                               ? "text-muted-foreground hover:text-danger"
                               : "text-success hover:text-success",
                           )}
                         >
                           {material.isActive ? (
-                            <>
-                              <Power className="size-3.5" aria-hidden="true" />
-                              <span className="hidden sm:inline">ปิดใช้งาน</span>
-                            </>
+                            <Power className="size-3.5" />
                           ) : (
-                            <>
-                              <RotateCcw className="size-3.5" aria-hidden="true" />
-                              <span className="hidden sm:inline">เปิดใช้งาน</span>
-                            </>
+                            <ToggleRight className="size-3.5" />
                           )}
                         </Button>
                       )}
-                      </div>
                     </div>
-                  )}
+                  </div>
                 </CardContent>
               </Card>
             );
@@ -353,10 +366,11 @@ export function MaterialCardGrid({
         </div>
       )}
 
-      <div className="text-muted-foreground flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* Pagination */}
+      <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
           <span>
-            {start}–{end} จาก {totalItems} รายการ
+            แสดง {start}–{end} จาก {totalItems} รายการ
           </span>
           <label className="flex items-center gap-2">
             จำนวนต่อหน้า
@@ -384,10 +398,10 @@ export function MaterialCardGrid({
             onClick={() => onPageChange(page - 1)}
             aria-label="หน้าก่อนหน้า"
           >
-            <ChevronLeft className="size-4" />
+            <ChevronLeft className="mr-1 size-4" />
             ก่อนหน้า
           </Button>
-          <span className="min-w-20 text-center">
+          <span className="min-w-20 text-center text-sm">
             หน้า {page} / {totalPages}
           </span>
           <Button
@@ -399,7 +413,7 @@ export function MaterialCardGrid({
             aria-label="หน้าถัดไป"
           >
             ถัดไป
-            <ChevronRight className="size-4" />
+            <ChevronRight className="ml-1 size-4" />
           </Button>
         </div>
       </div>
