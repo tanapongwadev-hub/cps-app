@@ -121,6 +121,15 @@ export const PERMISSIONS = {
   GOODS_RECEIPT_POST: "goods_receipt.post",
   GOODS_RECEIPT_CANCEL: "goods_receipt.cancel",
 
+  // Materials Receiving (รับเข้าวัตถุดิบ + Stock Balance + QR Code)
+  // ใช้ permission code เดียวกับ backend MATERIALS_RECEIVING_*
+  MATERIALS_RECEIVING_VIEW: "MATERIALS_RECEIVING_VIEW",
+  MATERIALS_RECEIVING_CREATE: "MATERIALS_RECEIVING_CREATE",
+  MATERIALS_RECEIVING_UPDATE: "MATERIALS_RECEIVING_UPDATE",
+  MATERIALS_RECEIVING_DELETE: "MATERIALS_RECEIVING_DELETE",
+  MATERIALS_RECEIVING_CONFIRM: "MATERIALS_RECEIVING_CONFIRM",
+  MATERIALS_RECEIVING_CANCEL: "MATERIALS_RECEIVING_CANCEL",
+
   // Reject Reason
   REJECT_REASON_VIEW: "REJECT_REASON_VIEW",
   REJECT_REASON_CREATE: "REJECT_REASON_CREATE",
@@ -308,6 +317,18 @@ export const PERMISSION_GROUPS = [
       { key: "delete", code: PERMISSIONS.GOODS_RECEIPT_DELETE, label: "ลบ" },
       { key: "post", code: PERMISSIONS.GOODS_RECEIPT_POST, label: "รับรอง" },
       { key: "cancel", code: PERMISSIONS.GOODS_RECEIPT_CANCEL, label: "ยกเลิก" },
+    ],
+  },
+  {
+    module: "materials-receiving",
+    label: "รับเข้าวัตถุดิบ (Materials Receiving)",
+    permissions: [
+      { key: "view", code: PERMISSIONS.MATERIALS_RECEIVING_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.MATERIALS_RECEIVING_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.MATERIALS_RECEIVING_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.MATERIALS_RECEIVING_DELETE, label: "ลบ" },
+      { key: "confirm", code: PERMISSIONS.MATERIALS_RECEIVING_CONFIRM, label: "ยืนยันรับ" },
+      { key: "cancel", code: PERMISSIONS.MATERIALS_RECEIVING_CANCEL, label: "ยกเลิก" },
     ],
   },
 ] as const;

@@ -1027,6 +1027,26 @@ export const seedOrganizations: Organization[] = [
   { id: "org-004", code: "BR-003", name: "สาขาภูเก็ต", nameEn: "Phuket Branch", parentId: "org-001", status: "inactive", type: "branch", createdAt: NOW, updatedAt: NOW },
 ];
 
+// --- Units (mock for Materials Receiving lookups) ---
+export const seedUnits = [
+  { id: "unit-001", code: "KG", nameTh: "กิโลกรัม", nameEn: "Kilogram", symbol: "kg", isActive: true, createdAt: NOW, updatedAt: NOW },
+  { id: "unit-002", code: "L", nameTh: "ลิตร", nameEn: "Liter", symbol: "L", isActive: true, createdAt: NOW, updatedAt: NOW },
+  { id: "unit-003", code: "PCS", nameTh: "ชิ้น", nameEn: "Piece", symbol: "pcs", isActive: true, createdAt: NOW, updatedAt: NOW },
+];
+
+// --- Suppliers (mock for Materials Receiving lookups) ---
+export const seedSuppliers = [
+  { id: "sup-001", code: "SUP-001", nameTh: "บริษัท ตัวอย่าง A จำกัด", nameEn: "Sample Co. A", taxId: "0105551000011", contactName: "สมชาย ใจดี", telephone: "02-555-0001", email: "a@supplier.test", address: "กรุงเทพฯ", isActive: true, createdAt: NOW, updatedAt: NOW },
+  { id: "sup-002", code: "SUP-002", nameTh: "บริษัท ตัวอย่าง B จำกัด", nameEn: "Sample Co. B", taxId: "0105551000022", contactName: "สมหญิง ขยัน", telephone: "02-555-0002", email: "b@supplier.test", address: "สมุทรสาคร", isActive: true, createdAt: NOW, updatedAt: NOW },
+];
+
+// --- Materials (mock for Materials Receiving lookups) ---
+export const seedMaterialsForReceiving = [
+  { id: "mat-001", code: "MAT-A", name: "น้ำมันปาล์ม", type: "PC", unitId: "unit-001", packingQuantity: 200, isActive: true, createdAt: NOW, updatedAt: NOW },
+  { id: "mat-002", code: "MAT-B", name: "น้ำตาลทราย", type: "PC", unitId: "unit-002", packingQuantity: 100, isActive: true, createdAt: NOW, updatedAt: NOW },
+  { id: "mat-003", code: "MAT-C", name: "เหล็กแผ่น", type: "PC", unitId: "unit-001", packingQuantity: 200, isActive: true, createdAt: NOW, updatedAt: NOW },
+];
+
 // --- Tickets ---
 const ticketSubjects = [
   "เข้าสู่ระบบไม่ได้",
@@ -1268,6 +1288,177 @@ const seedAuditLogs: AuditLog[] = Array.from({ length: 30 }, (_, i) => {
   };
 });
 
+// --- Materials Receiving seeds (mock) ---
+const NOW_ISO = new Date().toISOString();
+const TODAY = NOW_ISO.slice(0, 10);
+
+interface MockMaterialsReceiving {
+  id: string;
+  internalLotNo: string;
+  organizationId: string;
+  supplierId: string;
+  materialId: string;
+  unitId: string;
+  receiveQuantity: string;
+  packingQuantity: number;
+  packageCount: number;
+  supplierLotNo: string | null;
+  supplierProductionDate: string | null;
+  receiveDate: string;
+  qrCode: string | null;
+  qrPayload: unknown;
+  status: "draft" | "confirmed" | "cancelled";
+  idempotencyKey: string | null;
+  remark: string | null;
+  confirmedBy: string | null;
+  confirmedAt: string | null;
+  cancelledBy: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  supplier?: { id: string; code: string; nameTh: string; nameEn: string | null };
+  material?: { id: string; code: string; name: string };
+  unit?: { id: string; code: string; nameTh: string; nameEn: string | null };
+}
+
+const seedMaterialsReceivings: MockMaterialsReceiving[] = [
+  {
+    id: "mr-001",
+    internalLotNo: `CCI-${TODAY.replace(/-/g, "")}-001`,
+    organizationId: "1",
+    supplierId: "sup-001",
+    materialId: "mat-001",
+    unitId: "unit-001",
+    receiveQuantity: "1000",
+    packingQuantity: 200,
+    packageCount: 5,
+    supplierLotNo: "SUP-20260801",
+    supplierProductionDate: "2026-08-01",
+    receiveDate: TODAY,
+    qrCode: null,
+    qrPayload: null,
+    status: "draft",
+    idempotencyKey: null,
+    remark: "ฝากรับที่จุด A",
+    confirmedBy: null,
+    confirmedAt: null,
+    cancelledBy: null,
+    cancelledAt: null,
+    cancelReason: null,
+    createdBy: "user-001",
+    updatedBy: "user-001",
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+  },
+  {
+    id: "mr-002",
+    internalLotNo: `CCI-${TODAY.replace(/-/g, "")}-002`,
+    organizationId: "1",
+    supplierId: "sup-002",
+    materialId: "mat-002",
+    unitId: "unit-002",
+    receiveQuantity: "500",
+    packingQuantity: 100,
+    packageCount: 5,
+    supplierLotNo: "SUP-20260802",
+    supplierProductionDate: "2026-08-02",
+    receiveDate: TODAY,
+    qrCode: null,
+    qrPayload: null,
+    status: "confirmed",
+    idempotencyKey: null,
+    remark: null,
+    confirmedBy: "user-001",
+    confirmedAt: NOW_ISO,
+    cancelledBy: null,
+    cancelledAt: null,
+    cancelReason: null,
+    createdBy: "user-001",
+    updatedBy: "user-001",
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+  },
+  {
+    id: "mr-003",
+    internalLotNo: `CCI-${(function () {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0, 10).replace(/-/g, "");
+    })()}-001`,
+    organizationId: "1",
+    supplierId: "sup-001",
+    materialId: "mat-003",
+    unitId: "unit-001",
+    receiveQuantity: "1050",
+    packingQuantity: 200,
+    packageCount: 6,
+    supplierLotNo: "SUP-20260731",
+    supplierProductionDate: "2026-07-31",
+    receiveDate: (function () {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      return d.toISOString().slice(0, 10);
+    })(),
+    qrCode: null,
+    qrPayload: null,
+    status: "cancelled",
+    idempotencyKey: null,
+    remark: "ทดสอบระบบ",
+    confirmedBy: "user-001",
+    confirmedAt: NOW_ISO,
+    cancelledBy: "user-001",
+    cancelledAt: NOW_ISO,
+    cancelReason: "รับผิด material",
+    createdBy: "user-001",
+    updatedBy: "user-001",
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+  },
+];
+
+const seedMaterialsReceivingPackages = [
+  { id: "pkg-001", materialReceivingId: "mr-001", packageNo: 1, quantity: "200.0000" },
+  { id: "pkg-002", materialReceivingId: "mr-001", packageNo: 2, quantity: "200.0000" },
+  { id: "pkg-003", materialReceivingId: "mr-001", packageNo: 3, quantity: "200.0000" },
+  { id: "pkg-004", materialReceivingId: "mr-001", packageNo: 4, quantity: "200.0000" },
+  { id: "pkg-005", materialReceivingId: "mr-001", packageNo: 5, quantity: "200.0000" },
+  { id: "pkg-006", materialReceivingId: "mr-002", packageNo: 1, quantity: "100.0000" },
+  { id: "pkg-007", materialReceivingId: "mr-002", packageNo: 2, quantity: "100.0000" },
+  { id: "pkg-008", materialReceivingId: "mr-002", packageNo: 3, quantity: "100.0000" },
+  { id: "pkg-009", materialReceivingId: "mr-002", packageNo: 4, quantity: "100.0000" },
+  { id: "pkg-010", materialReceivingId: "mr-002", packageNo: 5, quantity: "100.0000" },
+];
+
+const seedStockBalances = [
+  { id: "sb-001", materialId: "mat-002", quantity: "500.0000", lastMovementAt: NOW_ISO },
+  { id: "sb-002", materialId: "mat-003", quantity: "1050.0000", lastMovementAt: NOW_ISO },
+];
+
+const seedStockTransactions = [
+  {
+    id: "stx-001",
+    materialId: "mat-002",
+    transactionType: "RECEIVE",
+    referenceType: "MATERIAL_RECEIVING",
+    referenceId: "mr-002",
+    referenceLotNo: "CCI-EXAMPLE-002",
+    quantityBefore: "0",
+    quantityIn: "500.0000",
+    quantityOut: "0",
+    quantityAfter: "500.0000",
+    transactionDate: NOW_ISO,
+    remark: "Confirmed from receiving mr-002",
+    createdBy: "user-001",
+  },
+];
+
+const seedMaterialsReceivingLotCounters = [
+  { id: "lrc-001", lotDate: TODAY, lastNumber: 2, createdAt: NOW_ISO, updatedAt: NOW_ISO },
+];
+
 // --- Mock DB object ---
 export const mockDb = {
   users: [...seedUsers],
@@ -1285,6 +1476,15 @@ export const mockDb = {
   tickets: [...seedTickets],
   ticketComments: { ...seedTicketComments },
   activityLogs: [...seedActivityLogs],
+  units: [...seedUnits],
+  suppliers: [...seedSuppliers],
+  materials: [...seedMaterialsForReceiving],
+  materialsReceivings: [...seedMaterialsReceivings],
+  materialsReceivingPackages: [...seedMaterialsReceivingPackages],
+  stockBalances: [...seedStockBalances],
+  stockTransactions: [...seedStockTransactions],
+  materialsReceivingLotCounters: [...seedMaterialsReceivingLotCounters],
+  materialsReceivingIndex: seedMaterialsReceivings.length + 1,
   accessToken: "mock-access-token-xxx",
   refreshToken: "mock-refresh-token-xxx",
 };

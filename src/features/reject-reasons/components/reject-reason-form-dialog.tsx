@@ -24,7 +24,7 @@ const rejectReasonSchema = z.object({
   nameTh: z.string().trim().min(1, "กรุณากรอกชื่อ (ไทย)"),
   nameEn: z.string().optional(),
   description: z.string().optional(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 type RejectReasonFormValues = z.infer<typeof rejectReasonSchema>;
@@ -76,7 +76,7 @@ export function RejectReasonFormDialog({
     }
   }, [open, reason, form]);
 
-  const handleSubmit = async (values: RejectReasonFormValues) => {
+  const handleSubmit = async (values: RejectReasonFormValues): Promise<void> => {
     try {
       setServerError(null);
       const payload: RejectReasonPayload | UpdateRejectReasonPayload = {

@@ -82,6 +82,9 @@ export interface GoodsReceipt {
   updatedBy: string | null;
   createdAt: string;
   updatedAt: string;
+  // Optional fields — backend's list response may or may not include them
+  supplierDocNo?: string | null;
+  noSupplierDocument?: boolean;
   items?: GoodsReceiptItem[];
   attachments?: GoodsReceiptAttachment[];
 }
@@ -130,6 +133,12 @@ export interface GoodsReceiptLookups {
     nameTh: string;
     nameEn: string | null;
   }[];
+}
+
+export interface GoodsReceiptAttachmentInput {
+  docType: GoodsReceiptAttachment["docType"];
+  filePath: string;
+  fileName: string;
 }
 
 export interface GoodsReceiptItemPayload {
@@ -219,7 +228,7 @@ export const goodsReceiptsApi = {
     );
   },
 
-  attachFile: (id: string, data: GoodsReceiptAttachmentPayload) =>
+  attachFile: (id: string, data: GoodsReceiptAttachmentInput) =>
     apiClient.post<GoodsReceiptAttachment>(`/goods-receipts/${id}/attachments`, data),
 
   removeAttachment: (id: string, attachmentId: string) =>

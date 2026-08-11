@@ -3,7 +3,7 @@
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FileUp, Plus, Trash2, X } from "lucide-react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { z } from "zod";
 import { FormSection } from "@/components/forms/form-section";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ const ITEM_SCHEMA = z.object({
   poNo: z.string().nullable().optional(),
   supplierDocNo: z.string().nullable().optional(),
   supplierDocDate: z.string().nullable().optional(),
-  noSupplierDocument: z.boolean().default(false),
+  noSupplierDocument: z.boolean(),
   lotNo: z.string().min(1, "กรุณากรอกเลขที่ Lot"),
   qtyReceived: z.string().min(1, "กรุณากรอกจำนวนรับ"),
   productionDate: z.string().nullable().optional(),
@@ -106,7 +106,7 @@ export function GoodsReceiptFormDialog({
 
   // Auto-select supplier if only one supplier exists
   const defaultSupplierId = React.useMemo(() => {
-    if (lookups.suppliers.length === 1) {
+    if (lookups.suppliers.length === 1 && lookups.suppliers[0]) {
       return lookups.suppliers[0].id;
     }
     return "";
@@ -153,7 +153,7 @@ export function GoodsReceiptFormDialog({
     });
   };
 
-  const handleSubmit = async (values: GoodsReceiptFormValues) => {
+  const handleSubmit = async (values: GoodsReceiptFormValues): Promise<void> => {
     try {
       setServerError(null);
 
@@ -349,12 +349,21 @@ export function GoodsReceiptFormDialog({
 
                     {/* No Supplier Document */}
                     <div className="space-y-1.5 flex items-start">
-                      <div className="flex items-center h-9">
-                        <Checkbox
-                          id={`items.${index}.noSupplierDocument`}
-                          {...form.register(`items.${index}.noSupplierDocument`)}
-                        />
-                      </div>
+                      <Controller
+                        control={form.control}
+                        name={`items.${index}.noSupplierDocument`}
+                        render={({ field }) => (
+                          <div className="flex items-center h-9">
+                            <Checkbox
+                              id={`items.${index}.noSupplierDocument`}
+                              checked={Boolean(field.value)}
+                              onCheckedChange={(checked) =>
+                                field.onChange(checked === true)
+                              }
+                            />
+                          </div>
+                        )}
+                      />
                       <Label
                         htmlFor={`items.${index}.noSupplierDocument`}
                         className="font-normal cursor-pointer ml-2 leading-9"
@@ -545,7 +554,7 @@ function getDefaultValues(
 ): GoodsReceiptFormValues {
   if (!receipt) {
     return {
-      receiptDate: new Date().toISOString().split("T")[0],
+      receiptDate: new Date().toISOString().slice(0, 10),
       remark: null,
       items: [
         {

@@ -269,27 +269,30 @@ export default function GoodsReceiptsPage() {
           open={!!cancelTarget}
           onOpenChange={(open) => !open && setCancelTarget(null)}
           title="ยกเลิกเอกสาร"
-          description={`ยกเลิกเอกสาร ${cancelTarget?.receiptNo ?? "ฉบับร่าง"}? การกระทำนี้ไม่สามารถย้อนกลับได้`}
-          confirmLabel="ยกเลิกเอกสาร"
-          confirmVariant="destructive"
+          description={
+            <div className="space-y-3">
+              <p>{`ยกเลิกเอกสาร ${cancelTarget?.receiptNo ?? "ฉบับร่าง"}? การกระทำนี้ไม่สามารถย้อนกลับได้`}</p>
+              <div className="space-y-1.5 text-left">
+                <label htmlFor="cancel-reason" className="text-sm font-medium">
+                  เหตุผลในการยกเลิก <span className="text-danger">*</span>
+                </label>
+                <textarea
+                  id="cancel-reason"
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  placeholder="ระบุเหตุผล..."
+                  rows={3}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+            </div>
+          }
+          confirmText="ยกเลิกเอกสาร"
+          variant="danger"
+          loading={cancelMutation.isPending}
           onConfirm={handleCancelConfirm}
-          pending={cancelMutation.isPending}
-        >
-          <div className="space-y-2 py-4">
-            <label htmlFor="cancel-reason" className="text-sm font-medium">
-              เหตุผลในการยกเลิก
-            </label>
-            <textarea
-              id="cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="ระบุเหตุผล..."
-              rows={3}
-              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              required
-            />
-          </div>
-        </ConfirmDialog>
+        />
 
         {/* Delete Confirm Dialog */}
         <ConfirmDialog
@@ -297,10 +300,10 @@ export default function GoodsReceiptsPage() {
           onOpenChange={(open) => !open && setDeleteTarget(null)}
           title="ลบรายการรับวัสดุ"
           description={`ต้องการลบรายการ ${deleteTarget?.receiptNo ?? "ฉบับร่าง"}? การกระทำนี้ไม่สามารถย้อนกลับได้`}
-          confirmLabel="ลบ"
-          confirmVariant="destructive"
+          confirmText="ลบ"
+          variant="danger"
+          loading={deleteMutation.isPending}
           onConfirm={handleDeleteConfirm}
-          pending={deleteMutation.isPending}
         />
       </PageContainer>
     </PermissionGuard>

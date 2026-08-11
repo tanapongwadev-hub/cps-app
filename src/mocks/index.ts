@@ -15,6 +15,7 @@ import { setupMasterDataMocks } from "./handlers/master-data";
 import { setupPermissionMocks } from "./handlers/permissions";
 import { setupSessionMocks } from "./handlers/sessions";
 import { setupAuditLogMocks } from "./handlers/audit-logs";
+import { setupMaterialsReceivingMocks } from "./handlers/materials-receiving";
 import { ApiClient } from "@/services/api-client";
 
 /**
@@ -35,6 +36,7 @@ const handlerChain: Array<{
   { name: "dashboard", setup: setupDashboardMocks },
   { name: "tickets", setup: setupTicketMocks },
   { name: "activity-logs", setup: setupActivityLogMocks },
+  { name: "materials-receiving", setup: setupMaterialsReceivingMocks },
   { name: "master-data", setup: setupMasterDataMocks },
 ];
 

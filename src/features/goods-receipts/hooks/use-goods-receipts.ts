@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { showToast } from "@/lib/toast";
 import {
   goodsReceiptsApi,
   type CreateGoodsReceiptPayload,
   type UpdateGoodsReceiptPayload,
   type CancelGoodsReceiptPayload,
   type ListGoodsReceiptsParams,
-  type GoodsReceiptAttachmentPayload,
+  type GoodsReceiptAttachmentInput,
 } from "../api/goods-receipts-api";
 
 // ============================================================================
@@ -63,6 +64,10 @@ export function useCreateGoodsReceipt() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lookups() });
+      showToast.success("สร้างรายการรับวัสดุสำเร็จ");
+    },
+    onError: (error) => {
+      showToast.error("ไม่สามารถสร้างรายการได้", String(error));
     },
   });
 }
@@ -81,6 +86,10 @@ export function useUpdateGoodsReceipt() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.detail(variables.id) });
+      showToast.success("บันทึกการแก้ไขสำเร็จ");
+    },
+    onError: (error) => {
+      showToast.error("ไม่สามารถบันทึกการแก้ไขได้", String(error));
     },
   });
 }
@@ -92,6 +101,10 @@ export function useDeleteGoodsReceipt() {
     mutationFn: (id: string) => goodsReceiptsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
+      showToast.success("ลบรายการสำเร็จ");
+    },
+    onError: (error) => {
+      showToast.error("ไม่สามารถลบได้", String(error));
     },
   });
 }
@@ -104,6 +117,10 @@ export function usePostGoodsReceipt() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.detail(id) });
+      showToast.success("รับรองเอกสารสำเร็จ");
+    },
+    onError: (error) => {
+      showToast.error("ไม่สามารถรับรองเอกสารได้", String(error));
     },
   });
 }
@@ -117,6 +134,10 @@ export function useCancelGoodsReceipt() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.lists() });
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.detail(variables.id) });
+      showToast.success("ยกเลิกเอกสารสำเร็จ");
+    },
+    onError: (error) => {
+      showToast.error("ไม่สามารถยกเลิกได้", String(error));
     },
   });
 }
@@ -136,7 +157,7 @@ export function useAttachGoodsReceiptFile() {
       data,
     }: {
       id: string;
-      data: GoodsReceiptAttachmentPayload;
+      data: GoodsReceiptAttachmentInput;
     }) => goodsReceiptsApi.attachFile(id, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: goodsReceiptKeys.detail(variables.id) });

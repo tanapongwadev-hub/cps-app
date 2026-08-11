@@ -37,6 +37,7 @@ const material = {
   id: "11",
   code: "MAT-001",
   name: "Steel coil",
+  type: null,
   unitId: "1",
   deliveryTypeId: null,
   modelId: null,

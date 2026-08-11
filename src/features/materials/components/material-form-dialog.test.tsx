@@ -58,6 +58,7 @@ const material: Material = {
   id: "99",
   code: "MAT-099",
   name: "เหล็กแผ่น",
+  type: "PC",
   unitId: "9007199254740993",
   deliveryTypeId: "3",
   modelId: "2",

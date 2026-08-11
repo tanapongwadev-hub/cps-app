@@ -33,10 +33,10 @@ export function RejectReasonStatusDialog({
           ? `ต้องการปิดใช้งาน "${reason.nameTh}" หรือไม่?`
           : `ต้องการเปิดใช้งาน "${reason.nameTh}" หรือไม่?`
       }
-      confirmLabel={isDeactivating ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-      confirmVariant={isDeactivating ? "destructive" : "default"}
+      confirmText={isDeactivating ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+      variant={isDeactivating ? "danger" : "info"}
+      loading={pending}
       onConfirm={onConfirm}
-      pending={pending}
     />
   );
 }

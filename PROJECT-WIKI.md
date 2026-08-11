@@ -127,6 +127,19 @@ src/
     └── index.ts              # Setup function
 ```
 
+### Feature modules ที่สำคัญ
+
+| Feature | Path | บทบาท |
+|---|---|---|
+| `materials-receiving` | `src/features/materials-receiving/` | รับเข้าวัตถุดิบ (single material) + คำนวณบรรจุภัณฑ์ + generate QR + update stock balance (route: `/materials/materials-receiving`) |
+| `goods-receipts` | `src/features/goods-receipts/` | เอกสารรับเข้าวัตถุดิบ (multi-line) + ไฟล์แนบ + reject reasons (route: `/materials/goods-receipts`) |
+| `materials` | `src/features/materials/` | Material Master CRUD + รูปภาพ |
+| `reject-reasons` | `src/features/reject-reasons/` | Master data: เหตุผลการปฏิเสธ |
+
+**สำคัญ — ความต่างระหว่าง Materials Receiving vs Goods Receipt:**
+- **Materials Receiving** — 1 material ต่อ 1 ใบ, generate Internal Lot No. (`CCI-YYYYMMDD-XXX`) + Supplier Lot No. (`SUP-YYYYMMDD`), package breakdown (`CEIL(qty / packing)`), QR code, update `stock_balances` + `stock_transactions` ทันทีที่ confirm
+- **Goods Receipt** — เอกสารหลายบรรทัด, generate `GR-YYYYMM-NNNN`, มี reject reasons และ attachments, ไม่แตะ stock (ยังไม่มี stock ledger ในเฟสนี้)
+
 ---
 
 ## Coding Standards

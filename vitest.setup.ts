@@ -45,19 +45,27 @@ beforeAll(() => {
     })),
   });
 
-  // Mock IntersectionObserver
-  globalThis.IntersectionObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  })) as unknown as typeof IntersectionObserver;
+  // Mock IntersectionObserver (must be a class — Radix uses `new`)
+  class MockIntersectionObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn().mockReturnValue([]);
+    root = null;
+    rootMargin = "";
+    thresholds = [];
+  }
+  globalThis.IntersectionObserver =
+    MockIntersectionObserver as unknown as typeof IntersectionObserver;
 
-  // Mock ResizeObserver
-  globalThis.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn(),
-  })) as unknown as typeof ResizeObserver;
+  // Mock ResizeObserver (must be a class — Radix uses `new`)
+  class MockResizeObserver {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+  }
+  globalThis.ResizeObserver =
+    MockResizeObserver as unknown as typeof ResizeObserver;
 });
 
 afterEach(() => {
