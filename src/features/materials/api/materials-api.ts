@@ -158,3 +158,24 @@ export const materialsApi = {
     return apiClient.upload<MaterialImageUpload>("/materials/images", formData);
   },
 };
+
+// ============================================================================
+// Stock Balance
+// ============================================================================
+
+export interface StockBalance {
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  quantity: string;
+  unitCode: string;
+  unitNameTh: string;
+  lastMovementAt: string | null;
+}
+
+export const stockBalanceApi = {
+  getByMaterialId: (materialId: string) =>
+    apiClient.get<StockBalance>(`/stock-balances/${materialId}`),
+
+  getAll: () => apiClient.get<StockBalance[]>("/stock-balances"),
+};

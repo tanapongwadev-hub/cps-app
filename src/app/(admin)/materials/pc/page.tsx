@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Settings2,
   TrendingUp,
+  Warehouse,
 } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -39,12 +40,14 @@ import { MaterialTable } from "@/features/materials/components/material-table";
 import { MaterialFilters } from "@/features/materials/components/material-filters";
 import { MaterialFormModal } from "@/features/materials/components/material-form-modal";
 import { MaterialStatusDialog } from "@/features/materials/components/material-status-dialog";
+import { StockBalanceDialog } from "@/features/materials/components/stock-balance-dialog";
 import type {
   ListMaterialsParams,
   Material,
   MaterialPayload,
   UpdateMaterialPayload,
 } from "@/features/materials/api/materials-api";
+import { useRouter } from "next/navigation";
 
 type SortBy = NonNullable<ListMaterialsParams["sortBy"]>;
 type SortOrder = NonNullable<ListMaterialsParams["sortOrder"]>;
@@ -52,6 +55,7 @@ type SortOrder = NonNullable<ListMaterialsParams["sortOrder"]>;
 const PC_PAGE_SIZE = 12;
 
 export default function MaterialsPCPage() {
+  const router = useRouter();
   const [filters, setFilters] = React.useState<ListMaterialsParams>({
     page: 1,
     pageSize: PC_PAGE_SIZE,
@@ -63,6 +67,7 @@ export default function MaterialsPCPage() {
     material: Material;
     action: "deactivate" | "restore";
   } | null>(null);
+  const [stockBalanceMaterial, setStockBalanceMaterial] = React.useState<Material | null>(null);
 
   const lookupsQuery = useMaterialLookups();
   const listQuery = useMaterials(filters);
@@ -114,6 +119,14 @@ export default function MaterialsPCPage() {
     setEditingMaterial(null);
     setFormOpen(true);
   }, []);
+
+  const handleViewStockBalance = React.useCallback((material: Material) => {
+    setStockBalanceMaterial(material);
+  }, []);
+
+  const handleGoToReceiving = React.useCallback(() => {
+    router.push("/materials/materials-receiving");
+  }, [router]);
 
   const handleFormOpenChange = React.useCallback((open: boolean) => {
     setFormOpen(open);
@@ -184,17 +197,30 @@ export default function MaterialsPCPage() {
             </PermissionGuard>
           }
           secondaryActions={
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => listQuery.refetch()}
-              disabled={listQuery.isFetching}
-            >
-              <RefreshCw
-                className={listQuery.isFetching ? "size-4 animate-spin" : "size-4"}
-              />
-              <span className="hidden sm:inline">รีเฟรช</span>
-            </Button>
+            <>
+              <PermissionGuard permission={PERMISSIONS.MATERIALS_RECEIVING_VIEW}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGoToReceiving}
+                  className="gap-2"
+                >
+                  <Warehouse className="size-4" />
+                  <span className="hidden sm:inline">รับเข้าวัตถุดิบ</span>
+                </Button>
+              </PermissionGuard>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => listQuery.refetch()}
+                disabled={listQuery.isFetching}
+              >
+                <RefreshCw
+                  className={listQuery.isFetching ? "size-4 animate-spin" : "size-4"}
+                />
+                <span className="hidden sm:inline">รีเฟรช</span>
+              </Button>
+            </>
           }
         />
 
@@ -273,6 +299,7 @@ export default function MaterialsPCPage() {
               onCreate={canSave ? handleCreate : undefined}
               onEdit={canSave ? handleEdit : undefined}
               onStatusChange={canSave ? handleStatusChange : undefined}
+              onViewStockBalance={handleViewStockBalance}
               detailHref={(material) => `/materials/pc/${material.id}`}
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
@@ -291,6 +318,7 @@ export default function MaterialsPCPage() {
               onCreate={canSave ? handleCreate : undefined}
               onEdit={canSave ? handleEdit : undefined}
               onStatusChange={canSave ? handleStatusChange : undefined}
+              onViewStockBalance={handleViewStockBalance}
               detailHref={(material) => `/materials/pc/${material.id}`}
               onSortChange={handleSortChange}
               onPageChange={handlePageChange}
@@ -324,6 +352,15 @@ export default function MaterialsPCPage() {
         }}
         onConfirm={handleConfirmStatusChange}
         pending={deactivateMutation.isPending || restoreMutation.isPending}
+      />
+
+      {/* Stock Balance Dialog */}
+      <StockBalanceDialog
+        open={!!stockBalanceMaterial}
+        material={stockBalanceMaterial}
+        onOpenChange={(open) => {
+          if (!open) setStockBalanceMaterial(null);
+        }}
       />
     </>
   );

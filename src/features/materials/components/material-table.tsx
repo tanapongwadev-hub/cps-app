@@ -23,6 +23,7 @@ import {
   Pencil,
   Power,
   RotateCcw,
+  Scale,
   Slash,
   Store,
 } from "lucide-react";
@@ -58,6 +59,7 @@ export interface MaterialTableProps {
   onCreate?: () => void;
   onEdit?: (material: Material) => void;
   onStatusChange?: (material: Material) => void;
+  onViewStockBalance?: (material: Material) => void;
   /**
    * If provided, each row gains a "ดู" action that navigates to the
    * returned URL. The whole row also becomes clickable for the same URL.
@@ -152,6 +154,7 @@ export function MaterialTable({
   onCreate,
   onEdit,
   onStatusChange,
+  onViewStockBalance,
   detailHref,
   onSortChange,
   onPageChange,
@@ -469,7 +472,20 @@ export function MaterialTable({
                             )}
                           </Button>
                         )}
-                        {!href && !onEdit && !onStatusChange && (
+                        {onViewStockBalance && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => onViewStockBalance(material)}
+                            aria-label={`ดูสต็อก ${material.code}`}
+                            title="ดูสต็อก"
+                            className="text-muted-foreground hover:text-primary"
+                          >
+                            <Scale className="size-4" />
+                          </Button>
+                        )}
+                        {!href && !onEdit && !onStatusChange && !onViewStockBalance && (
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </div>

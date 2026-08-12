@@ -22,6 +22,7 @@ import {
   Package,
   Power,
   RotateCcw,
+  Scale,
   ToggleLeft,
   ToggleRight,
   X,
@@ -48,6 +49,7 @@ export interface MaterialCardGridProps {
   onCreate?: () => void;
   onEdit?: (material: Material) => void;
   onStatusChange?: (material: Material) => void;
+  onViewStockBalance?: (material: Material) => void;
   detailHref?: (material: Material) => string;
   page: number;
   pageSize: number;
@@ -69,6 +71,7 @@ export function MaterialCardGrid({
   onCreate,
   onEdit,
   onStatusChange,
+  onViewStockBalance,
   detailHref,
   page,
   pageSize,
@@ -230,8 +233,21 @@ export function MaterialCardGrid({
                   )}
 
                   {/* Quick Actions - shown next to status badge (visible on hover) */}
-                  {(onEdit || onStatusChange) && (
+                  {(onEdit || onStatusChange || onViewStockBalance) && (
                     <div className="absolute right-2 top-9 flex translate-y-1 items-center gap-1.5 opacity-0 transition-all duration-200 group-hover:translate-y-0 group-hover:opacity-100">
+                      {onViewStockBalance && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewStockBalance(material);
+                          }}
+                          aria-label={`ดูสต็อก ${material.code}`}
+                          className="bg-background/95 hover:bg-primary hover:scale-110 flex size-7 items-center justify-center rounded-md border shadow-sm backdrop-blur-sm transition-all"
+                        >
+                          <Scale className="text-muted-foreground group-hover/btn:text-primary-foreground size-3.5 transition-colors" />
+                        </button>
+                      )}
                       {onEdit && (
                         <button
                           type="button"
