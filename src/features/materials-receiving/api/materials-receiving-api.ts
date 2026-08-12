@@ -32,7 +32,10 @@ export interface MaterialsReceivingPackage {
   id: string;
   materialReceivingId: string;
   packageNo: number;
+  lotDetailNo: string | null;
   quantity: string;
+  qrCode: string | null;
+  status: string;
 }
 
 /** QR Code payload embedded in the QR image (matches backend QrPayload v1.0) */
@@ -112,7 +115,11 @@ export interface MaterialsReceivingLookups {
 
 export interface CreateMaterialsReceivingPayload {
   materialId: string;
-  supplierId: string;
+  /**
+   * Optional — auto-derived from material's supplier list when omitted.
+   * Required only when the material has more than one active supplier.
+   */
+  supplierId?: string;
   receiveQuantity: string;
   supplierProductionDate: string;
   receiveDate: string;
@@ -171,6 +178,12 @@ export const materialsReceivingApi = {
 
   lookups: () =>
     apiClient.get<MaterialsReceivingLookups>("/materials-receiving/lookups"),
+
+  getSuppliersByMaterial: (materialId: string) =>
+    apiClient.get<MaterialsReceivingSupplier[]>(
+      "/materials-receiving/suppliers",
+      { params: { materialId } },
+    ),
 
   create: (data: CreateMaterialsReceivingPayload) =>
     apiClient.post<MaterialsReceiving>("/materials-receiving", data),

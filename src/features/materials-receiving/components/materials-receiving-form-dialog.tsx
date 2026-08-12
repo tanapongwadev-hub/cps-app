@@ -24,8 +24,10 @@ import type {
   CreateMaterialsReceivingPayload,
   MaterialsReceiving,
   MaterialsReceivingLookups,
+  MaterialsReceivingSupplier,
   UpdateMaterialsReceivingPayload,
 } from "../api/materials-receiving-api";
+import { materialsReceivingApi } from "../api/materials-receiving-api";
 
 // ============================================================================
 // Helpers
@@ -83,7 +85,7 @@ const IDEMPOTENCY_REGEX = /^[A-Za-z0-9_-]{8,80}$/;
 
 const formSchema = z.object({
   materialId: z.string().min(1, "กรุณาเลือกวัสดุ"),
-  supplierId: z.string().min(1, "กรุณาเลือกผู้จัดจำหน่าย"),
+  supplierId: z.string().optional(),
   receiveQuantity: z
     .string()
     .min(1, "กรุณากรอกจำนวนรับเข้า")
@@ -170,6 +172,18 @@ export function MaterialsReceivingFormDialog({
   const isEditing = !!receiving;
   const [serverError, setServerError] = React.useState<string | null>(null);
 
+  /**
+   * Suppliers auto-derived from selected material.
+   *  - 0 suppliers  → no supplier selectable (frontend will show error from backend)
+   *  - 1 supplier   → auto-select (the asterisk hides)
+   *  - 2+ suppliers → user must pick
+   */
+  const [materialSuppliers, setMaterialSuppliers] = React.useState<
+    MaterialsReceivingSupplier[]
+  >([]);
+  const [suppliersLoading, setSuppliersLoading] = React.useState(false);
+  const autoSelectedSupplier = React.useRef(false);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: getDefaultValues(receiving),
@@ -179,6 +193,8 @@ export function MaterialsReceivingFormDialog({
     if (open) {
       form.reset(getDefaultValues(receiving));
       setServerError(null);
+      autoSelectedSupplier.current = false;
+      setMaterialSuppliers([]);
     }
   }, [open, receiving, form]);
 
@@ -187,6 +203,40 @@ export function MaterialsReceivingFormDialog({
   const watchQuantity = form.watch("receiveQuantity");
   const watchPackingOverride = form.watch("packingQuantityOverride");
   const watchProductionDate = form.watch("supplierProductionDate");
+
+  // Fetch suppliers when material changes (only in create mode)
+  React.useEffect(() => {
+    if (isEditing || !watchMaterialId) {
+      setMaterialSuppliers([]);
+      return;
+    }
+    let cancelled = false;
+    setSuppliersLoading(true);
+    materialsReceivingApi
+      .getSuppliersByMaterial(watchMaterialId)
+      .then((list) => {
+        if (cancelled) return;
+        const suppliers = list ?? [];
+        setMaterialSuppliers(suppliers);
+        // Auto-select if exactly 1 supplier
+        const only = suppliers[0];
+        if (suppliers.length === 1 && only && !autoSelectedSupplier.current) {
+          form.setValue("supplierId", only.id, { shouldValidate: false });
+          autoSelectedSupplier.current = true;
+        } else if (suppliers.length !== 1) {
+          form.setValue("supplierId", "", { shouldValidate: false });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMaterialSuppliers([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSuppliersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [watchMaterialId, isEditing, form]);
 
   // Find selected material for packing quantity
   const selectedMaterial = React.useMemo(
@@ -221,13 +271,15 @@ export function MaterialsReceivingFormDialog({
 
       const basePayload: CreateMaterialsReceivingPayload = {
         materialId: values.materialId,
-        supplierId: values.supplierId,
         receiveQuantity: values.receiveQuantity,
         supplierProductionDate: values.supplierProductionDate,
         receiveDate: values.receiveDate,
         idempotencyKey: values.idempotencyKey || null,
         remark: values.remark || null,
       };
+      if (values.supplierId) {
+        basePayload.supplierId = values.supplierId;
+      }
 
       if (values.packingQuantityOverride) {
         const override = Number(values.packingQuantityOverride);
@@ -341,7 +393,10 @@ export function MaterialsReceivingFormDialog({
 
               <div className="space-y-1.5">
                 <Label htmlFor="supplierId">
-                  ผู้จัดจำหน่าย <span className="text-danger">*</span>
+                  ผู้จัดจำหน่าย
+                  {materialSuppliers.length !== 1 && (
+                    <span className="text-danger"> *</span>
+                  )}
                 </Label>
                 <select
                   id="supplierId"
@@ -350,18 +405,47 @@ export function MaterialsReceivingFormDialog({
                     "border-input bg-background h-9 w-full rounded-md border px-3 text-sm shadow-xs outline-none",
                     form.formState.errors.supplierId && "border-danger",
                   )}
-                  disabled={isEditing}
+                  disabled={isEditing || suppliersLoading}
                 >
-                  <option value="">เลือกผู้จัดจำหน่าย</option>
-                  {lookups.suppliers.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code} — {s.nameTh}
+                  {suppliersLoading && (
+                    <option key="__loading__" value="">
+                      กำลังโหลด...
                     </option>
-                  ))}
+                  )}
+                  {!suppliersLoading && materialSuppliers.length === 0 && (
+                    <option key="__empty__" value="">
+                      — เลือกวัสดุก่อน —
+                    </option>
+                  )}
+                  {!suppliersLoading &&
+                    materialSuppliers.length === 1 &&
+                    (() => {
+                      const only = materialSuppliers[0];
+                      return only ? (
+                        <option key={only.id} value={only.id}>
+                          {only.code} — {only.nameTh}
+                        </option>
+                      ) : null;
+                    })()}
+                  {!suppliersLoading && materialSuppliers.length > 1 && [
+                    <option key="__placeholder__" value="">
+                      เลือกผู้จัดจำหน่าย
+                    </option>,
+                    ...materialSuppliers.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.code} — {s.nameTh}
+                      </option>
+                    )),
+                  ]}
                 </select>
                 {form.formState.errors.supplierId && (
                   <p className="text-danger text-xs">
                     {form.formState.errors.supplierId.message}
+                  </p>
+                )}
+                {materialSuppliers.length > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    วัสดุนี้มีผู้จัดจำหน่าย {materialSuppliers.length} ราย กรุณาเลือก
                   </p>
                 )}
               </div>

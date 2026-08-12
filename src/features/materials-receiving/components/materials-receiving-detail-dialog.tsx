@@ -311,26 +311,70 @@ export function MaterialsReceivingDetailDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-24">ลำดับ</TableHead>
-                        <TableHead className="text-right">จำนวน</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {receiving.packages.map((pkg) => (
-                        <TableRow key={pkg.id}>
-                          <TableCell className="font-mono">
-                            #{pkg.packageNo}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatNumber(pkg.quantity)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {receiving.packages.map((pkg) => (
+                      <div
+                        key={pkg.id}
+                        className="rounded-md border bg-white p-3 flex flex-col items-center gap-2"
+                      >
+                        {pkg.qrCode ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={pkg.qrCode}
+                            alt={`QR for ${pkg.lotDetailNo ?? pkg.id}`}
+                            width={140}
+                            height={140}
+                            className="block"
+                          />
+                        ) : (
+                          <div className="h-[140px] w-[140px] grid place-items-center text-muted-foreground text-xs">
+                            ไม่มี QR
+                          </div>
+                        )}
+                        <div className="text-xs font-mono text-center break-all">
+                          {pkg.lotDetailNo ?? `#${pkg.packageNo}`}
+                        </div>
+                        <div className="text-sm tabular-nums">
+                          {formatNumber(pkg.quantity)}{" "}
+                          {receiving.unit?.code ?? ""}
+                        </div>
+                        <div className="flex gap-1.5 w-full">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() =>
+                              pkg.lotDetailNo &&
+                              copyToClipboard(pkg.lotDetailNo, "Lot Detail No.")
+                            }
+                            disabled={!pkg.lotDetailNo}
+                          >
+                            <Copy className="h-3.5 w-3.5 mr-1" />
+                            คัดลอก
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              if (pkg.qrCode) {
+                                downloadQrCode(
+                                  pkg.qrCode,
+                                  `${pkg.lotDetailNo ?? pkg.id}.png`,
+                                );
+                              }
+                            }}
+                            disabled={!pkg.qrCode}
+                          >
+                            <Download className="h-3.5 w-3.5 mr-1" />
+                            PNG
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
