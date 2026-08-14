@@ -32,36 +32,83 @@ import {
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage } from "../utils";
-import type {
-  Material,
-  MaterialImageUpload,
-  MaterialLookupOption,
-  MaterialLookups,
-  MaterialPayload,
-  MaterialType,
-  UpdateMaterialPayload,
+import {
+  resolveMaterialImage,
+  getMaterialShapeLabel,
+  getMaterialShapeColor,
+} from "../utils";
+import {
+  materialShapeRequiresRatio,
+  type Material,
+  type MaterialImageUpload,
+  type MaterialLookupOption,
+  type MaterialLookups,
+  type MaterialPayload,
+  type MaterialShape,
+  type MaterialType,
+  type UpdateMaterialPayload,
 } from "../api/materials-api";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
-const materialFormSchema = z.object({
-  code: z.string().trim().min(1, "กรุณากรอกรหัสวัสดุ"),
-  name: z.string().trim().min(1, "กรุณากรอกชื่อวัสดุ"),
-  type: z.string(),
-  unitId: z.string().min(1, "กรุณาเลือกหน่วย"),
-  deliveryTypeId: z.string(),
-  modelId: z.string(),
-  loadingPointId: z.string(),
-  processLineName: z.string(),
-  scale: z.string(),
-  specification: z.string(),
-  description: z.string(),
-  packingQuantity: z.string(),
-  supplierIds: z.array(z.string()),
-  isActive: z.boolean(),
-});
+const MATERIAL_SHAPE_OPTIONS: ReadonlyArray<MaterialShape> = [
+  "PCS",
+  "PIPE",
+  "SHEET",
+  "COIL",
+];
+
+const materialFormSchema = z
+  .object({
+    code: z.string().trim().min(1, "กรุณากรอกรหัสวัสดุ"),
+    name: z.string().trim().min(1, "กรุณากรอกชื่อวัสดุ"),
+    type: z.string(),
+    materialType: z.enum(["PCS", "PIPE", "SHEET", "COIL"], {
+      message: "กรุณาเลือกประเภทวัสดุ",
+    }),
+    ratio: z.string(),
+    unitId: z.string().min(1, "กรุณาเลือกหน่วย"),
+    deliveryTypeId: z.string(),
+    modelId: z.string(),
+    loadingPointId: z.string(),
+    processLineName: z.string(),
+    scale: z.string(),
+    specification: z.string(),
+    description: z.string(),
+    packingQuantity: z.string(),
+    supplierIds: z.array(z.string()),
+    isActive: z.boolean(),
+  })
+  .superRefine((values, ctx) => {
+    if (materialShapeRequiresRatio(values.materialType)) {
+      const trimmed = values.ratio.trim();
+      if (trimmed === "") {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ratio"],
+          message: "กรุณากรอกจำนวนชิ้นต่อเส้น (ratio)",
+        });
+        return;
+      }
+      const parsed = Number(trimmed);
+      if (!Number.isFinite(parsed) || !Number.isInteger(parsed)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ratio"],
+          message: "ratio ต้องเป็นจำนวนเต็ม",
+        });
+        return;
+      }
+      if (parsed < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["ratio"],
+          message: "ratio ต้องมีค่าอย่างน้อย 1",
+        });
+      }
+    }
+  });
 
 type MaterialFormValues = z.infer<typeof materialFormSchema>;
 
@@ -86,6 +133,8 @@ function formValues(material?: Material | null): MaterialFormValues {
     code: material?.code ?? "",
     name: material?.name ?? "",
     type: material?.type ?? "",
+    materialType: material?.materialType ?? "PCS",
+    ratio: material?.ratio != null ? material.ratio.toString() : "",
     unitId: material?.unitId ?? "",
     deliveryTypeId: material?.deliveryTypeId ?? "",
     modelId: material?.modelId ?? "",
@@ -330,6 +379,12 @@ export function MaterialFormDialog({
         code: values.code,
         name: values.name,
         type: optionalText(values.type) as MaterialType | null ?? null,
+        materialType: values.materialType,
+        ratio: materialShapeRequiresRatio(values.materialType)
+          ? values.ratio.trim()
+            ? parseInt(values.ratio.trim(), 10)
+            : null
+          : null,
         unitId: values.unitId,
         deliveryTypeId: optionalText(values.deliveryTypeId),
         modelId: optionalText(values.modelId),
@@ -477,6 +532,95 @@ export function MaterialFormDialog({
                     inputMode="numeric"
                     {...form.register("packingQuantity")}
                   />
+                </FieldGrid>
+              </SectionCard>
+
+              {/* Section 1.5: Material Shape (PCS/PIPE/SHEET/COIL) + Ratio */}
+              <SectionCard icon={Box} title="ลักษณะวัสดุ (Material Shape)">
+                <FieldGrid>
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="material-shape-dialog"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      ประเภทวัสดุ <span className="text-red-500 ml-0.5">*</span>
+                    </Label>
+                    <div className="relative">
+                      <select
+                        id="material-shape-dialog"
+                        aria-label="ประเภทวัสดุ"
+                        value={form.watch("materialType")}
+                        onChange={(event) =>
+                          form.setValue(
+                            "materialType",
+                            event.target.value as MaterialShape,
+                            { shouldDirty: true, shouldValidate: true },
+                          )
+                        }
+                        className={cn(
+                          "h-10 w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 pr-10 text-sm transition-colors hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none",
+                          form.formState.errors.materialType &&
+                            "border-red-400 focus:border-red-400 focus:ring-red-400/20",
+                        )}
+                        aria-invalid={!!form.formState.errors.materialType}
+                      >
+                        {MATERIAL_SHAPE_OPTIONS.map((shape) => (
+                          <option key={shape} value={shape}>
+                            {getMaterialShapeLabel(shape)}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                    </div>
+                    {form.formState.errors.materialType && (
+                      <p className="text-xs text-red-500">
+                        {form.formState.errors.materialType.message as string}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      ลักษณะปัจจุบัน:{" "}
+                      <span
+                        className={cn(
+                          "inline-block rounded-md border px-2 py-0.5 text-[11px] font-medium",
+                          getMaterialShapeColor(form.watch("materialType")),
+                        )}
+                      >
+                        {getMaterialShapeLabel(form.watch("materialType"))}
+                      </span>
+                    </p>
+                  </div>
+                  {materialShapeRequiresRatio(form.watch("materialType")) ? (
+                    <TextField
+                      label="จำนวนชิ้นต่อเส้น (Ratio)"
+                      aria-label="จำนวนชิ้นต่อเส้น"
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      required
+                      placeholder="เช่น 4"
+                      description="1 เส้น/แผ่น/ม้วน แบ่งได้กี่ชิ้น (ต้องกรอกเมื่อเลือก PIPE/SHEET/COIL)"
+                      error={form.formState.errors.ratio?.message}
+                      {...form.register("ratio")}
+                    />
+                  ) : (
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="material-ratio-display-dialog"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        จำนวนชิ้นต่อเส้น (Ratio)
+                      </Label>
+                      <div
+                        id="material-ratio-display-dialog"
+                        className="flex h-10 items-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 text-sm text-gray-500"
+                      >
+                        ไม่ต้องระบุ — ประเภท PCS ไม่ใช้ ratio
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        เปลี่ยนประเภทเป็น PIPE/SHEET/COIL เพื่อกรอก ratio
+                      </p>
+                    </div>
+                  )}
                 </FieldGrid>
               </SectionCard>
 

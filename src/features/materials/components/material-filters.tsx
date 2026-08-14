@@ -23,8 +23,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/utils/cn";
-import { getMaterialTypeLabel } from "../utils";
-import type { ListMaterialsParams, MaterialLookups } from "../api/materials-api";
+import { getMaterialTypeLabel, getMaterialShapeLabel } from "../utils";
+import type {
+  ListMaterialsParams,
+  MaterialLookups,
+  MaterialShape,
+} from "../api/materials-api";
 
 export interface MaterialFiltersProps {
   value: ListMaterialsParams;
@@ -42,6 +46,17 @@ const TYPE_FILTERS: { value: "" | "PC" | "OF" | "OF_MAT"; color: string }[] = [
   { value: "PC", color: "bg-[#8B0000] text-white" },
   { value: "OF", color: "bg-emerald-700 text-white" },
   { value: "OF_MAT", color: "bg-blue-600 text-white" },
+];
+
+const MATERIAL_SHAPE_FILTERS: {
+  value: "" | MaterialShape;
+  color: string;
+}[] = [
+  { value: "", color: "bg-muted text-foreground" },
+  { value: "PCS", color: "bg-slate-200 text-slate-800 border-slate-300" },
+  { value: "PIPE", color: "bg-amber-200 text-amber-900 border-amber-300" },
+  { value: "SHEET", color: "bg-sky-200 text-sky-900 border-sky-300" },
+  { value: "COIL", color: "bg-violet-200 text-violet-900 border-violet-300" },
 ];
 
 const STATUS_FILTERS: { value: "all" | "true" | "false"; label: string; color: string }[] = [
@@ -95,6 +110,14 @@ export function MaterialFilters({
     onChange({ ...value, page: 1, type: type === "" ? undefined : type });
   };
 
+  const setMaterialType = (shape: "" | MaterialShape) => {
+    onChange({
+      ...value,
+      page: 1,
+      materialType: shape === "" ? undefined : shape,
+    });
+  };
+
   const setStatus = (status: "all" | "true" | "false") => {
     onChange({
       ...value,
@@ -118,6 +141,7 @@ export function MaterialFilters({
   const activeCount = [
     value.search,
     value.type,
+    value.materialType,
     value.isActive !== undefined ? "status" : undefined,
     value.unitId,
     value.modelId,
@@ -165,7 +189,7 @@ export function MaterialFilters({
         </div>
       </div>
 
-      {/* ===== Quick Filters: Type + Status ===== */}
+      {/* ===== Quick Filters: Type + Material Shape + Status ===== */}
       <div className="space-y-3">
         {/* Type Pills */}
         <div className="flex flex-wrap items-center gap-2">
@@ -182,6 +206,36 @@ export function MaterialFilters({
                 key={f.value || "all"}
                 type="button"
                 onClick={() => setType(f.value)}
+                className={cn(
+                  "inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all",
+                  isActive
+                    ? cn(f.color, "border-transparent shadow-sm")
+                    : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                )}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Material Shape Pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+            <Package className="size-3.5" />
+            ลักษณะวัสดุ:
+          </span>
+          {MATERIAL_SHAPE_FILTERS.map((f) => {
+            const currentShape = (value.materialType ?? "") as "" | MaterialShape;
+            const isActive = currentShape === f.value;
+            const label = f.value
+              ? getMaterialShapeLabel(f.value) ?? f.value
+              : "ทั้งหมด";
+            return (
+              <button
+                key={f.value || "all-shapes"}
+                type="button"
+                onClick={() => setMaterialType(f.value)}
                 className={cn(
                   "inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-all",
                   isActive

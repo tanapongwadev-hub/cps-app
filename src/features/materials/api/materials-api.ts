@@ -45,6 +45,8 @@ export interface Material {
   code: string;
   name: string;
   type: string | null;
+  materialType: MaterialShape | null;
+  ratio: number | null;
   unitId: string;
   deliveryTypeId: string | null;
   modelId: string | null;
@@ -70,10 +72,31 @@ export interface Material {
 
 export type MaterialType = "PC" | "OF" | "OF_MAT";
 
+/**
+ * Material physical shape — how the material is delivered.
+ *
+ * - `PCS`  : discrete pieces
+ * - `PIPE` : pipe / bar stock (cut into N pieces per ratio)
+ * - `SHEET`: flat sheet
+ * - `COIL` : coil / roll
+ */
+export type MaterialShape = "PCS" | "PIPE" | "SHEET" | "COIL";
+
+/** Materials that require a `ratio` value (i.e. anything other than PCS). */
+export const MATERIAL_SHAPES_REQUIRING_RATIO: ReadonlySet<MaterialShape> =
+  new Set<MaterialShape>(["PIPE", "SHEET", "COIL"]);
+
+export function materialShapeRequiresRatio(shape: MaterialShape | null): boolean {
+  if (!shape) return false;
+  return MATERIAL_SHAPES_REQUIRING_RATIO.has(shape);
+}
+
 export interface MaterialPayload {
   code: string;
   name: string;
   type?: MaterialType | null;
+  materialType?: MaterialShape | null;
+  ratio?: number | null;
   unitId: string;
   deliveryTypeId?: string | null;
   modelId?: string | null;
@@ -98,6 +121,7 @@ export interface ListMaterialsParams {
   search?: string;
   isActive?: boolean;
   type?: MaterialType;
+  materialType?: MaterialShape;
   unitId?: string;
   modelId?: string;
   deliveryTypeId?: string;
@@ -129,6 +153,7 @@ export const materialsApi = {
     if (params.search) query.search = params.search;
     if (params.isActive !== undefined) query.isActive = params.isActive;
     if (params.type) query.type = params.type;
+    if (params.materialType) query.materialType = params.materialType;
     if (params.unitId) query.unitId = params.unitId;
     if (params.modelId) query.modelId = params.modelId;
     if (params.deliveryTypeId) query.deliveryTypeId = params.deliveryTypeId;

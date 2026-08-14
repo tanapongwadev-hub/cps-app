@@ -40,7 +40,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage, getMaterialTypeLabel, getMaterialTypeColor } from "../utils";
+import {
+  resolveMaterialImage,
+  getMaterialTypeLabel,
+  getMaterialTypeColor,
+  getMaterialShapeLabel,
+  getMaterialShapeColor,
+} from "../utils";
 import type { ListMaterialsParams, Material } from "../api/materials-api";
 
 type MaterialSortBy = NonNullable<ListMaterialsParams["sortBy"]>;
@@ -182,6 +188,7 @@ export function MaterialTable({
                 />
               </TableHead>
               <TableHead className="w-[100px]">ประเภท</TableHead>
+              <TableHead className="w-[140px]">ลักษณะวัสดุ</TableHead>
               <TableHead>ผู้ขาย</TableHead>
               <TableHead>
                 <SortableHeader
@@ -210,14 +217,14 @@ export function MaterialTable({
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
                 <TableRow key={`skel-${index}`} className="hover:bg-transparent">
-                  <TableCell colSpan={6} className="py-2">
+                  <TableCell colSpan={7} className="py-2">
                     <Skeleton className="h-14 w-full" />
                   </TableCell>
                 </TableRow>
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center">
+                <TableCell colSpan={7} className="py-12 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                     <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
                       <Slash className="size-5" />
@@ -236,7 +243,7 @@ export function MaterialTable({
               </TableRow>
             ) : materials.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="p-0">
+                <TableCell colSpan={7} className="p-0">
                   <EmptyState
                     icon={<Package className="size-6" />}
                     title="ยังไม่มีข้อมูลวัสดุ"
@@ -369,6 +376,31 @@ export function MaterialTable({
                           )}
                         >
                           {getMaterialTypeLabel(material.type) ?? material.type}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {material.materialType ? (
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-medium",
+                            getMaterialShapeColor(material.materialType),
+                          )}
+                          title={
+                            material.ratio
+                              ? `1 เส้น/แผ่น/ม้วน แบ่งได้ ${material.ratio} ชิ้น`
+                              : undefined
+                          }
+                        >
+                          {getMaterialShapeLabel(material.materialType) ??
+                            material.materialType}
+                          {material.ratio != null && (
+                            <span className="ml-0.5 rounded bg-white/40 px-1 text-[10px] font-semibold">
+                              ×{material.ratio}
+                            </span>
+                          )}
                         </span>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>

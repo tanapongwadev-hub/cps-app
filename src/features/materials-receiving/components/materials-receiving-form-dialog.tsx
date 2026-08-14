@@ -2,7 +2,17 @@
 
 import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Boxes, Info, Save, X } from "lucide-react";
+import {
+  Boxes,
+  FileText,
+  Info,
+  Paperclip,
+  Save,
+  Scissors,
+  Trash2,
+  Upload,
+  X,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormSection } from "@/components/forms/form-section";
@@ -24,19 +34,41 @@ import type {
   CreateMaterialsReceivingPayload,
   MaterialsReceiving,
   MaterialsReceivingLookups,
+  MaterialsReceivingMaterialShape,
   MaterialsReceivingSupplier,
   UpdateMaterialsReceivingPayload,
 } from "../api/materials-receiving-api";
 import { materialsReceivingApi } from "../api/materials-receiving-api";
 
 // ============================================================================
+// Constants
+// ============================================================================
+
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024; // 10 MiB
+const ATTACHMENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/pdf",
+]);
+
+const SHAPES_REQUIRING_RATIO: ReadonlySet<MaterialsReceivingMaterialShape> = new Set([
+  "PIPE",
+  "SHEET",
+  "COIL",
+]);
+
+function materialShapeRequiresRatio(
+  shape: MaterialsReceivingMaterialShape | null,
+): boolean {
+  if (!shape) return false;
+  return SHAPES_REQUIRING_RATIO.has(shape);
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
-/**
- * Preview of Internal Lot No. — เลข lot จริง generate โดย backend
- * ใช้สำหรับ placeholder ในฟอร์มเท่านั้น
- */
 function previewInternalLotNo(): string {
   const now = new Date();
   const yyyy = now.getFullYear();
@@ -45,7 +77,6 @@ function previewInternalLotNo(): string {
   return `CCI-${yyyy}${mm}${dd}-???`;
 }
 
-/** CEIL(receiveQuantity / packingQuantity) */
 function computePackageCount(
   receiveQuantity: string,
   packingQuantity: number | null | undefined,
@@ -56,7 +87,6 @@ function computePackageCount(
   return Math.ceil(qty / packingQuantity);
 }
 
-/** คำนวณ breakdown ของ package เพื่อ preview */
 function previewPackages(
   receiveQuantity: string,
   packingQuantity: number | null | undefined,
@@ -75,41 +105,63 @@ function previewPackages(
   return packages;
 }
 
+/** คำนวณ piecesQuantity = receiveQuantity × ratio (สำหรับ PIPE/SHEET/COIL เท่านั้น) */
+function computePiecesQuantity(
+  receiveQuantity: string,
+  shape: MaterialsReceivingMaterialShape | null,
+  ratio: number | null | undefined,
+): number | null {
+  if (!materialShapeRequiresRatio(shape)) return null;
+  if (!ratio || ratio < 1) return null;
+  const qty = Number(receiveQuantity);
+  if (!Number.isFinite(qty) || qty <= 0) return null;
+  return qty * ratio;
+}
+
 // ============================================================================
 // Schema
 // ============================================================================
 
 const DECIMAL_REGEX = /^\d+(\.\d{1,4})?$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const IDEMPOTENCY_REGEX = /^[A-Za-z0-9_-]{8,80}$/;
+const PO_NO_REGEX = /^[A-Za-z0-9_/ \-]{1,30}$/;
 
-const formSchema = z.object({
-  materialId: z.string().min(1, "กรุณาเลือกวัสดุ"),
-  supplierId: z.string().optional(),
-  receiveQuantity: z
-    .string()
-    .min(1, "กรุณากรอกจำนวนรับเข้า")
-    .regex(DECIMAL_REGEX, "ต้องเป็นตัวเลขทศนิยมไม่เกิน 4 ตำแหน่ง"),
-  supplierProductionDate: z
-    .string()
-    .min(1, "กรุณาเลือกวันที่ผลิตของ Supplier")
-    .regex(ISO_DATE, "รูปแบบวันที่ไม่ถูกต้อง (YYYY-MM-DD)"),
-  receiveDate: z
-    .string()
-    .min(1, "กรุณาเลือกวันที่รับเข้า")
-    .regex(ISO_DATE, "รูปแบบวันที่ไม่ถูกต้อง (YYYY-MM-DD)"),
-  packingQuantityOverride: z
-    .string()
-    .regex(DECIMAL_REGEX, "ต้องเป็นจำนวนเต็มบวก")
-    .optional()
-    .or(z.literal("")),
-  idempotencyKey: z
-    .string()
-    .regex(IDEMPOTENCY_REGEX, "ต้องเป็น 8-80 ตัวอักษร (a-z, 0-9, -, _)")
-    .optional()
-    .or(z.literal("")),
-  remark: z.string().optional(),
-});
+const formSchema = z
+  .object({
+    poNo: z
+      .string()
+      .max(30, "เลขที่ PO ยาวเกิน 30 ตัวอักษร")
+      .regex(PO_NO_REGEX, "รูปแบบเลขที่ PO ไม่ถูกต้อง")
+      .optional()
+      .or(z.literal("")),
+    materialId: z.string().min(1, "กรุณาเลือกวัสดุ"),
+    supplierId: z.string().optional(),
+    receiveQuantity: z
+      .string()
+      .min(1, "กรุณากรอกจำนวนรับเข้า")
+      .regex(DECIMAL_REGEX, "ต้องเป็นตัวเลขทศนิยมไม่เกิน 4 ตำแหน่ง"),
+    ratioOverride: z
+      .string()
+      .regex(DECIMAL_REGEX, "ratio ต้องเป็นจำนวนเต็มบวก")
+      .optional()
+      .or(z.literal("")),
+    packingQuantityOverride: z
+      .string()
+      .regex(DECIMAL_REGEX, "ต้องเป็นจำนวนเต็มบวก")
+      .optional()
+      .or(z.literal("")),
+    supplierProductionDate: z
+      .string()
+      .min(1, "กรุณาเลือกวันที่ผลิตของ Supplier")
+      .regex(ISO_DATE, "รูปแบบวันที่ไม่ถูกต้อง (YYYY-MM-DD)"),
+    receiveDate: z
+      .string()
+      .min(1, "กรุณาเลือกวันที่รับเข้า")
+      .regex(ISO_DATE, "รูปแบบวันที่ไม่ถูกต้อง (YYYY-MM-DD)"),
+    remark: z.string().optional(),
+    attachmentUrl: z.string().optional(),
+    attachmentName: z.string().optional(),
+  });
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -118,26 +170,32 @@ function getDefaultValues(
 ): FormValues {
   if (receiving) {
     return {
+      poNo: receiving.poNo ?? "",
       materialId: receiving.materialId,
       supplierId: receiving.supplierId,
       receiveQuantity: receiving.receiveQuantity,
+      ratioOverride: "",
+      packingQuantityOverride: "",
       supplierProductionDate: receiving.supplierProductionDate ?? "",
       receiveDate: receiving.receiveDate,
-      packingQuantityOverride: "",
-      idempotencyKey: receiving.idempotencyKey ?? "",
       remark: receiving.remark ?? "",
+      attachmentUrl: receiving.attachmentUrl ?? "",
+      attachmentName: receiving.attachmentName ?? "",
     };
   }
   const today = new Date().toISOString().slice(0, 10);
   return {
+    poNo: "",
     materialId: "",
     supplierId: "",
     receiveQuantity: "",
+    ratioOverride: "",
+    packingQuantityOverride: "",
     supplierProductionDate: today,
     receiveDate: today,
-    packingQuantityOverride: "",
-    idempotencyKey: "",
     remark: "",
+    attachmentUrl: "",
+    attachmentName: "",
   };
 }
 
@@ -154,6 +212,7 @@ export interface MaterialsReceivingFormDialogProps {
     payload: CreateMaterialsReceivingPayload | UpdateMaterialsReceivingPayload,
   ) => Promise<void>;
   savePending?: boolean;
+  onUploadAttachment?: (file: File) => Promise<{ url: string; name: string }>;
 }
 
 function errorMessage(error: unknown): string {
@@ -168,16 +227,15 @@ export function MaterialsReceivingFormDialog({
   lookups,
   onSave,
   savePending,
+  onUploadAttachment,
 }: MaterialsReceivingFormDialogProps) {
   const isEditing = !!receiving;
   const [serverError, setServerError] = React.useState<string | null>(null);
+  const [attachmentFile, setAttachmentFile] = React.useState<File | null>(null);
+  const [attachmentUploading, setAttachmentUploading] = React.useState(false);
+  const [attachmentRemoved, setAttachmentRemoved] = React.useState(false);
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null);
 
-  /**
-   * Suppliers auto-derived from selected material.
-   *  - 0 suppliers  → no supplier selectable (frontend will show error from backend)
-   *  - 1 supplier   → auto-select (the asterisk hides)
-   *  - 2+ suppliers → user must pick
-   */
   const [materialSuppliers, setMaterialSuppliers] = React.useState<
     MaterialsReceivingSupplier[]
   >([]);
@@ -195,16 +253,20 @@ export function MaterialsReceivingFormDialog({
       setServerError(null);
       autoSelectedSupplier.current = false;
       setMaterialSuppliers([]);
+      setAttachmentFile(null);
+      setAttachmentRemoved(false);
     }
   }, [open, receiving, form]);
 
-  // Watch fields for live preview
   const watchMaterialId = form.watch("materialId");
   const watchQuantity = form.watch("receiveQuantity");
+  const watchRatioOverride = form.watch("ratioOverride");
   const watchPackingOverride = form.watch("packingQuantityOverride");
   const watchProductionDate = form.watch("supplierProductionDate");
+  const watchAttachmentUrl = form.watch("attachmentUrl");
+  const watchAttachmentName = form.watch("attachmentName");
 
-  // Fetch suppliers when material changes (only in create mode)
+  // Fetch suppliers when material changes
   React.useEffect(() => {
     if (isEditing || !watchMaterialId) {
       setMaterialSuppliers([]);
@@ -218,13 +280,13 @@ export function MaterialsReceivingFormDialog({
         if (cancelled) return;
         const suppliers = list ?? [];
         setMaterialSuppliers(suppliers);
-        // Auto-select if exactly 1 supplier
         const only = suppliers[0];
+        // Only auto-select when there is exactly one supplier;
+        // for multiple/no suppliers leave supplierId untouched to avoid
+        // a controlled→uncontrolled transition on the <select>.
         if (suppliers.length === 1 && only && !autoSelectedSupplier.current) {
           form.setValue("supplierId", only.id, { shouldValidate: false });
           autoSelectedSupplier.current = true;
-        } else if (suppliers.length !== 1) {
-          form.setValue("supplierId", "", { shouldValidate: false });
         }
       })
       .catch(() => {
@@ -238,7 +300,18 @@ export function MaterialsReceivingFormDialog({
     };
   }, [watchMaterialId, isEditing, form]);
 
-  // Find selected material for packing quantity
+  // Sync supplierId when a material has no linked suppliers.
+  // Runs AFTER materialSuppliers is set to [] (not before), so the <select>
+  // value is already "" when we reset the form field — no controlled→uncontrolled.
+  React.useEffect(() => {
+    if (!watchMaterialId) return;          // no material selected yet
+    if (materialSuppliers.length > 0) return; // has suppliers, leave supplierId as-is
+    const current = form.getValues("supplierId");
+    if (current && current !== "") {
+      form.setValue("supplierId", "", { shouldValidate: false });
+    }
+  }, [watchMaterialId, materialSuppliers, form]);
+
   const selectedMaterial = React.useMemo(
     () => lookups.materials.find((m) => m.id === watchMaterialId) ?? null,
     [lookups.materials, watchMaterialId],
@@ -255,15 +328,84 @@ export function MaterialsReceivingFormDialog({
     return null;
   }, [watchPackingOverride, selectedMaterial]);
 
+  /** Effective ratio: form override > material.ratio */
+  const effectiveRatio = React.useMemo(() => {
+    const override = Number(watchRatioOverride);
+    if (Number.isFinite(override) && override >= 1) {
+      return Math.floor(override);
+    }
+    if (selectedMaterial?.ratio && selectedMaterial.ratio >= 1) {
+      return selectedMaterial.ratio;
+    }
+    return null;
+  }, [watchRatioOverride, selectedMaterial]);
+
+  const requiresRatio = materialShapeRequiresRatio(
+    selectedMaterial?.materialType ?? null,
+  );
+
   const packages = React.useMemo(
     () => previewPackages(watchQuantity, effectivePackingQuantity),
     [watchQuantity, effectivePackingQuantity],
+  );
+
+  const piecesQuantity = React.useMemo(
+    () =>
+      requiresRatio
+        ? computePiecesQuantity(
+            watchQuantity,
+            selectedMaterial?.materialType ?? null,
+            effectiveRatio,
+          )
+        : null,
+    [requiresRatio, watchQuantity, selectedMaterial, effectiveRatio],
   );
 
   const supplierLotPreview = React.useMemo(() => {
     if (!watchProductionDate || !ISO_DATE.test(watchProductionDate)) return null;
     return `SUP-${watchProductionDate.replace(/-/g, "")}`;
   }, [watchProductionDate]);
+
+  const handleAttachmentPick = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setServerError(null);
+    if (!ATTACHMENT_TYPES.has(file.type)) {
+      setServerError("รองรับเฉพาะไฟล์ JPEG, PNG, WebP หรือ PDF");
+      return;
+    }
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      setServerError("ไฟล์แนบต้องมีขนาดไม่เกิน 10 MiB");
+      return;
+    }
+    setAttachmentFile(file);
+    if (onUploadAttachment) {
+      try {
+        setAttachmentUploading(true);
+        const uploaded = await onUploadAttachment(file);
+        form.setValue("attachmentUrl", uploaded.url, { shouldDirty: true });
+        form.setValue("attachmentName", uploaded.name, { shouldDirty: true });
+        setAttachmentRemoved(false);
+      } catch (err) {
+        setServerError(errorMessage(err));
+        setAttachmentFile(null);
+      } finally {
+        setAttachmentUploading(false);
+      }
+    }
+  };
+
+  const removeAttachment = () => {
+    setAttachmentFile(null);
+    setAttachmentRemoved(true);
+    form.setValue("attachmentUrl", "", { shouldDirty: true });
+    form.setValue("attachmentName", "", { shouldDirty: true });
+    if (attachmentInputRef.current) {
+      attachmentInputRef.current.value = "";
+    }
+  };
 
   const handleSubmit = async (values: FormValues) => {
     try {
@@ -274,7 +416,9 @@ export function MaterialsReceivingFormDialog({
         receiveQuantity: values.receiveQuantity,
         supplierProductionDate: values.supplierProductionDate,
         receiveDate: values.receiveDate,
-        idempotencyKey: values.idempotencyKey || null,
+        poNo: values.poNo || null,
+        attachmentUrl: values.attachmentUrl || null,
+        attachmentName: values.attachmentName || null,
         remark: values.remark || null,
       };
       if (values.supplierId) {
@@ -288,6 +432,13 @@ export function MaterialsReceivingFormDialog({
         }
       }
 
+      if (values.ratioOverride) {
+        const override = Number(values.ratioOverride);
+        if (Number.isFinite(override) && override >= 1) {
+          basePayload.ratioOverride = Math.floor(override);
+        }
+      }
+
       let payload: CreateMaterialsReceivingPayload | UpdateMaterialsReceivingPayload =
         basePayload;
 
@@ -296,6 +447,9 @@ export function MaterialsReceivingFormDialog({
           receiveQuantity: values.receiveQuantity,
           supplierProductionDate: values.supplierProductionDate,
           receiveDate: values.receiveDate,
+          poNo: values.poNo || null,
+          attachmentUrl: values.attachmentUrl || null,
+          attachmentName: values.attachmentName || null,
           remark: values.remark || null,
           updatedAt: receiving.updatedAt,
         };
@@ -303,6 +457,12 @@ export function MaterialsReceivingFormDialog({
           const override = Number(values.packingQuantityOverride);
           if (Number.isFinite(override) && override >= 1) {
             updatePayload.packingQuantityOverride = Math.floor(override);
+          }
+        }
+        if (values.ratioOverride) {
+          const override = Number(values.ratioOverride);
+          if (Number.isFinite(override) && override >= 1) {
+            updatePayload.ratioOverride = Math.floor(override);
           }
         }
         payload = updatePayload;
@@ -316,6 +476,10 @@ export function MaterialsReceivingFormDialog({
   };
 
   const today = new Date().toISOString().slice(0, 10);
+  const showAttachment =
+    !!watchAttachmentUrl || !!attachmentFile || attachmentRemoved;
+  const attachmentDisplayName =
+    watchAttachmentName || attachmentFile?.name || null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -355,8 +519,95 @@ export function MaterialsReceivingFormDialog({
                   <Badge variant="secondary">{packages.length} ใบ</Badge>
                 </>
               )}
+              {piecesQuantity !== null && (
+                <>
+                  <span className="text-muted-foreground">ชิ้นที่ใช้ได้:</span>
+                  <Badge variant="default" className="gap-1">
+                    <Scissors className="h-3 w-3" />
+                    {piecesQuantity.toLocaleString("th-TH")} ชิ้น
+                  </Badge>
+                </>
+              )}
             </div>
           </div>
+
+          {/* PO Header */}
+          <FormSection title="เอกสารอ้างอิง">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="poNo" className="flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5" />
+                  เลขที่ PO
+                </Label>
+                <Input
+                  id="poNo"
+                  type="text"
+                  placeholder="เช่น PO-2026-001"
+                  {...form.register("poNo")}
+                  className={cn(
+                    "font-mono",
+                    form.formState.errors.poNo && "border-danger",
+                  )}
+                />
+                <p className="text-muted-foreground text-xs">
+                  ใช้เป็น header ของเอกสารรับเข้า (ไม่บังคับ)
+                </p>
+                {form.formState.errors.poNo && (
+                  <p className="text-danger text-xs">
+                    {form.formState.errors.poNo.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Attachment */}
+              <div className="space-y-1.5">
+                <Label htmlFor="attachmentUrl" className="flex items-center gap-1.5">
+                  <Paperclip className="h-3.5 w-3.5" />
+                  แนบไฟล์ (รูป/เอกสาร PO)
+                </Label>
+                <input
+                  ref={attachmentInputRef}
+                  id="attachmentUrl"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  onChange={handleAttachmentPick}
+                  className="hidden"
+                />
+                {showAttachment ? (
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                    <Paperclip className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 truncate font-mono text-xs">
+                      {attachmentDisplayName ?? "ไฟล์แนบ"}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={removeAttachment}
+                      disabled={attachmentUploading}
+                      className="h-7 px-2 text-danger"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => attachmentInputRef.current?.click()}
+                    disabled={attachmentUploading}
+                    className="w-full gap-2"
+                  >
+                    <Upload className="h-4 w-4" />
+                    {attachmentUploading ? "กำลังอัปโหลด..." : "เลือกไฟล์แนบ"}
+                  </Button>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  รองรับ JPEG/PNG/WebP/PDF ขนาดไม่เกิน 10 MiB (ไม่บังคับ)
+                </p>
+              </div>
+            </div>
+          </FormSection>
 
           {/* Material + Supplier */}
           <FormSection title="วัสดุและผู้จัดจำหน่าย">
@@ -378,9 +629,9 @@ export function MaterialsReceivingFormDialog({
                   {lookups.materials.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.code} — {m.name}
-                      {m.packingQuantity
-                        ? ` (${m.packingQuantity}/แพ็ก)`
-                        : ""}
+                      {m.materialType ? ` [${m.materialType}]` : ""}
+                      {m.packingQuantity ? ` (${m.packingQuantity}/แพ็ก)` : ""}
+                      {m.ratio ? ` ×${m.ratio}` : ""}
                     </option>
                   ))}
                 </select>
@@ -407,36 +658,46 @@ export function MaterialsReceivingFormDialog({
                   )}
                   disabled={isEditing || suppliersLoading}
                 >
-                  {suppliersLoading && (
-                    <option key="__loading__" value="">
-                      กำลังโหลด...
-                    </option>
-                  )}
-                  {!suppliersLoading && materialSuppliers.length === 0 && (
-                    <option key="__empty__" value="">
-                      — เลือกวัสดุก่อน —
-                    </option>
-                  )}
-                  {!suppliersLoading &&
-                    materialSuppliers.length === 1 &&
-                    (() => {
+                  {(() => {
+                    if (suppliersLoading) {
+                      return (
+                        <option key="supplier-loading" value="">
+                          กำลังโหลด...
+                        </option>
+                      );
+                    }
+                    if (materialSuppliers.length === 0) {
+                      return (
+                        <option key="supplier-empty" value="">
+                          — เลือกวัสดุก่อน —
+                        </option>
+                      );
+                    }
+                    if (materialSuppliers.length === 1) {
                       const only = materialSuppliers[0];
-                      return only ? (
-                        <option key={only.id} value={only.id}>
+                      if (!only) return null;
+                      return (
+                        <option key={`supplier-only-${only.id}`} value={only.id}>
                           {only.code} — {only.nameTh}
                         </option>
-                      ) : null;
-                    })()}
-                  {!suppliersLoading && materialSuppliers.length > 1 && [
-                    <option key="__placeholder__" value="">
-                      เลือกผู้จัดจำหน่าย
-                    </option>,
-                    ...materialSuppliers.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.code} — {s.nameTh}
-                      </option>
-                    )),
-                  ]}
+                      );
+                    }
+                    return (
+                      <>
+                        <option key="supplier-placeholder" value="">
+                          เลือกผู้จัดจำหน่าย
+                        </option>
+                        {materialSuppliers.map((s, idx) => (
+                          <option
+                            key={`supplier-${s.id ?? `idx-${idx}`}-${s.code ?? idx}`}
+                            value={s.id}
+                          >
+                            {s.code} — {s.nameTh}
+                          </option>
+                        ))}
+                      </>
+                    );
+                  })()}
                 </select>
                 {form.formState.errors.supplierId && (
                   <p className="text-danger text-xs">
@@ -452,12 +713,12 @@ export function MaterialsReceivingFormDialog({
             </div>
           </FormSection>
 
-          {/* Quantity + Dates */}
+          {/* Quantity + Ratio + Dates */}
           <FormSection title="จำนวนและวันที่">
             <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="receiveQuantity">
-                  จำนวนรับเข้า <span className="text-danger">*</span>
+                  จำนวนรับเข้า (ต้นทาง) <span className="text-danger">*</span>
                 </Label>
                 <Input
                   id="receiveQuantity"
@@ -477,9 +738,7 @@ export function MaterialsReceivingFormDialog({
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="packingQuantityOverride">
-                  Packing/แพ็ก (override)
-                </Label>
+                <Label htmlFor="packingQuantityOverride">Packing/แพ็ก (override)</Label>
                 <Input
                   id="packingQuantityOverride"
                   type="number"
@@ -496,6 +755,50 @@ export function MaterialsReceivingFormDialog({
                   ปล่อยว่างเพื่อใช้ค่าจาก Material
                 </p>
               </div>
+
+              {requiresRatio ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="ratioOverride" className="flex items-center gap-1.5">
+                    <Scissors className="h-3.5 w-3.5" />
+                    Ratio (ชิ้น/เส้น) <span className="text-danger">*</span>
+                  </Label>
+                  <Input
+                    id="ratioOverride"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder={
+                      selectedMaterial?.ratio
+                        ? `ใช้ของวัสดุ: ${selectedMaterial.ratio}`
+                        : "ระบุจำนวนชิ้นต่อเส้น"
+                    }
+                    {...form.register("ratioOverride")}
+                    className={cn(
+                      "font-mono",
+                      form.formState.errors.ratioOverride && "border-danger",
+                    )}
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    1 เส้น/แผ่น/ม้วน แบ่งได้กี่ชิ้น
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label htmlFor="ratioDisplay" className="flex items-center gap-1.5">
+                    <Scissors className="h-3.5 w-3.5" />
+                    Ratio (ชิ้น/เส้น)
+                  </Label>
+                  <Input
+                    id="ratioDisplay"
+                    value="—"
+                    disabled
+                    placeholder="ไม่ใช้ ratio (materialType = PCS)"
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    ประเภทนี้ไม่ใช้ ratio
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="supplierProductionDate">
@@ -539,11 +842,11 @@ export function MaterialsReceivingFormDialog({
             </div>
           </FormSection>
 
-          {/* Package Preview */}
+          {/* Package Preview + Pieces summary */}
           {packages && packages.length > 0 && (
             <FormSection title="ตัวอย่างการแบ่งบรรจุภัณฑ์">
-              <div className="rounded-md border bg-muted/30 p-3">
-                <div className="flex items-center gap-2 mb-2 text-sm font-medium">
+              <div className="rounded-md border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center gap-2 text-sm font-medium">
                   <Boxes className="h-4 w-4" />
                   รวม {packages.length} ใบ
                   {effectivePackingQuantity && (
@@ -552,6 +855,24 @@ export function MaterialsReceivingFormDialog({
                     </span>
                   )}
                 </div>
+                {requiresRatio && piecesQuantity !== null && (
+                  <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2 text-amber-900 font-medium">
+                      <Scissors className="h-4 w-4" />
+                      จำนวนชิ้นที่ใช้ได้ (piecesQuantity)
+                    </div>
+                    <div className="mt-1 text-amber-800">
+                      รับเข้า{" "}
+                      <strong>{watchQuantity || "0"}</strong>{" "}
+                      (หน่วยต้นทาง) × ratio <strong>{effectiveRatio ?? "—"}</strong>{" "}
+                      = <strong>{piecesQuantity.toLocaleString("th-TH")}</strong> ชิ้น
+                    </div>
+                    <p className="text-amber-700 text-xs mt-1">
+                      ยอดนี้คือจำนวนชิ้นที่ต้องรับเข้าจริง (เก็บทั้ง receiveQuantity
+                      และ piecesQuantity ไว้ทั้งคู่)
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-sm">
                   {packages.map((pkg) => (
                     <div
@@ -569,37 +890,16 @@ export function MaterialsReceivingFormDialog({
             </FormSection>
           )}
 
-          {/* Advanced */}
-          <FormSection title="ขั้นสูง">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="idempotencyKey">Idempotency Key</Label>
-                <Input
-                  id="idempotencyKey"
-                  type="text"
-                  placeholder="เช่น order-20260809-001"
-                  {...form.register("idempotencyKey")}
-                  disabled={isEditing}
-                />
-                <p className="text-muted-foreground text-xs">
-                  กันสร้างซ้ำจาก network retry (8-80 ตัวอักษร)
-                </p>
-                {form.formState.errors.idempotencyKey && (
-                  <p className="text-danger text-xs">
-                    {form.formState.errors.idempotencyKey.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="remark">หมายเหตุ</Label>
-                <Textarea
-                  id="remark"
-                  {...form.register("remark")}
-                  placeholder="รายละเอียดเพิ่มเติม..."
-                  rows={2}
-                />
-              </div>
+          {/* Remark */}
+          <FormSection title="หมายเหตุ">
+            <div className="space-y-1.5">
+              <Label htmlFor="remark">หมายเหตุ</Label>
+              <Textarea
+                id="remark"
+                {...form.register("remark")}
+                placeholder="รายละเอียดเพิ่มเติม..."
+                rows={2}
+              />
             </div>
           </FormSection>
 

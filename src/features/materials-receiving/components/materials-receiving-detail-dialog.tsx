@@ -10,6 +10,7 @@ import {
   Factory,
   Package,
   QrCode,
+  Scissors,
   Tag,
   Truck,
   User,
@@ -190,7 +191,71 @@ export function MaterialsReceivingDetailDialog({
         ) : (
           <div className="space-y-4">
             {/* QR + Quick actions */}
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-4">
+              {/* Pieces QR — ชุดจำนวนชิ้นที่ใช้ได้ (PIPE/SHEET/COIL เท่านั้น) */}
+              {receiving.piecesQrCode ? (
+                <Card className="md:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Scissors className="h-4 w-4 text-primary" />
+                      QR Code ชิ้นที่ใช้ได้
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center gap-3">
+                    <div className="rounded-md border bg-white p-2">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={receiving.piecesQrCode}
+                        alt={`Pieces QR for ${receiving.internalLotNo}`}
+                        width={160}
+                        height={160}
+                        className="block"
+                      />
+                    </div>
+                    {receiving.piecesQrPayload && (
+                      <div className="w-full space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">ชิ้นที่ใช้ได้</span>
+                          <span className="font-mono font-semibold">
+                            {Number(receiving.piecesQrPayload.piecesQuantity).toLocaleString("th-TH")}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">ประเภท</span>
+                          <Badge variant="outline" className="text-xs">
+                            {receiving.piecesQrPayload.materialType}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">Run No.</span>
+                          <span className="font-mono">
+                            {receiving.piecesQrPayload.runNo ?? "—"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1.5 w-full">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          downloadQrCode(
+                            receiving.piecesQrCode!,
+                            `pieces-${receiving.internalLotNo}.png`,
+                          );
+                        }}
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1" />
+                        PNG
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div />
+              )}
+
+              {/* Main QR — ชุดจำนวนรับเข้า (ต้นทาง) */}
               <Card className="md:col-span-1">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
@@ -288,6 +353,20 @@ export function MaterialsReceivingDetailDialog({
                     label="จำนวนรับเข้า"
                     value={`${formatNumber(receiving.receiveQuantity)} ${receiving.unit?.code ?? ""}`}
                   />
+                  {receiving.materialType && receiving.materialType !== "PCS" && receiving.piecesQuantity && (
+                    <InfoRow
+                      icon={<Scissors className="h-4 w-4 text-primary" />}
+                      label="ชิ้นที่ใช้ได้"
+                      value={`${formatNumber(receiving.piecesQuantity)} ชิ้น`}
+                    />
+                  )}
+                  {receiving.materialType && (
+                    <InfoRow
+                      icon={<Package className="h-4 w-4" />}
+                      label="ประเภทวัสดุ"
+                      value={`${receiving.materialType}${receiving.ratio ? ` (×${receiving.ratio})` : ""}`}
+                    />
+                  )}
                   <InfoRow
                     icon={<Box className="h-4 w-4" />}
                     label="Packing / แพ็ก"

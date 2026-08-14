@@ -38,6 +38,8 @@ const material = {
   code: "MAT-001",
   name: "Steel coil",
   type: null,
+  materialType: "PCS" as const,
+  ratio: null,
   unitId: "1",
   deliveryTypeId: null,
   modelId: null,

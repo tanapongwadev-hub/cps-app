@@ -59,6 +59,8 @@ const material: Material = {
   code: "MAT-099",
   name: "เหล็กแผ่น",
   type: "PC",
+  materialType: "PIPE",
+  ratio: 4,
   unitId: "9007199254740993",
   deliveryTypeId: "3",
   modelId: "2",

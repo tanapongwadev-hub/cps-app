@@ -82,3 +82,33 @@ export function getMaterialTypeColor(type: string | null | undefined): string {
   if (!type) return "bg-muted text-foreground";
   return MATERIAL_TYPE_COLORS[type] ?? "bg-muted text-foreground";
 }
+
+/** Map a Material.materialType (shape) code to a human-readable Thai label. */
+const MATERIAL_SHAPE_LABELS: Record<string, string> = {
+  PCS: "ชิ้น (PCS)",
+  PIPE: "เหล็กเส้น / ท่อ (PIPE)",
+  SHEET: "แผ่น (SHEET)",
+  COIL: "ม้วน (COIL)",
+};
+
+/** Map a Material.materialType (shape) code to its accent color. */
+const MATERIAL_SHAPE_COLORS: Record<string, string> = {
+  PCS: "bg-slate-100 text-slate-700 border-slate-200",
+  PIPE: "bg-amber-100 text-amber-800 border-amber-200",
+  SHEET: "bg-sky-100 text-sky-800 border-sky-200",
+  COIL: "bg-violet-100 text-violet-800 border-violet-200",
+};
+
+export function getMaterialShapeLabel(
+  shape: string | null | undefined,
+): string | null {
+  if (!shape) return null;
+  return MATERIAL_SHAPE_LABELS[shape] ?? shape;
+}
+
+export function getMaterialShapeColor(
+  shape: string | null | undefined,
+): string {
+  if (!shape) return "bg-muted text-foreground border-border";
+  return MATERIAL_SHAPE_COLORS[shape] ?? "bg-muted text-foreground border-border";
+}

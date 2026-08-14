@@ -12,14 +12,17 @@
 import { useState } from "react";
 import {
   AlertCircle,
+  Box,
   Calendar,
   Edit2,
   Hash,
+  Image as ImageIcon,
   ImageOff,
   Maximize2,
   Package,
   Power,
   RotateCcw,
+  Scissors,
   Tag,
   Truck,
   User,
@@ -34,9 +37,14 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage, getMaterialTypeLabel, getMaterialTypeColor } from "../utils";
+import {
+  resolveMaterialImage,
+  getMaterialTypeLabel,
+  getMaterialTypeColor,
+  getMaterialShapeLabel,
+  getMaterialShapeColor,
+} from "../utils";
 import type { Material } from "../api/materials-api";
 
 function formatDate(value: string): string {
@@ -85,17 +93,42 @@ export function MaterialDetailCard({
     material.unit?.code ||
     "—";
   const typeLabel = getMaterialTypeLabel(material.type);
+  const shapeLabel = getMaterialShapeLabel(material.materialType);
   const [preview, setPreview] = useState(false);
 
   return (
     <div className={cn("space-y-5", className)}>
-      {/* ===== Hero Section ===== */}
-      <Card className="overflow-hidden border-border/60">
-        <div className="grid grid-cols-1 md:grid-cols-[260px_1fr]">
-          {/* Image */}
+      {/* ===== Hero Section: Image Card + Info Card (แยกกัน) ===== */}
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-[360px_1fr] lg:grid-cols-[420px_1fr]">
+        {/* Image Card — แยกเดี่ยว */}
+        <Card className="overflow-hidden border-border/60">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 border-b bg-muted/20 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-primary/10 text-primary flex size-7 items-center justify-center rounded-md">
+                <ImageIcon className="size-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">รูปอะไหล่</h3>
+                <p className="text-muted-foreground text-xs">คลิกเพื่อขยาย</p>
+              </div>
+            </div>
+            {imageUrl && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setPreview(true)}
+                className="h-8 gap-1.5"
+                aria-label="ขยายรูปภาพ"
+              >
+                <Maximize2 className="size-3.5" />
+                <span className="hidden sm:inline">ขยาย</span>
+              </Button>
+            )}
+          </CardHeader>
           <div
             className={cn(
-              "group/img relative min-h-[280px] overflow-hidden bg-muted/30 border-b md:border-b-0 md:border-r",
+              "group/img relative aspect-square w-full overflow-hidden bg-muted/30",
               imageUrl && "cursor-pointer",
             )}
             onClick={() => imageUrl && setPreview(true)}
@@ -117,19 +150,12 @@ export function MaterialDetailCard({
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3">
-                <div className="bg-muted/50 flex size-14 items-center justify-center rounded-xl">
-                  <ImageOff className="size-6 text-muted-foreground" />
+                <div className="bg-muted/50 flex size-16 items-center justify-center rounded-2xl">
+                  <ImageOff className="size-7 text-muted-foreground" />
                 </div>
-                <span className="text-muted-foreground text-sm">ไม่มีรูปตัวอย่าง</span>
-              </div>
-            )}
-
-            {/* Preview Hint (ซ้อนทับรูป) */}
-            {imageUrl && (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover/img:bg-black/30 group-hover/img:opacity-100">
-                <div className="bg-background/90 text-foreground flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium shadow-lg">
-                  <Maximize2 className="size-3.5" />
-                  คลิกเพื่อขยาย
+                <div className="text-center">
+                  <p className="text-foreground text-sm font-medium">ไม่มีรูปตัวอย่าง</p>
+                  <p className="text-muted-foreground text-xs">อัปโหลดรูปเพื่อให้ง่ายต่อการค้นหา</p>
                 </div>
               </div>
             )}
@@ -139,10 +165,11 @@ export function MaterialDetailCard({
               <div className="absolute left-3 top-3">
                 <span
                   className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-semibold shadow-md",
+                    "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider shadow-md",
                     getMaterialTypeColor(material.type),
                   )}
                 >
+                  <Tag className="size-3" />
                   {typeLabel}
                 </span>
               </div>
@@ -152,7 +179,7 @@ export function MaterialDetailCard({
             <div className="absolute right-3 top-3">
               <Badge
                 variant={material.isActive ? "success" : "secondary"}
-                className="gap-1.5 px-2.5 py-1"
+                className="gap-1.5 px-2.5 py-1 shadow-md"
               >
                 <span
                   className={cn(
@@ -163,26 +190,24 @@ export function MaterialDetailCard({
                 {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
               </Badge>
             </div>
-          </div>
 
-          {/* Info Panel */}
-          <div className="flex flex-col">
-            {/* Header */}
-            <div className="flex flex-col gap-3 p-5 pb-4">
-              {/* Type — Hero element (เด่น) */}
-              {typeLabel && (
-                <div>
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold uppercase tracking-wider shadow-sm",
-                      getMaterialTypeColor(material.type),
-                    )}
-                  >
-                    <Tag className="size-3.5" />
-                    {typeLabel}
-                  </span>
+            {/* Preview Hint (ซ้อนทับรูป) */}
+            {imageUrl && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition-all duration-300 group-hover/img:bg-black/30 group-hover/img:opacity-100">
+                <div className="bg-background/90 text-foreground flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium shadow-lg">
+                  <Maximize2 className="size-3.5" />
+                  คลิกเพื่อขยาย
                 </div>
-              )}
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Info Card — แยกเดี่ยว */}
+        <Card className="flex flex-col border-border/60">
+          {/* Header */}
+          <CardHeader className="border-b bg-muted/20 px-5 pb-4">
+            <div className="flex flex-col gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <code className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 font-mono text-sm font-semibold">
                   {material.code}
@@ -198,100 +223,127 @@ export function MaterialDetailCard({
                 )}
               </div>
               <h1 className="text-2xl font-semibold tracking-tight">{material.name}</h1>
+
+              {/* Material Shape + Ratio — Hero highlight */}
+              {shapeLabel && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    className={cn(
+                      "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-semibold shadow-sm",
+                      getMaterialShapeColor(material.materialType),
+                    )}
+                  >
+                    <Box className="size-4" />
+                    <span>{shapeLabel}</span>
+                    {material.ratio != null && (
+                      <span className="ml-1 inline-flex items-center gap-1 rounded bg-white/60 px-2 py-0.5 text-xs font-bold text-foreground/80">
+                        <Scissors className="size-3" />×{material.ratio} ชิ้น/เส้น
+                      </span>
+                    )}
+                  </div>
+                  {material.ratio != null && (
+                    <span className="text-muted-foreground text-xs">
+                      เช่น รับเข้า 3 เส้น × ratio {material.ratio} = ใช้ได้{" "}
+                      <span className="text-foreground font-semibold">
+                        {3 * material.ratio}
+                      </span>{" "}
+                      ชิ้น
+                    </span>
+                  )}
+                </div>
+              )}
               {material.description && (
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {material.description}
                 </p>
               )}
             </div>
+          </CardHeader>
 
-            <Separator />
-
-            {/* Meta Info */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b px-5 py-3 text-sm">
+          {/* Meta Info */}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b px-5 py-3 text-sm">
+            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+              <Calendar className="size-4" />
+              สร้าง {formatDate(material.createdAt)}
+            </span>
+            <span className="text-muted-foreground inline-flex items-center gap-1.5">
+              <Calendar className="size-4" />
+              อัปเดต {formatDateTime(material.updatedAt)}
+            </span>
+            {material.updatedBy && (
               <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                <Calendar className="size-4" />
-                สร้าง {formatDate(material.createdAt)}
+                <User className="size-4" />
+                โดย {material.updatedBy}
               </span>
-              <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                <Calendar className="size-4" />
-                อัปเดต {formatDateTime(material.updatedAt)}
-              </span>
-              {material.updatedBy && (
-                <span className="text-muted-foreground inline-flex items-center gap-1.5">
-                  <User className="size-4" />
-                  โดย {material.updatedBy}
-                </span>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* Quick Tags */}
-            <div className="flex flex-wrap gap-2 border-b px-5 py-3">
-              {material.packingQuantity && (
-                <div className="bg-warning/10 text-warning inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
-                  <Package className="size-3.5" />
-                  {material.packingQuantity} ชิ้น/หน่วย
-                </div>
-              )}
-              {material.deliveryType && (
-                <div className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
-                  <Truck className="size-3.5" />
-                  {material.deliveryType.nameTh}
-                </div>
-              )}
-              {material.loadingPoint && (
-                <div className="bg-info/10 text-info inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
-                  <Warehouse className="size-3.5" />
-                  {material.loadingPoint.nameTh}
-                </div>
-              )}
-              {material.processLineName && (
-                <div className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
-                  {material.processLineName}
-                </div>
-              )}
-            </div>
-
-            {/* Actions */}
-            {(onEdit || onStatusChange) && (
-              <div className="mt-auto flex items-center gap-2 border-t p-4">
-                {onEdit && (
-                  <Button size="sm" onClick={onEdit} className="gap-1.5">
-                    <Edit2 className="size-3.5" />
-                    แก้ไขข้อมูล
-                  </Button>
-                )}
-                {onStatusChange && (
-                  <Button
-                    size="sm"
-                    variant={material.isActive ? "outline" : "default"}
-                    onClick={onStatusChange}
-                    className={cn(
-                      "gap-1.5",
-                      material.isActive && "text-danger hover:text-danger",
-                    )}
-                  >
-                    {material.isActive ? (
-                      <>
-                        <Power className="size-3.5" />
-                        ปิดใช้งาน
-                      </>
-                    ) : (
-                      <>
-                        <RotateCcw className="size-3.5" />
-                        เปิดใช้งาน
-                      </>
-                    )}
-                  </Button>
-                )}
+          {/* Quick Tags */}
+          <div className="flex flex-wrap gap-2 border-b px-5 py-3">
+            {material.packingQuantity && (
+              <div className="bg-warning/10 text-warning inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                <Package className="size-3.5" />
+                {material.packingQuantity} ชิ้น/หน่วย
+              </div>
+            )}
+            {material.deliveryType && (
+              <div className="bg-primary/10 text-primary inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                <Truck className="size-3.5" />
+                {material.deliveryType.nameTh}
+              </div>
+            )}
+            {material.loadingPoint && (
+              <div className="bg-info/10 text-info inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                <Warehouse className="size-3.5" />
+                {material.loadingPoint.nameTh}
+              </div>
+            )}
+            {material.processLineName && (
+              <div className="bg-muted text-muted-foreground inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium">
+                {material.processLineName}
               </div>
             )}
           </div>
-        </div>
-      </Card>
+
+          {/* Actions */}
+          {(onEdit || onStatusChange) && (
+            <div className="mt-auto flex items-center gap-2 border-t bg-muted/10 p-4">
+              {onEdit && (
+                <Button size="sm" onClick={onEdit} className="gap-1.5">
+                  <Edit2 className="size-3.5" />
+                  แก้ไขข้อมูล
+                </Button>
+              )}
+              {onStatusChange && (
+                <Button
+                  size="sm"
+                  variant={material.isActive ? "outline" : "default"}
+                  onClick={onStatusChange}
+                  className={cn(
+                    "gap-1.5",
+                    material.isActive && "text-danger hover:text-danger",
+                  )}
+                >
+                  {material.isActive ? (
+                    <>
+                      <Power className="size-3.5" />
+                      ปิดใช้งาน
+                    </>
+                  ) : (
+                    <>
+                      <RotateCcw className="size-3.5" />
+                      เปิดใช้งาน
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          )}
+        </Card>
+      </div>
 
       {/* ===== Detail Cards ===== */}
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
         {/* Material Info Card */}
         <Card className="border-border/60">
           <CardHeader className="pb-3">
@@ -312,6 +364,15 @@ export function MaterialDetailCard({
             {material.model && (
               <DetailItem label="ประเภท (Model)" value={material.model.nameTh} />
             )}
+            {shapeLabel && (
+              <DetailItem label="ลักษณะวัสดุ" value={shapeLabel} />
+            )}
+            {material.ratio != null && (
+              <DetailItem
+                label="จำนวนชิ้นต่อเส้น (Ratio)"
+                value={`${material.ratio} ชิ้น`}
+              />
+            )}
             {material.packingQuantity && (
               <DetailItem label="จำนวนบรรจุ" value={`${material.packingQuantity} ชิ้น/หน่วย`} />
             )}
@@ -321,6 +382,83 @@ export function MaterialDetailCard({
             {material.scale && (
               <DetailItem label="Scale" value={material.scale} />
             )}
+          </CardContent>
+        </Card>
+
+        {/* Material Shape & Ratio Card */}
+        <Card className="border-border/60">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <div
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-lg",
+                  "bg-primary/10 text-primary",
+                )}
+              >
+                <Box className="size-4" />
+              </div>
+              <div>
+                <h3 className="font-semibold">ลักษณะวัสดุ & จำนวนชิ้นต่อเส้น</h3>
+                <p className="text-muted-foreground text-xs">
+                  ใช้คำนวณจำนวนชิ้นที่ใช้ได้เมื่อรับเข้า
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Shape badge ใหญ่ */}
+            <div className="flex flex-col items-start gap-2 rounded-lg border bg-muted/20 p-4">
+              <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                Material Shape
+              </span>
+              {shapeLabel ? (
+                <div
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-base font-semibold",
+                    getMaterialShapeColor(material.materialType),
+                  )}
+                >
+                  <Box className="size-5" />
+                  {shapeLabel}
+                </div>
+              ) : (
+                <span className="text-muted-foreground text-sm">ไม่ระบุ</span>
+              )}
+            </div>
+
+            {/* Ratio */}
+            <div className="flex flex-col items-start gap-2 rounded-lg border bg-muted/20 p-4">
+              <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">
+                Ratio (จำนวนชิ้นต่อเส้น)
+              </span>
+              {material.ratio != null ? (
+                <>
+                  <div className="inline-flex items-baseline gap-1.5">
+                    <span className="text-3xl font-bold text-foreground">
+                      {material.ratio}
+                    </span>
+                    <span className="text-muted-foreground text-sm">ชิ้น/เส้น</span>
+                  </div>
+                  <p className="text-muted-foreground text-xs">
+                    1 เส้น/แผ่น/ม้วน แบ่งได้ {material.ratio} ชิ้น
+                    {material.materialType === "PIPE" && (
+                      <>
+                        {" "}
+                        •{" "}
+                        <span className="text-foreground font-medium">
+                          เช่น รับเข้า 3 เส้น × {material.ratio} = ใช้ได้{" "}
+                          {3 * material.ratio} ชิ้น
+                        </span>
+                      </>
+                    )}
+                  </p>
+                </>
+              ) : (
+                <span className="text-muted-foreground text-sm">
+                  ไม่ระบุ — ประเภทนี้ไม่ใช้ ratio
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
 

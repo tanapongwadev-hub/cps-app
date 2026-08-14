@@ -8,6 +8,13 @@ import { toLimit } from "@/types/paginated";
 
 export type MaterialsReceivingStatus = "draft" | "confirmed" | "cancelled";
 
+/** Material physical shape — matches `MaterialShape` in materials module. */
+export type MaterialsReceivingMaterialShape =
+  | "PCS"
+  | "PIPE"
+  | "SHEET"
+  | "COIL";
+
 export interface MaterialsReceivingSupplier {
   id: string;
   code: string;
@@ -47,6 +54,16 @@ export interface MaterialsReceivingQrPayload {
   supplierLotNo: string | null;
 }
 
+/** QR payload for pieces QR Code — used for material_type = PIPE/SHEET/COIL only (matches backend PiecesQrPayload v2.0) */
+export interface MaterialsReceivingPiecesQrPayload {
+  version: string;
+  internalLotNo: string;
+  runNo: string | null;
+  materialCode: string;
+  piecesQuantity: string;
+  materialType: string;
+}
+
 export interface MaterialsReceiving {
   id: string;
   internalLotNo: string;
@@ -57,14 +74,35 @@ export interface MaterialsReceiving {
   receiveQuantity: string;
   packingQuantity: number;
   packageCount: number;
+  /**
+   * จำนวนชิ้นที่ใช้ได้จริง (สำหรับ PIPE/SHEET/COIL = receiveQuantity × ratio)
+   * สำหรับ PCS จะเป็น null
+   */
+  piecesQuantity: string | null;
   supplierLotNo: string | null;
   supplierProductionDate: string | null;
   receiveDate: string;
   status: MaterialsReceivingStatus;
+  /** เลขที่ PO — header ของเอกสาร (optional) */
+  poNo: string | null;
+  /** Snapshot of material.materialType at receive time */
+  materialType: MaterialsReceivingMaterialShape | null;
+  /** Snapshot of material.ratio at receive time (only for PIPE/SHEET/COIL) */
+  ratio: number | null;
+  /** Path ของไฟล์แนบ (รูป / เอกสาร PO) */
+  attachmentUrl: string | null;
+  /** ชื่อไฟล์เดิมของไฟล์แนบ */
+  attachmentName: string | null;
   remark: string | null;
-  idempotencyKey: string | null;
   qrCode: string | null;
   qrPayload: MaterialsReceivingQrPayload | null;
+  /**
+   * QR Code ชุดที่ 2 สำหรับ piecesQuantity (PIPE/SHEET/COIL เท่านั้น)
+   * อ้างอิง internalLotNo + runNo เดียวกันกับ QR หลัก
+   */
+  piecesQrCode: string | null;
+  /** Payload ของ pieces QR Code (version 2.0) */
+  piecesQrPayload: MaterialsReceivingPiecesQrPayload | null;
   confirmedBy: string | null;
   confirmedAt: string | null;
   cancelledBy: string | null;
@@ -108,6 +146,8 @@ export interface MaterialsReceivingLookups {
     code: string;
     name: string;
     packingQuantity: number | null;
+    materialType: MaterialsReceivingMaterialShape | null;
+    ratio: number | null;
     unitId: string;
   }[];
   units: MaterialsReceivingUnit[];
@@ -123,7 +163,14 @@ export interface CreateMaterialsReceivingPayload {
   receiveQuantity: string;
   supplierProductionDate: string;
   receiveDate: string;
-  idempotencyKey?: string | null;
+  /** เลขที่ PO — header ของเอกสาร (optional) */
+  poNo?: string | null;
+  /** Override ratio ต่อครั้งที่รับเข้า (snapshot) */
+  ratioOverride?: number;
+  /** URL ของไฟล์แนบ (upload แล้ว) */
+  attachmentUrl?: string | null;
+  /** ชื่อไฟล์เดิมของไฟล์แนบ */
+  attachmentName?: string | null;
   packingQuantityOverride?: number;
   remark?: string | null;
 }
@@ -133,6 +180,10 @@ export interface UpdateMaterialsReceivingPayload {
   receiveQuantity?: string;
   supplierProductionDate?: string;
   receiveDate?: string;
+  poNo?: string | null;
+  ratioOverride?: number;
+  attachmentUrl?: string | null;
+  attachmentName?: string | null;
   packingQuantityOverride?: number;
   remark?: string | null;
   updatedAt: string;

@@ -38,7 +38,13 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/utils/cn";
-import { resolveMaterialImage, getMaterialTypeLabel, getMaterialTypeColor } from "../utils";
+import {
+  resolveMaterialImage,
+  getMaterialTypeLabel,
+  getMaterialTypeColor,
+  getMaterialShapeLabel,
+  getMaterialShapeColor,
+} from "../utils";
 import type { Material } from "../api/materials-api";
 
 export interface MaterialCardGridProps {
@@ -149,6 +155,7 @@ export function MaterialCardGrid({
             const imageUrl = resolveMaterialImage(material.imagePath);
             const href = detailHref?.(material);
             const typeLabel = getMaterialTypeLabel(material.type);
+            const shapeLabel = getMaterialShapeLabel(material.materialType);
             return (
               <Card
                 key={material.id}
@@ -203,6 +210,30 @@ export function MaterialCardGrid({
                         )}
                       >
                         {typeLabel}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Material Shape Badge - Top Left (below type) */}
+                  {shapeLabel && (
+                    <div className="absolute left-2 top-10">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[10px] font-medium shadow-sm",
+                          getMaterialShapeColor(material.materialType),
+                        )}
+                        title={
+                          material.ratio
+                            ? `1 เส้น/แผ่น/ม้วน แบ่งได้ ${material.ratio} ชิ้น`
+                            : undefined
+                        }
+                      >
+                        {shapeLabel}
+                        {material.ratio != null && (
+                          <span className="ml-0.5 rounded bg-white/40 px-1 text-[10px] font-semibold">
+                            ×{material.ratio}
+                          </span>
+                        )}
                       </span>
                     </div>
                   )}
