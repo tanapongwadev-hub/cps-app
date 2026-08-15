@@ -56,6 +56,26 @@ function makeRow(overrides: Partial<MaterialsReceiving> = {}): MaterialsReceivin
   return { ...baseRow, id: `mr-${Math.random()}`, ...overrides };
 }
 
+function renderList({
+  receivings = [baseRow],
+  totalItems = receivings.length,
+}: {
+  receivings?: MaterialsReceiving[];
+  totalItems?: number;
+} = {}) {
+  return render(
+    <MaterialsReceivingTable
+      receivings={receivings}
+      page={1}
+      pageSize={20}
+      totalItems={totalItems}
+      onSortChange={vi.fn()}
+      onPageChange={vi.fn()}
+      onPageSizeChange={vi.fn()}
+    />,
+  );
+}
+
 describe("MaterialsReceivingTable", () => {
   it("renders a list of receivings with key columns", () => {
     const receivings = [
@@ -345,5 +365,21 @@ describe("MaterialsReceivingTable", () => {
       />,
     );
     expect(screen.getByText(/รายการต่อหน้า/)).toBeInTheDocument();
+  });
+
+  it("uses stacked touch-friendly pagination on mobile", () => {
+    renderList({ receivings: [baseRow], totalItems: 40 });
+    expect(screen.getByTestId("materials-receiving-pagination")).toHaveClass(
+      "flex-col",
+      "sm:flex-row",
+    );
+    expect(screen.getByRole("button", { name: "หน้าก่อนหน้า" })).toHaveClass(
+      "h-10",
+      "w-10",
+    );
+    expect(screen.getByRole("button", { name: "หน้าถัดไป" })).toHaveClass(
+      "h-10",
+      "w-10",
+    );
   });
 });

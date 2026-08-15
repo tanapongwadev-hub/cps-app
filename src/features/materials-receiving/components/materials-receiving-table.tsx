@@ -518,7 +518,10 @@ export function MaterialsReceivingTable({
       )}
 
       {!isLoading && receivings.length > 0 && (
-        <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          data-testid="materials-receiving-pagination"
+          className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             <span>แสดง</span>
             <select
@@ -547,7 +550,7 @@ export function MaterialsReceivingTable({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-10 w-10 sm:h-8 sm:w-8"
                 onClick={() => onPageChange(page - 1)}
                 disabled={page <= 1}
                 aria-label="หน้าก่อนหน้า"
@@ -557,7 +560,7 @@ export function MaterialsReceivingTable({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-10 w-10 sm:h-8 sm:w-8"
                 onClick={() => onPageChange(page + 1)}
                 disabled={page >= Math.ceil(totalItems / pageSize)}
                 aria-label="หน้าถัดไป"

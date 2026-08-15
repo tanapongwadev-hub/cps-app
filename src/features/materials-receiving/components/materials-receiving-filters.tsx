@@ -178,11 +178,11 @@ export function MaterialsReceivingFilters({
   const [showAdvanced, setShowAdvanced] = React.useState(hasAdvancedFilters);
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card p-4">
+    <div className="space-y-3 rounded-lg border bg-card p-3 sm:p-4">
       {/* Always-visible row: search + status + filter toggle */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative min-w-0 basis-full flex-1 sm:min-w-[200px] sm:basis-auto">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="ค้นหา supplier lot, material code..."
@@ -225,7 +225,7 @@ export function MaterialsReceivingFilters({
           size="sm"
           type="button"
           onClick={() => setShowAdvanced((s) => !s)}
-          className="md:hidden"
+          className="w-full justify-center sm:w-auto md:hidden"
           aria-expanded={showAdvanced}
         >
           <SlidersHorizontal className="h-4 w-4 mr-1" />
@@ -237,7 +237,12 @@ export function MaterialsReceivingFilters({
 
         {/* Reset */}
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={handleReset}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleReset}
+            className="w-full justify-center sm:w-auto"
+          >
             <X className="h-4 w-4 mr-1" />
             ล้างตัวกรอง
           </Button>
@@ -247,7 +252,7 @@ export function MaterialsReceivingFilters({
       {/* Advanced filters row — hidden on mobile unless toggled; always visible on desktop */}
       <div
         className={cn(
-          "flex flex-wrap items-center gap-3",
+          "flex min-w-0 flex-wrap items-center gap-3",
           showAdvanced ? "flex" : "hidden md:flex",
         )}
       >

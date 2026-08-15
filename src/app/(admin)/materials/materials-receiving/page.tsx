@@ -217,10 +217,11 @@ export default function MaterialsReceivingPage() {
           title="รับเข้าวัตถุดิบ (Materials Receiving)"
           description="สร้างใบรับเข้าวัตถุดิบ พร้อมคำนวณบรรจุภัณฑ์ + QR Code + อัปเดตสต็อกอัตโนมัติ"
           primaryAction={
-            <div className="flex items-center gap-2">
+            <div className="grid w-full grid-cols-1 gap-2 sm:flex sm:w-auto sm:items-center">
               <Button
                 variant="outline"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={() => listQuery.refetch()}
                 disabled={listQuery.isFetching}
               >
@@ -230,7 +231,7 @@ export default function MaterialsReceivingPage() {
                 รีเฟรช
               </Button>
               <PermissionGuard permission={PERMISSIONS.MATERIALS_RECEIVING_CREATE}>
-                <Button size="sm" onClick={handleCreate}>
+                <Button size="sm" className="w-full sm:w-auto" onClick={handleCreate}>
                   <Plus className="h-4 w-4 mr-2" />
                   สร้างรายการรับเข้า
                 </Button>
