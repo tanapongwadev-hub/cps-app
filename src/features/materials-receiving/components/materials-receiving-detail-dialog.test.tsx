@@ -65,6 +65,31 @@ const detail: MaterialsReceivingDetail = {
 };
 
 describe("MaterialsReceivingDetailDialog", () => {
+  it("constrains QR wrappers within narrow card columns", () => {
+    render(
+      <MaterialsReceivingDetailDialog
+        open
+        onOpenChange={vi.fn()}
+        receiving={{
+          ...detail,
+          qrCode: "data:image/png;base64,main",
+          piecesQrCode: "data:image/png;base64,pieces",
+        }}
+      />,
+    );
+
+    expect(
+      screen.getByRole("img", {
+        name: "Pieces QR for CCI-20260809-001",
+      }).parentElement,
+    ).toHaveClass("max-w-full");
+    expect(
+      screen.getByRole("img", {
+        name: "QR code for CCI-20260809-001",
+      }).parentElement,
+    ).toHaveClass("max-w-full");
+  });
+
   it("uses a viewport-safe shell and sticky mobile actions", async () => {
     const user = userEvent.setup();
     const onEdit = vi.fn();

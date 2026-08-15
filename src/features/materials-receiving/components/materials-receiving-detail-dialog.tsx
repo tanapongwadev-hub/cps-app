@@ -206,7 +206,7 @@ export function MaterialsReceivingDetailDialog({
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-col items-center gap-3">
-                    <div className="rounded-md border bg-white p-2">
+                    <div className="max-w-full rounded-md border bg-white p-2">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={receiving.piecesQrCode}
@@ -270,7 +270,7 @@ export function MaterialsReceivingDetailDialog({
                 <CardContent className="flex flex-col items-center gap-3">
                   {receiving.qrCode ? (
                     <>
-                      <div className="rounded-md border bg-white p-2">
+                      <div className="max-w-full rounded-md border bg-white p-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={receiving.qrCode}
