@@ -239,7 +239,7 @@ function ReceivingActions({
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-10 w-10"
           aria-label={`เปิดเมนูการจัดการ ${receiving.internalLotNo}`}
         >
           <MoreVertical className="h-4 w-4" />
@@ -247,19 +247,19 @@ function ReceivingActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {onView && (
-          <DropdownMenuItem onClick={() => onView(receiving)}>
+          <DropdownMenuItem className="min-h-10" onClick={() => onView(receiving)}>
             <Eye className="h-4 w-4 mr-2" /> ดูรายละเอียด
           </DropdownMenuItem>
         )}
         {canEdit && (
-          <DropdownMenuItem onClick={() => onEdit(receiving)}>
+          <DropdownMenuItem className="min-h-10" onClick={() => onEdit(receiving)}>
             <Pencil className="h-4 w-4 mr-2" /> แก้ไข
           </DropdownMenuItem>
         )}
         {canConfirm && (
           <DropdownMenuItem
             onClick={() => onConfirm(receiving)}
-            className="text-success focus:text-success"
+            className="min-h-10 text-success focus:text-success"
           >
             <Check className="h-4 w-4 mr-2" /> ยืนยันรับเข้า
           </DropdownMenuItem>
@@ -267,7 +267,7 @@ function ReceivingActions({
         {canCancel && (
           <DropdownMenuItem
             onClick={() => onCancel(receiving)}
-            className="text-warning focus:text-warning"
+            className="min-h-10 text-warning focus:text-warning"
           >
             <XCircle className="h-4 w-4 mr-2" /> ยกเลิก
           </DropdownMenuItem>
@@ -278,7 +278,7 @@ function ReceivingActions({
         {canDelete && (
           <DropdownMenuItem
             onClick={() => onDelete(receiving)}
-            className="text-danger focus:text-danger"
+            className="min-h-10 text-danger focus:text-danger"
           >
             <Trash2 className="h-4 w-4 mr-2" /> ลบ
           </DropdownMenuItem>

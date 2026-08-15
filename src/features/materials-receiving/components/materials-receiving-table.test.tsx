@@ -149,9 +149,12 @@ describe("MaterialsReceivingTable", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", {
+    const menuTrigger = screen.getByRole("button", {
       name: "เปิดเมนูการจัดการ CCI-20260809-001",
-    }));
+    });
+    expect(menuTrigger).toHaveClass("h-10", "w-10");
+    await user.click(menuTrigger);
+    expect(screen.getByRole("menuitem", { name: /ดูรายละเอียด/ })).toHaveClass("min-h-10");
     await user.click(screen.getByRole("menuitem", { name: /ดูรายละเอียด/ }));
     expect(onView).toHaveBeenCalledWith(row);
   });
@@ -373,13 +376,7 @@ describe("MaterialsReceivingTable", () => {
       "flex-col",
       "sm:flex-row",
     );
-    expect(screen.getByRole("button", { name: "หน้าก่อนหน้า" })).toHaveClass(
-      "h-10",
-      "w-10",
-    );
-    expect(screen.getByRole("button", { name: "หน้าถัดไป" })).toHaveClass(
-      "h-10",
-      "w-10",
-    );
+    expect(screen.getByRole("button", { name: "หน้าก่อนหน้า" })).toHaveClass("h-10", "w-10");
+    expect(screen.getByRole("button", { name: "หน้าถัดไป" })).toHaveClass("h-10", "w-10");
   });
 });

@@ -246,41 +246,51 @@ export function MaterialsReceivingFormDialog({
     resolver: zodResolver(formSchema),
     defaultValues: getDefaultValues(receiving),
   });
+  const editSupplier = isEditing
+    ? (lookups.suppliers.find((supplier) => supplier.id === receiving?.supplierId) ??
+      receiving?.supplier ??
+      null)
+    : null;
 
   React.useEffect(() => {
-    if (open) {
-      // For edit mode: pre-populate materialSuppliers BEFORE form.reset() so
-      // React never renders with materialSuppliers=[] and supplierId="sup-001".
-      // This prevents the controlled→uncontrolled warning.
-      if (isEditing && receiving?.materialId) {
-        const currentSupplier = lookups.suppliers.find(
-          (s) => s.id === receiving.supplierId,
-        );
-        setMaterialSuppliers(currentSupplier ? [currentSupplier] : []);
-        setSuppliersLoading(true);
-      } else {
-        setMaterialSuppliers([]);
-        setSuppliersLoading(false);
-      }
-      // form.reset must come AFTER setMaterialSuppliers so the first render
-      // always has a valid supplier list for the <select> options.
-      form.reset(getDefaultValues(receiving));
-      setServerError(null);
-      autoSelectedSupplier.current = false;
-      setAttachmentFile(null);
-      setAttachmentRemoved(false);
+    if (!open) return;
 
-      // Fetch filtered supplier list after state is pre-populated.
-      if (isEditing && receiving?.materialId) {
-        materialsReceivingApi
-          .getSuppliersByMaterial(receiving.materialId)
-          .then((list) => {
-            setMaterialSuppliers(list ?? []);
-          })
-          .catch(() => {});
-      }
+    let cancelled = false;
+    // For edit mode: pre-populate materialSuppliers BEFORE form.reset() so
+    // React never renders with materialSuppliers=[] and supplierId="sup-001".
+    // This prevents the controlled→uncontrolled warning.
+    if (isEditing && receiving?.materialId) {
+      setMaterialSuppliers(editSupplier ? [editSupplier] : []);
+      setSuppliersLoading(true);
+    } else {
+      setMaterialSuppliers([]);
+      setSuppliersLoading(false);
     }
-  }, [open, receiving, form, isEditing]);
+    // form.reset must come AFTER setMaterialSuppliers so the first render
+    // always has a valid supplier list for the <select> options.
+    form.reset(getDefaultValues(receiving));
+    setServerError(null);
+    autoSelectedSupplier.current = false;
+    setAttachmentFile(null);
+    setAttachmentRemoved(false);
+
+    // Fetch filtered supplier list after state is pre-populated.
+    if (isEditing && receiving?.materialId) {
+      materialsReceivingApi
+        .getSuppliersByMaterial(receiving.materialId)
+        .then((list) => {
+          if (!cancelled) setMaterialSuppliers(list ?? []);
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setSuppliersLoading(false);
+        });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, receiving, form, isEditing, editSupplier]);
 
   const watchMaterialId = form.watch("materialId");
   const watchQuantity = form.watch("receiveQuantity");
@@ -292,8 +302,10 @@ export function MaterialsReceivingFormDialog({
 
   // Fetch suppliers when material changes
   React.useEffect(() => {
-    if (isEditing || !watchMaterialId) {
+    if (isEditing) return;
+    if (!watchMaterialId) {
       setMaterialSuppliers([]);
+      setSuppliersLoading(false);
       return;
     }
     let cancelled = false;
@@ -328,13 +340,13 @@ export function MaterialsReceivingFormDialog({
   // Runs AFTER materialSuppliers is set to [] (not before), so the <select>
   // value is already "" when we reset the form field — no controlled→uncontrolled.
   React.useEffect(() => {
-    if (!watchMaterialId) return;          // no material selected yet
-    if (materialSuppliers.length > 0) return; // has suppliers, leave supplierId as-is
+    if (isEditing || !watchMaterialId) return;
+    if (materialSuppliers.length > 0) return;
     const current = form.getValues("supplierId");
     if (current && current !== "") {
       form.setValue("supplierId", "", { shouldValidate: false });
     }
-  }, [watchMaterialId, materialSuppliers, form]);
+  }, [watchMaterialId, materialSuppliers, isEditing, form]);
 
   const selectedMaterial = React.useMemo(
     () => lookups.materials.find((m) => m.id === watchMaterialId) ?? null,

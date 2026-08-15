@@ -62,18 +62,25 @@ export function ConfirmDialog({
       <DialogContent
         size="sm"
         hideClose={loading}
-        className="w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] p-4 sm:p-6"
+        className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] p-4 sm:p-6"
       >
         <DialogHeader>
           <div className="flex items-start gap-3">
-            <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", colors[variant])}>
+            <div
+              className={cn(
+                "flex h-10 w-10 shrink-0 items-center justify-center rounded-full",
+                colors[variant],
+              )}
+            >
               {icons[variant]}
             </div>
             <div className="min-w-0 space-y-1.5 break-words">
               <DialogTitle>{title}</DialogTitle>
               {description && (
                 <DialogDescription asChild>
-                  <div className="text-sm text-muted-foreground">{description}</div>
+                  <div className="text-muted-foreground min-w-0 text-sm break-words">
+                    {description}
+                  </div>
                 </DialogDescription>
               )}
             </div>
@@ -160,8 +167,8 @@ export function ConfirmDeleteDialog({
         <div className="space-y-2">
           <p>การลบข้อมูลนี้ไม่สามารถกู้คืนได้ กรุณาตรวจสอบให้แน่ใจก่อนดำเนินการ</p>
           {warning && (
-            <div className="flex items-start gap-2 rounded-md bg-warning/10 p-2 text-warning text-xs">
-              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+            <div className="bg-warning/10 text-warning flex items-start gap-2 rounded-md p-2 text-xs">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>{warning}</span>
             </div>
           )}

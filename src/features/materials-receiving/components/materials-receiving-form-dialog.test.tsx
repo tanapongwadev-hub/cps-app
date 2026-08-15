@@ -10,7 +10,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MaterialsReceivingFormDialog } from "./materials-receiving-form-dialog";
-import type { MaterialsReceiving, MaterialsReceivingLookups } from "../api/materials-receiving-api";
+import type {
+  MaterialsReceiving,
+  MaterialsReceivingLookups,
+  MaterialsReceivingSupplier,
+} from "../api/materials-receiving-api";
 
 const { createMutateAsync, updateMutateAsync, getSuppliersByMaterial } = vi.hoisted(() => ({
   createMutateAsync: vi.fn(),
@@ -52,11 +56,30 @@ vi.mock("@/hooks/use-permission", () => ({
 
 const today = new Date().toISOString().slice(0, 10);
 
+const supplierA: MaterialsReceivingSupplier = {
+  id: "sup-001",
+  code: "SUP-001",
+  nameTh: "บริษัท A",
+  nameEn: "Co A",
+};
+
+const supplierB: MaterialsReceivingSupplier = {
+  id: "sup-002",
+  code: "SUP-002",
+  nameTh: "บริษัท B",
+  nameEn: "Co B",
+};
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve;
+  });
+  return { promise, resolve };
+}
+
 const lookups: MaterialsReceivingLookups = {
-  suppliers: [
-    { id: "sup-001", code: "SUP-001", nameTh: "บริษัท A", nameEn: "Co A" },
-    { id: "sup-002", code: "SUP-002", nameTh: "บริษัท B", nameEn: "Co B" },
-  ],
+  suppliers: [supplierA, supplierB],
   materials: [
     {
       id: "mat-001",
@@ -171,7 +194,6 @@ describe("MaterialsReceivingFormDialog", () => {
   });
 
   it("previews Supplier Lot (SUP-YYYYMMDD) based on supplier production date", async () => {
-    const user = userEvent.setup();
     render(
       <MaterialsReceivingFormDialog
         open
@@ -306,6 +328,79 @@ describe("MaterialsReceivingFormDialog", () => {
     const supplierSelect = screen.getByLabelText(/ผู้จัดจำหน่าย/);
     expect(materialSelect).toBeDisabled();
     expect(supplierSelect).toBeDisabled();
+  });
+
+  it("shows the immutable edit supplier after loading finishes", async () => {
+    const supplierRequest = deferred<MaterialsReceivingSupplier[]>();
+    getSuppliersByMaterial.mockReturnValueOnce(supplierRequest.promise);
+
+    render(
+      <MaterialsReceivingFormDialog
+        open
+        onOpenChange={vi.fn()}
+        receiving={baseReceiving}
+        lookups={lookups}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const supplierSelect = await screen.findByLabelText(/ผู้จัดจำหน่าย/);
+    expect(screen.getByRole("option", { name: "กำลังโหลด..." })).toBeInTheDocument();
+
+    supplierRequest.resolve([supplierA]);
+
+    await waitFor(() => {
+      expect(supplierSelect).toHaveValue("sup-001");
+      expect(screen.getByRole("option", { name: "SUP-001 — บริษัท A" })).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("option", { name: "กำลังโหลด..." })).not.toBeInTheDocument();
+  });
+
+  it("ignores a stale edit supplier request after the receiving changes", async () => {
+    const firstRequest = deferred<MaterialsReceivingSupplier[]>();
+    const secondRequest = deferred<MaterialsReceivingSupplier[]>();
+    getSuppliersByMaterial.mockImplementation((materialId: string) =>
+      materialId === "mat-001" ? firstRequest.promise : secondRequest.promise,
+    );
+    const secondReceiving: MaterialsReceiving = {
+      ...baseReceiving,
+      id: "mr-002",
+      internalLotNo: "CCI-20260809-002",
+      materialId: "mat-002",
+      supplierId: "sup-002",
+    };
+
+    const { rerender } = render(
+      <MaterialsReceivingFormDialog
+        open
+        onOpenChange={vi.fn()}
+        receiving={baseReceiving}
+        lookups={lookups}
+        onSave={vi.fn()}
+      />,
+    );
+    rerender(
+      <MaterialsReceivingFormDialog
+        open
+        onOpenChange={vi.fn()}
+        receiving={secondReceiving}
+        lookups={lookups}
+        onSave={vi.fn()}
+      />,
+    );
+
+    secondRequest.resolve([supplierB]);
+    const supplierSelect = await screen.findByLabelText(/ผู้จัดจำหน่าย/);
+    await waitFor(() => {
+      expect(supplierSelect).toHaveValue("sup-002");
+      expect(screen.getByRole("option", { name: "SUP-002 — บริษัท B" })).toBeInTheDocument();
+    });
+
+    firstRequest.resolve([supplierA]);
+    await waitFor(() => {
+      expect(supplierSelect).toHaveValue("sup-002");
+      expect(screen.queryByRole("option", { name: "SUP-001 — บริษัท A" })).not.toBeInTheDocument();
+    });
   });
 
   it("displays the server error message when onSave throws", async () => {
