@@ -128,6 +128,166 @@ function formatDate(value: string | null): string {
   }
 }
 
+function CardField({
+  label,
+  value,
+  className,
+  mono,
+}: {
+  label: string;
+  value: string;
+  className?: string;
+  mono?: boolean;
+}) {
+  return (
+    <div className={className}>
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className={mono ? "mt-1 break-all font-mono text-sm" : "mt-1 break-words"}>
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function ReceivingActions({
+  presentation,
+  receiving,
+  onView,
+  onEdit,
+  onConfirm,
+  onCancel,
+  onDelete,
+}: {
+  presentation: "inline" | "menu";
+  receiving: MaterialsReceiving;
+  onView?: (receiving: MaterialsReceiving) => void;
+  onEdit?: (receiving: MaterialsReceiving) => void;
+  onConfirm?: (receiving: MaterialsReceiving) => void;
+  onCancel?: (receiving: MaterialsReceiving) => void;
+  onDelete?: (receiving: MaterialsReceiving) => void;
+}) {
+  const canEdit = onEdit && receiving.status === "draft";
+  const canConfirm = onConfirm && receiving.status === "draft";
+  const canCancel = onCancel && receiving.status !== "cancelled";
+  const canDelete = onDelete && receiving.status === "draft";
+
+  if (presentation === "inline") {
+    return (
+      <div className="flex items-center justify-end gap-1">
+        {onView && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onView(receiving)}
+            title="ดูรายละเอียด"
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        )}
+        {canEdit && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => onEdit(receiving)}
+            title="แก้ไข"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+        {canConfirm && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-success hover:text-success"
+            onClick={() => onConfirm(receiving)}
+            title="ยืนยันรับเข้า"
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        )}
+        {canCancel && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-warning hover:text-warning"
+            onClick={() => onCancel(receiving)}
+            title="ยกเลิก"
+          >
+            <XCircle className="h-4 w-4" />
+          </Button>
+        )}
+        {canDelete && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-danger hover:text-danger"
+            onClick={() => onDelete(receiving)}
+            title="ลบ"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          aria-label={`เปิดเมนูการจัดการ ${receiving.internalLotNo}`}
+        >
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {onView && (
+          <DropdownMenuItem onClick={() => onView(receiving)}>
+            <Eye className="h-4 w-4 mr-2" /> ดูรายละเอียด
+          </DropdownMenuItem>
+        )}
+        {canEdit && (
+          <DropdownMenuItem onClick={() => onEdit(receiving)}>
+            <Pencil className="h-4 w-4 mr-2" /> แก้ไข
+          </DropdownMenuItem>
+        )}
+        {canConfirm && (
+          <DropdownMenuItem
+            onClick={() => onConfirm(receiving)}
+            className="text-success focus:text-success"
+          >
+            <Check className="h-4 w-4 mr-2" /> ยืนยันรับเข้า
+          </DropdownMenuItem>
+        )}
+        {canCancel && (
+          <DropdownMenuItem
+            onClick={() => onCancel(receiving)}
+            className="text-warning focus:text-warning"
+          >
+            <XCircle className="h-4 w-4 mr-2" /> ยกเลิก
+          </DropdownMenuItem>
+        )}
+        {canDelete && (onView || canEdit || canConfirm || canCancel) && (
+          <DropdownMenuSeparator />
+        )}
+        {canDelete && (
+          <DropdownMenuItem
+            onClick={() => onDelete(receiving)}
+            className="text-danger focus:text-danger"
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> ลบ
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function TableSkeleton() {
   return (
     <>
@@ -142,6 +302,21 @@ function TableSkeleton() {
           <TableCell><Skeleton className="h-4 w-16" /></TableCell>
           <TableCell><Skeleton className="h-4 w-24" /></TableCell>
         </TableRow>
+      ))}
+    </>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="rounded-lg border bg-background p-4 shadow-sm">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="mt-2 h-3 w-24" />
+          <Skeleton className="mt-4 h-4 w-full" />
+          <Skeleton className="mt-3 h-4 w-2/3" />
+        </div>
       ))}
     </>
   );
@@ -184,8 +359,83 @@ export function MaterialsReceivingTable({
   }
 
   return (
-    <div className="rounded-lg border bg-card overflow-x-auto">
-      <Table className="min-w-[900px]">
+    <div className="rounded-lg border bg-card">
+      {!isLoading && receivings.length === 0 ? (
+        <EmptyState
+          icon={<QrCode className="h-12 w-12" />}
+          title="ยังไม่มีรายการรับเข้า"
+          description="เริ่มรับเข้าวัตถุดิบใบแรกของคุณ"
+          action={
+            onCreate ? (
+              <Button size="sm" onClick={onCreate}>
+                สร้างรายการรับเข้า
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          <div data-testid="materials-receiving-cards" className="space-y-3 p-3 md:hidden">
+            {isLoading ? (
+              <CardSkeleton />
+            ) : (
+              receivings.map((receiving) => (
+                <article
+                  key={receiving.id}
+                  aria-label={`รายการรับเข้า ${receiving.internalLotNo}`}
+                  className="min-w-0 rounded-lg border bg-background p-4 shadow-sm"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all font-mono text-sm font-semibold">
+                        {receiving.internalLotNo}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatDate(receiving.receiveDate)}
+                      </p>
+                    </div>
+                    <StatusBadge status={receiving.status} />
+                  </div>
+                  <dl className="mt-4 grid min-w-0 grid-cols-2 gap-3 text-sm">
+                    <CardField
+                      className="col-span-2"
+                      label="วัสดุ"
+                      value={receiving.material
+                        ? `${receiving.material.code} — ${receiving.material.name}`
+                        : "—"}
+                    />
+                    <CardField
+                      className="col-span-2"
+                      label="ผู้จัดจำหน่าย"
+                      value={receiving.supplier?.nameTh ?? "—"}
+                    />
+                    <CardField label="จำนวนรับ" value={formatNumber(receiving.receiveQuantity)} />
+                    <CardField label="บรรจุภัณฑ์" value={`${receiving.packageCount} ใบ`} />
+                    <CardField
+                      className="col-span-2"
+                      label="Supplier Lot"
+                      mono
+                      value={receiving.supplierLotNo ?? "—"}
+                    />
+                  </dl>
+                  <div className="mt-3 flex justify-end border-t pt-2">
+                    <ReceivingActions
+                      presentation="menu"
+                      receiving={receiving}
+                      onView={onView}
+                      onEdit={onEdit}
+                      onConfirm={onConfirm}
+                      onCancel={onCancel}
+                      onDelete={onDelete}
+                    />
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div data-testid="materials-receiving-table" className="hidden overflow-x-auto md:block">
+            <Table className="min-w-[900px]">
         <TableHeader>
           <TableRow>
             <SortableHeader
@@ -217,27 +467,10 @@ export function MaterialsReceivingTable({
             <TableHead className="text-right">การจัดการ</TableHead>
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {isLoading ? (
-            <TableSkeleton />
-          ) : receivings.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={9}>
-                <EmptyState
-                  icon={<QrCode className="h-12 w-12" />}
-                  title="ยังไม่มีรายการรับเข้า"
-                  description="เริ่มรับเข้าวัตถุดิบใบแรกของคุณ"
-                  action={
-                    onCreate ? (
-                      <Button size="sm" onClick={onCreate}>
-                        สร้างรายการรับเข้า
-                      </Button>
-                    ) : undefined
-                  }
-                />
-              </TableCell>
-            </TableRow>
-          ) : (
+              <TableBody>
+                {isLoading ? (
+                  <TableSkeleton />
+                ) : (
             receivings.map((receiving) => (
               <TableRow key={receiving.id}>
                 <TableCell className="font-mono text-xs font-semibold">
@@ -265,126 +498,24 @@ export function MaterialsReceivingTable({
                   <StatusBadge status={receiving.status} />
                 </TableCell>
                 <TableCell className="text-right">
-                  {/* Desktop (md+): inline icon buttons */}
-                  <div className="hidden md:flex items-center justify-end gap-1">
-                    {onView && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onView(receiving)}
-                        title="ดูรายละเอียด"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onEdit && receiving.status === "draft" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => onEdit(receiving)}
-                        title="แก้ไข"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onConfirm && receiving.status === "draft" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-success hover:text-success"
-                        onClick={() => onConfirm(receiving)}
-                        title="ยืนยันรับเข้า"
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onCancel && receiving.status !== "cancelled" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-warning hover:text-warning"
-                        onClick={() => onCancel(receiving)}
-                        title="ยกเลิก"
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onDelete && receiving.status === "draft" && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-danger hover:text-danger"
-                        onClick={() => onDelete(receiving)}
-                        title="ลบ"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Mobile (<md): compact dropdown */}
-                  <div className="flex justify-end md:hidden">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          aria-label="เปิดเมนูการจัดการ"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {onView && (
-                          <DropdownMenuItem onClick={() => onView(receiving)}>
-                            <Eye className="h-4 w-4 mr-2" /> ดูรายละเอียด
-                          </DropdownMenuItem>
-                        )}
-                        {onEdit && receiving.status === "draft" && (
-                          <DropdownMenuItem onClick={() => onEdit(receiving)}>
-                            <Pencil className="h-4 w-4 mr-2" /> แก้ไข
-                          </DropdownMenuItem>
-                        )}
-                        {onConfirm && receiving.status === "draft" && (
-                          <DropdownMenuItem
-                            onClick={() => onConfirm(receiving)}
-                            className="text-success focus:text-success"
-                          >
-                            <Check className="h-4 w-4 mr-2" /> ยืนยันรับเข้า
-                          </DropdownMenuItem>
-                        )}
-                        {onCancel && receiving.status !== "cancelled" && (
-                          <DropdownMenuItem
-                            onClick={() => onCancel(receiving)}
-                            className="text-warning focus:text-warning"
-                          >
-                            <XCircle className="h-4 w-4 mr-2" /> ยกเลิก
-                          </DropdownMenuItem>
-                        )}
-                        {(onDelete && receiving.status === "draft") &&
-                          (onEdit || onConfirm || onCancel) && (
-                            <DropdownMenuSeparator />
-                          )}
-                        {onDelete && receiving.status === "draft" && (
-                          <DropdownMenuItem
-                            onClick={() => onDelete(receiving)}
-                            className="text-danger focus:text-danger"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" /> ลบ
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+                  <ReceivingActions
+                    presentation="inline"
+                    receiving={receiving}
+                    onView={onView}
+                    onEdit={onEdit}
+                    onConfirm={onConfirm}
+                    onCancel={onCancel}
+                    onDelete={onDelete}
+                  />
                 </TableCell>
               </TableRow>
             ))
-          )}
-        </TableBody>
-      </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
 
       {!isLoading && receivings.length > 0 && (
         <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">

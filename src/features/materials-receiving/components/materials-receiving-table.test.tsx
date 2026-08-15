@@ -77,13 +77,63 @@ describe("MaterialsReceivingTable", () => {
         onPageSizeChange={vi.fn()}
       />,
     );
-    expect(screen.getByText("CCI-20260809-001")).toBeInTheDocument();
-    expect(screen.getByText("CCI-20260809-002")).toBeInTheDocument();
-    expect(screen.getByText("MAT-A — น้ำมันปาล์ม")).toBeInTheDocument();
-    expect(screen.getByText("MAT-B — น้ำตาล")).toBeInTheDocument();
+    expect(screen.getAllByText("CCI-20260809-001").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("CCI-20260809-002").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("MAT-A — น้ำมันปาล์ม").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("MAT-B — น้ำตาล").length).toBeGreaterThan(0);
     expect(screen.getAllByText("บริษัท A").length).toBeGreaterThan(0);
-    expect(screen.getByText("บริษัท B")).toBeInTheDocument();
+    expect(screen.getAllByText("บริษัท B").length).toBeGreaterThan(0);
     expect(screen.getAllByText("5 ใบ").length).toBeGreaterThan(0);
+  });
+
+  it("renders receiving details as a mobile card and preserves the desktop table", () => {
+    render(
+      <MaterialsReceivingTable
+        receivings={[makeRow({ internalLotNo: "CCI-20260809-001" })]}
+        page={1}
+        pageSize={20}
+        totalItems={1}
+        onSortChange={vi.fn()}
+        onPageChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("materials-receiving-cards")).toHaveClass("md:hidden");
+    expect(screen.getByTestId("materials-receiving-table")).toHaveClass("hidden", "md:block");
+    const card = screen.getByRole("article", {
+      name: "รายการรับเข้า CCI-20260809-001",
+    });
+    expect(card).toHaveTextContent("MAT-A");
+    expect(card).toHaveTextContent("น้ำมันปาล์ม");
+    expect(card).toHaveTextContent("บริษัท A");
+    expect(card).toHaveTextContent("1,000");
+    expect(card).toHaveTextContent("5 ใบ");
+    expect(card).toHaveTextContent("SUP-20260801");
+  });
+
+  it("calls onView from the mobile receiving card menu", async () => {
+    const user = userEvent.setup();
+    const onView = vi.fn();
+    const row = makeRow({ internalLotNo: "CCI-20260809-001" });
+    render(
+      <MaterialsReceivingTable
+        receivings={[row]}
+        page={1}
+        pageSize={20}
+        totalItems={1}
+        onView={onView}
+        onSortChange={vi.fn()}
+        onPageChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", {
+      name: "เปิดเมนูการจัดการ CCI-20260809-001",
+    }));
+    await user.click(screen.getByRole("menuitem", { name: /ดูรายละเอียด/ }));
+    expect(onView).toHaveBeenCalledWith(row);
   });
 
   it("shows draft status badge for draft rows", () => {
@@ -98,7 +148,7 @@ describe("MaterialsReceivingTable", () => {
         onPageSizeChange={vi.fn()}
       />,
     );
-    expect(screen.getByText("ฉบับร่าง")).toBeInTheDocument();
+    expect(screen.getAllByText("ฉบับร่าง").length).toBeGreaterThan(0);
   });
 
   it("shows confirmed status badge for confirmed rows", () => {
@@ -113,7 +163,7 @@ describe("MaterialsReceivingTable", () => {
         onPageSizeChange={vi.fn()}
       />,
     );
-    expect(screen.getByText("ยืนยันแล้ว")).toBeInTheDocument();
+    expect(screen.getAllByText("ยืนยันแล้ว").length).toBeGreaterThan(0);
   });
 
   it("shows cancelled status badge for cancelled rows", () => {
@@ -128,7 +178,7 @@ describe("MaterialsReceivingTable", () => {
         onPageSizeChange={vi.fn()}
       />,
     );
-    expect(screen.getByText("ยกเลิก")).toBeInTheDocument();
+    expect(screen.getAllByText("ยกเลิก").length).toBeGreaterThan(0);
   });
 
   it("only shows edit/delete/confirm actions for draft status", () => {
