@@ -138,7 +138,7 @@ function InfoRow({
         {icon}
         <span>{label}</span>
       </div>
-      <div className={cn("text-sm font-medium text-right", mono && "font-mono")}>
+      <div className={cn("min-w-0 text-sm font-medium text-right", mono && "font-mono")}>
         {value || "—"}
       </div>
     </div>
@@ -168,20 +168,24 @@ export function MaterialsReceivingDetailDialog({
 }: MaterialsReceivingDetailDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent
+        data-testid="materials-receiving-detail-dialog"
+        className="grid w-[calc(100vw-1rem)] max-w-4xl max-h-[calc(100dvh-1rem)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 sm:p-6"
+      >
+        <DialogHeader className="px-4 pt-4 pr-12 sm:px-0 sm:pt-0">
           <DialogTitle className="flex items-center gap-2">
             {isLoading ? (
               <Skeleton className="h-6 w-48" />
             ) : (
               <>
-                <span className="font-mono">{receiving?.internalLotNo}</span>
+                <span className="font-mono break-all">{receiving?.internalLotNo}</span>
                 {receiving && <StatusBadge status={receiving.status} />}
               </>
             )}
           </DialogTitle>
         </DialogHeader>
 
+        <div className="min-h-0 overflow-y-auto px-4 pb-4 sm:px-0 sm:pb-0">
         {isLoading ? (
           <DetailSkeleton />
         ) : !receiving ? (
@@ -194,7 +198,7 @@ export function MaterialsReceivingDetailDialog({
             <div className="grid gap-4 md:grid-cols-4">
               {/* Pieces QR — ชุดจำนวนชิ้นที่ใช้ได้ (PIPE/SHEET/COIL เท่านั้น) */}
               {receiving.piecesQrCode ? (
-                <Card className="md:col-span-1">
+                <Card className="min-w-0 md:col-span-1">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Scissors className="h-4 w-4 text-primary" />
@@ -209,7 +213,7 @@ export function MaterialsReceivingDetailDialog({
                         alt={`Pieces QR for ${receiving.internalLotNo}`}
                         width={160}
                         height={160}
-                        className="block"
+                        className="block max-w-full h-auto"
                       />
                     </div>
                     {receiving.piecesQrPayload && (
@@ -256,7 +260,7 @@ export function MaterialsReceivingDetailDialog({
               )}
 
               {/* Main QR — ชุดจำนวนรับเข้า (ต้นทาง) */}
-              <Card className="md:col-span-1">
+              <Card className="min-w-0 md:col-span-1">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <QrCode className="h-4 w-4" />
@@ -273,7 +277,7 @@ export function MaterialsReceivingDetailDialog({
                           alt={`QR code for ${receiving.internalLotNo}`}
                           width={180}
                           height={180}
-                          className="block"
+                          className="block max-w-full h-auto"
                         />
                       </div>
                       <div className="flex flex-col gap-1.5 w-full">
@@ -313,7 +317,7 @@ export function MaterialsReceivingDetailDialog({
                 </CardContent>
               </Card>
 
-              <Card className="md:col-span-2">
+              <Card className="min-w-0 md:col-span-2">
                 <CardHeader>
                   <CardTitle className="text-base">ข้อมูลเอกสาร</CardTitle>
                 </CardHeader>
@@ -345,7 +349,7 @@ export function MaterialsReceivingDetailDialog({
                   <InfoRow
                     icon={<Tag className="h-4 w-4" />}
                     label="Supplier Lot"
-                    value={receiving.supplierLotNo ?? "—"}
+                    value={<span className="break-all">{receiving.supplierLotNo ?? "—"}</span>}
                     mono
                   />
                   <InfoRow
@@ -383,18 +387,18 @@ export function MaterialsReceivingDetailDialog({
 
             {/* Package Breakdown */}
             {receiving.packages && receiving.packages.length > 0 && (
-              <Card>
+              <Card className="min-w-0">
                 <CardHeader>
                   <CardTitle className="text-base">
                     รายละเอียดบรรจุภัณฑ์ ({receiving.packages.length} ใบ)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {receiving.packages.map((pkg) => (
                       <div
                         key={pkg.id}
-                        className="rounded-md border bg-white p-3 flex flex-col items-center gap-2"
+                        className="min-w-0 rounded-md border bg-white p-3 flex flex-col items-center gap-2"
                       >
                         {pkg.qrCode ? (
                           /* eslint-disable-next-line @next/next/no-img-element */
@@ -403,14 +407,14 @@ export function MaterialsReceivingDetailDialog({
                             alt={`QR for ${pkg.lotDetailNo ?? pkg.id}`}
                             width={140}
                             height={140}
-                            className="block"
+                            className="block max-w-full h-auto"
                           />
                         ) : (
                           <div className="h-[140px] w-[140px] grid place-items-center text-muted-foreground text-xs">
                             ไม่มี QR
                           </div>
                         )}
-                        <div className="text-xs font-mono text-center break-all">
+                        <div className="w-full min-w-0 text-xs font-mono text-center break-all">
                           {pkg.lotDetailNo ?? `#${pkg.packageNo}`}
                         </div>
                         <div className="text-sm tabular-nums">
@@ -459,7 +463,7 @@ export function MaterialsReceivingDetailDialog({
             )}
 
             {/* Audit trail */}
-            <Card>
+            <Card className="min-w-0">
               <CardHeader>
                 <CardTitle className="text-base">ประวัติการดำเนินการ</CardTitle>
               </CardHeader>
@@ -518,11 +522,15 @@ export function MaterialsReceivingDetailDialog({
             </Card>
 
             {/* Actions */}
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div
+              data-testid="materials-receiving-detail-actions"
+              className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-2 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:flex-row sm:flex-wrap sm:justify-end sm:border-0 sm:bg-transparent sm:p-0"
+            >
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
+                className="w-full sm:w-auto"
               >
                 <X className="h-4 w-4 mr-1" />
                 ปิด
@@ -532,6 +540,7 @@ export function MaterialsReceivingDetailDialog({
                   type="button"
                   variant="outline"
                   onClick={() => onEdit(receiving)}
+                  className="w-full sm:w-auto"
                 >
                   แก้ไข
                 </Button>
@@ -541,6 +550,7 @@ export function MaterialsReceivingDetailDialog({
                   type="button"
                   onClick={() => onConfirm(receiving)}
                   disabled={confirmPending}
+                  className="w-full sm:w-auto"
                 >
                   <Check className="h-4 w-4 mr-1" />
                   {confirmPending ? "กำลังยืนยัน..." : "ยืนยันรับเข้า"}
@@ -552,6 +562,7 @@ export function MaterialsReceivingDetailDialog({
                   variant="destructive"
                   onClick={() => onCancel(receiving)}
                   disabled={cancelPending}
+                  className="w-full sm:w-auto"
                 >
                   <XCircle className="h-4 w-4 mr-1" />
                   {cancelPending ? "กำลังยกเลิก..." : "ยกเลิก"}
@@ -560,6 +571,7 @@ export function MaterialsReceivingDetailDialog({
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

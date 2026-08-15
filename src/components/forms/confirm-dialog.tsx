@@ -59,13 +59,17 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="sm" hideClose={loading}>
+      <DialogContent
+        size="sm"
+        hideClose={loading}
+        className="w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] p-4 sm:p-6"
+      >
         <DialogHeader>
           <div className="flex items-start gap-3">
             <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", colors[variant])}>
               {icons[variant]}
             </div>
-            <div className="space-y-1.5">
+            <div className="min-w-0 space-y-1.5 break-words">
               <DialogTitle>{title}</DialogTitle>
               {description && (
                 <DialogDescription asChild>
@@ -77,7 +81,12 @@ export function ConfirmDialog({
         </DialogHeader>
         <DialogFooter className="gap-2 sm:space-x-0">
           {!hideCancel && (
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+              className="w-full sm:w-auto"
+            >
               {cancelText}
             </Button>
           )}
@@ -86,6 +95,7 @@ export function ConfirmDialog({
             onClick={onConfirm}
             loading={loading}
             autoFocus
+            className="w-full sm:w-auto"
           >
             {confirmText}
           </Button>
