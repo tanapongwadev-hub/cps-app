@@ -12,10 +12,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MaterialsReceivingFormDialog } from "./materials-receiving-form-dialog";
 import type { MaterialsReceiving, MaterialsReceivingLookups } from "../api/materials-receiving-api";
 
-const { createMutateAsync, updateMutateAsync } = vi.hoisted(() => ({
+const { createMutateAsync, updateMutateAsync, getSuppliersByMaterial } = vi.hoisted(() => ({
   createMutateAsync: vi.fn(),
   updateMutateAsync: vi.fn(),
+  getSuppliersByMaterial: vi.fn(),
 }));
+
+vi.mock("../api/materials-receiving-api", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../api/materials-receiving-api")>();
+  return {
+    ...actual,
+    materialsReceivingApi: {
+      ...actual.materialsReceivingApi,
+      getSuppliersByMaterial,
+    },
+  };
+});
 
 vi.mock("../hooks/use-materials-receiving", () => ({
   useCreateMaterialsReceiving: () => ({
@@ -112,10 +124,35 @@ describe("MaterialsReceivingFormDialog", () => {
     vi.clearAllMocks();
     createMutateAsync.mockResolvedValue(baseReceiving);
     updateMutateAsync.mockResolvedValue({ ...baseReceiving, id: "mr-001" });
+    getSuppliersByMaterial.mockResolvedValue(lookups.suppliers);
   });
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("uses a viewport-safe shell and sticky mobile actions", async () => {
+    render(
+      <MaterialsReceivingFormDialog
+        open
+        onOpenChange={vi.fn()}
+        lookups={lookups}
+        onSave={vi.fn()}
+      />,
+    );
+
+    const dialog = await screen.findByTestId("materials-receiving-form-dialog");
+    expect(dialog).toHaveClass(
+      "w-[calc(100vw-1rem)]",
+      "max-h-[calc(100dvh-1rem)]",
+      "p-0",
+      "sm:p-6",
+    );
+    expect(screen.getByTestId("materials-receiving-form-actions")).toHaveClass(
+      "sticky",
+      "bottom-0",
+    );
+    expect(screen.getByRole("button", { name: "ยกเลิก" })).toHaveClass("w-full", "sm:w-auto");
   });
 
   it("renders create dialog with empty fields when no receiving provided", async () => {
@@ -186,6 +223,7 @@ describe("MaterialsReceivingFormDialog", () => {
 
     // Select material
     await user.selectOptions(screen.getByLabelText(/วัสดุ/), "mat-001");
+    await screen.findByRole("option", { name: /SUP-001/ });
     await user.selectOptions(screen.getByLabelText(/ผู้จัดจำหน่าย/), "sup-001");
     // Enter invalid decimal
     await user.type(screen.getByLabelText(/จำนวนรับเข้า/), "abc");
@@ -209,6 +247,7 @@ describe("MaterialsReceivingFormDialog", () => {
     );
 
     await user.selectOptions(screen.getByLabelText(/วัสดุ/), "mat-001");
+    await screen.findByRole("option", { name: /SUP-001/ });
     await user.selectOptions(screen.getByLabelText(/ผู้จัดจำหน่าย/), "sup-001");
     await user.type(screen.getByLabelText(/จำนวนรับเข้า/), "500");
     await user.click(screen.getByRole("button", { name: /สร้างรายการรับเข้า/ }));
@@ -282,6 +321,7 @@ describe("MaterialsReceivingFormDialog", () => {
     );
 
     await user.selectOptions(screen.getByLabelText(/วัสดุ/), "mat-001");
+    await screen.findByRole("option", { name: /SUP-001/ });
     await user.selectOptions(screen.getByLabelText(/ผู้จัดจำหน่าย/), "sup-001");
     await user.type(screen.getByLabelText(/จำนวนรับเข้า/), "1000");
     await user.click(screen.getByRole("button", { name: /สร้างรายการรับเข้า/ }));

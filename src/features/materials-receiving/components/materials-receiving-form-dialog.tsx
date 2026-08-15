@@ -249,14 +249,38 @@ export function MaterialsReceivingFormDialog({
 
   React.useEffect(() => {
     if (open) {
+      // For edit mode: pre-populate materialSuppliers BEFORE form.reset() so
+      // React never renders with materialSuppliers=[] and supplierId="sup-001".
+      // This prevents the controlled→uncontrolled warning.
+      if (isEditing && receiving?.materialId) {
+        const currentSupplier = lookups.suppliers.find(
+          (s) => s.id === receiving.supplierId,
+        );
+        setMaterialSuppliers(currentSupplier ? [currentSupplier] : []);
+        setSuppliersLoading(true);
+      } else {
+        setMaterialSuppliers([]);
+        setSuppliersLoading(false);
+      }
+      // form.reset must come AFTER setMaterialSuppliers so the first render
+      // always has a valid supplier list for the <select> options.
       form.reset(getDefaultValues(receiving));
       setServerError(null);
       autoSelectedSupplier.current = false;
-      setMaterialSuppliers([]);
       setAttachmentFile(null);
       setAttachmentRemoved(false);
+
+      // Fetch filtered supplier list after state is pre-populated.
+      if (isEditing && receiving?.materialId) {
+        materialsReceivingApi
+          .getSuppliersByMaterial(receiving.materialId)
+          .then((list) => {
+            setMaterialSuppliers(list ?? []);
+          })
+          .catch(() => {});
+      }
     }
-  }, [open, receiving, form]);
+  }, [open, receiving, form, isEditing]);
 
   const watchMaterialId = form.watch("materialId");
   const watchQuantity = form.watch("receiveQuantity");
@@ -483,8 +507,11 @@ export function MaterialsReceivingFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent
+        data-testid="materials-receiving-form-dialog"
+        className="grid w-[calc(100vw-1rem)] max-w-4xl max-h-[calc(100dvh-1rem)] grid-rows-[auto_minmax(0,1fr)] overflow-hidden p-0 sm:p-6"
+      >
+        <DialogHeader className="px-4 pt-4 pr-12 sm:px-0 sm:pt-0">
           <DialogTitle>
             {isEditing
               ? `แก้ไขการรับเข้า ${receiving?.internalLotNo ?? ""}`
@@ -499,18 +526,18 @@ export function MaterialsReceivingFormDialog({
 
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
-          className="space-y-6"
+          className="min-h-0 space-y-6 overflow-y-auto px-4 pb-4 sm:px-0 sm:pb-0"
         >
           {/* Lot preview banner */}
-          <div className="rounded-md border border-dashed border-info/40 bg-info/5 p-3 text-sm flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3 rounded-md border border-dashed border-info/40 bg-info/5 p-3 text-sm">
             <Info className="h-4 w-4 text-info shrink-0" />
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">
               <span className="text-muted-foreground">Internal Lot (ตัวอย่าง):</span>
-              <code className="font-mono font-semibold text-info">
+              <code className="break-all font-mono font-semibold text-info">
                 {previewInternalLotNo()}
               </code>
               <span className="text-muted-foreground">Supplier Lot:</span>
-              <code className="font-mono font-semibold">
+              <code className="break-all font-mono font-semibold">
                 {supplierLotPreview ?? "—"}
               </code>
               {packages && (
@@ -873,7 +900,7 @@ export function MaterialsReceivingFormDialog({
                     </p>
                   </div>
                 )}
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 text-sm">
+                <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6">
                   {packages.map((pkg) => (
                     <div
                       key={pkg.packageNo}
@@ -909,17 +936,25 @@ export function MaterialsReceivingFormDialog({
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter
+            data-testid="materials-receiving-form-actions"
+            className="sticky bottom-0 z-10 -mx-4 border-t bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0"
+          >
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={savePending}
+              className="w-full sm:w-auto"
             >
               <X className="h-4 w-4 mr-1" />
               ยกเลิก
             </Button>
-            <Button type="submit" disabled={savePending}>
+            <Button
+              type="submit"
+              disabled={savePending}
+              className="w-full sm:w-auto"
+            >
               <Save className="h-4 w-4 mr-1" />
               {savePending
                 ? "กำลังบันทึก..."
