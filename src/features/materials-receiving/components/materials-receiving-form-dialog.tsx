@@ -25,6 +25,7 @@ import {
   Package,
   QrCode,
   Save,
+  Scissors,
   Truck,
   Upload,
   X,
@@ -138,6 +139,51 @@ function formatNumber(value: string | number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 4,
   });
+}
+
+/** สร้าง QR Code URL จาก text */
+function getQrCodeUrl(text: string, size: number = 100): string {
+  const encoded = encodeURIComponent(text);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&format=png`;
+}
+
+/** สร้าง date prefix สำหรับ Lot numbers */
+function getDatePrefix(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}${mm}${dd}`;
+}
+
+/** Preview ชุดที่ 1: Internal Lot Numbers (CCI-YYYYMMDD-NNN) */
+function previewLotNumbers(count: number | null): string[] {
+  if (!count || count < 1) return [];
+  const prefix = getDatePrefix();
+  return Array.from({ length: count }, (_, i) =>
+    `CCI-${prefix}-${String(i + 1).padStart(3, "0")}`
+  );
+}
+
+/** Preview ชุดที่ 2: Pieces Lot Numbers (CCI-YYYYMMDD-NNN-NNN) */
+function previewPiecesLotNumbers(
+  piecesQuantity: number | null,
+  ratio: number | null
+): { lotNo: string; pkg: number; piece: number }[] {
+  if (!piecesQuantity || piecesQuantity < 1 || !ratio || ratio < 1) return [];
+  const prefix = getDatePrefix();
+  const result: { lotNo: string; pkg: number; piece: number }[] = [];
+
+  for (let p = 1; p <= piecesQuantity; p++) {
+    const pkg = Math.ceil(p / ratio);
+    const pieceInPkg = p - (pkg - 1) * ratio;
+    result.push({
+      lotNo: `CCI-${prefix}-${String(pkg).padStart(3, "0")}-${String(pieceInPkg).padStart(3, "0")}`,
+      pkg,
+      piece: pieceInPkg,
+    });
+  }
+  return result;
 }
 
 // ============================================================================
@@ -254,6 +300,62 @@ function AccordionSection({
         )}
       </button>
       {isOpen && <div className="p-4 pt-0">{children}</div>}
+    </div>
+  );
+}
+
+// ============================================================================
+// Pieces QR Preview Grid Component
+// ============================================================================
+
+function PiecesQrPreviewGrid({
+  items,
+  totalPieces,
+}: {
+  items: { lotNo: string; pkg: number; piece: number }[];
+  totalPieces: number | null;
+}) {
+  const [showAll, setShowAll] = React.useState(false);
+  const INITIAL_SHOW = 20;
+  const visible = showAll ? items : items.slice(0, INITIAL_SHOW);
+  const hidden = items.length - INITIAL_SHOW;
+
+  if (items.length === 0) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-xs text-muted-foreground italic">
+          กรอกจำนวนรับเข้าเพื่อดู QR Codes
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+        {visible.map((item, i) => (
+          <div key={i} className="flex flex-col items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={getQrCodeUrl(item.lotNo, 50)}
+              alt={item.lotNo}
+              className="w-12 h-12 rounded border bg-white"
+            />
+            <span className="font-mono text-[9px] mt-1 text-center truncate w-full">
+              {item.lotNo.split("-").slice(-2).join("-")}
+            </span>
+          </div>
+        ))}
+      </div>
+      {!showAll && hidden > 0 && (
+        <button
+          type="button"
+          className="mt-2 w-full text-xs text-primary hover:underline"
+          onClick={() => setShowAll(true)}
+        >
+          แสดงทั้งหมด ({items.length} รายการ)
+        </button>
+      )}
     </div>
   );
 }
@@ -454,6 +556,7 @@ export function MaterialsReceivingFormDialog({
 
   const packageCount = computePackageCount(watchQuantity, effectivePackingQuantity);
 
+  // Pieces quantity calculation (must be before piecesLotNumbersPreview)
   const piecesQuantity = React.useMemo(
     () =>
       requiresRatio
@@ -464,6 +567,18 @@ export function MaterialsReceivingFormDialog({
           )
         : null,
     [requiresRatio, watchQuantity, selectedMaterial, effectiveRatio],
+  );
+
+  // Preview lot numbers for QR codes
+  const lotNumbersPreview = React.useMemo(
+    () => previewLotNumbers(packageCount),
+    [packageCount],
+  );
+
+  // Preview pieces lot numbers for QR codes (set 2)
+  const piecesLotNumbersPreview = React.useMemo(
+    () => previewPiecesLotNumbers(piecesQuantity, effectiveRatio),
+    [piecesQuantity, effectiveRatio],
   );
 
   const supplierLotPreview = React.useMemo(() => {
@@ -869,27 +984,24 @@ export function MaterialsReceivingFormDialog({
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 font-medium">
                       <QrCode className="h-4 w-4" />
-                      QR Code Preview
+                      QR Code หลัก
                     </div>
 
-                    {/* QR Preview Box */}
+                    {/* Main QR Preview */}
                     <div className="flex flex-col items-center">
-                      <div className="w-32 h-32 bg-white border-2 border-dashed border-muted-foreground/30 rounded-lg flex items-center justify-center">
-                        <div className="text-center">
-                          <QrCode className="h-16 w-16 mx-auto text-muted-foreground/50" />
-                          <p className="text-xs text-muted-foreground mt-1">QR Code</p>
-                        </div>
-                      </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={getQrCodeUrl(previewInternalLotNo(), 100)}
+                        alt="Main QR Code"
+                        className="w-24 h-24 rounded border-2 border-dashed bg-white"
+                      />
+                      <span className="font-mono text-xs mt-2 font-semibold text-primary">
+                        {previewInternalLotNo()}
+                      </span>
                     </div>
 
                     {/* Lot Info */}
                     <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Internal Lot:</span>
-                        <span className="font-mono font-semibold text-primary">
-                          {previewInternalLotNo()}
-                        </span>
-                      </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Run No:</span>
                         <span className="font-mono">
@@ -905,6 +1017,78 @@ export function MaterialsReceivingFormDialog({
                     </div>
                   </div>
                 </PreviewCard>
+
+                {/* QR Set 1: ตามจำนวนรับเข้า (บรรจุภัณฑ์) */}
+                <PreviewCard>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 font-medium text-sm">
+                        <QrCode className="h-4 w-4" />
+                        QR ชุดที่ 1: จำนวนรับเข้า
+                      </div>
+                      {packageCount && (
+                        <Badge variant="outline" className="text-xs">
+                          {packageCount} ชุด
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      รูปแบบ: CCI-YYYYMMDD-NNN
+                    </p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {lotNumbersPreview.length > 0 ? (
+                        lotNumbersPreview.map((lot, i) => (
+                          <div key={i} className="flex flex-col items-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={getQrCodeUrl(lot, 60)}
+                              alt={lot}
+                              className="w-14 h-14 rounded border bg-white"
+                            />
+                            <span className="font-mono text-[10px] mt-1 text-center">{lot.split('-').pop()}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-full text-center py-4">
+                          <p className="text-xs text-muted-foreground italic">
+                            กรอกจำนวนรับเข้าเพื่อดู QR Codes
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                    {packageCount && packageCount > 10 && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        +{packageCount - 10} ชุดอื่นๆ
+                      </p>
+                    )}
+                  </div>
+                </PreviewCard>
+
+                {/* QR Set 2: จำนวนชิ้นที่ใช้ได้ (เฉพาะ PIPE/SHEET/COIL) */}
+                {requiresRatio && (
+                  <PreviewCard>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 font-medium text-sm">
+                          <Scissors className="h-4 w-4 text-primary" />
+                          QR ชุดที่ 2: จำนวนชิ้นที่ใช้ได้
+                        </div>
+                        {piecesQuantity && (
+                          <Badge variant="default" className="text-xs">
+                            {formatNumber(piecesQuantity)} ชิ้น
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        รูปแบบ: CCI-YYYYMMDD-NNN-NNN
+                      </p>
+                      <PiecesQrPreviewGrid
+                        items={piecesLotNumbersPreview}
+                        totalPieces={piecesQuantity}
+                      />
+                    </div>
+                  </PreviewCard>
+                )}
 
                 {/* Package Preview */}
                 <PreviewCard>

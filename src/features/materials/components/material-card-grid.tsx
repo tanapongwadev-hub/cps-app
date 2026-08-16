@@ -10,7 +10,7 @@
  * - Responsive grid layout
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -45,7 +45,7 @@ import {
   getMaterialShapeLabel,
   getMaterialShapeColor,
 } from "../utils";
-import type { Material } from "../api/materials-api";
+import { stockBalanceApi, materialShapeRequiresRatio, type Material } from "../api/materials-api";
 
 export interface MaterialCardGridProps {
   materials: Material[];
@@ -90,6 +90,27 @@ export function MaterialCardGrid({
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
   const [preview, setPreview] = useState<{ url: string; code: string; name: string } | null>(null);
+
+  // Stock balances — fetch once per material
+  const [stockBalances, setStockBalances] = useState<Record<string, { qty: string; unit: string }>>({});
+  const [stockLoaded, setStockLoaded] = useState(false);
+  useEffect(() => {
+    if (!materials.length) return;
+    setStockLoaded(false);
+    stockBalanceApi
+      .getAll()
+      .then((data) => {
+        const map: Record<string, { qty: string; unit: string }> = {};
+        for (const sb of data ?? []) {
+          map[sb.materialId] = { qty: sb.quantity, unit: sb.unitCode };
+        }
+        setStockBalances(map);
+      })
+      .catch(() => {
+        // silently ignore — balances just won't show
+      })
+      .finally(() => setStockLoaded(true));
+  }, [materials.map((m) => m.id).join(",")]);
 
   return (
     <div className="space-y-4">
@@ -324,11 +345,39 @@ export function MaterialCardGrid({
 
                 {/* Content Section */}
                 <CardContent className="flex flex-1 flex-col gap-2 p-3">
-                  {/* Code & Date */}
-                  <div className="flex items-start justify-between gap-2">
-                    <code className="text-primary font-mono text-xs font-semibold">
-                      {material.code}
-                    </code>
+                  {/* Code & Stock Balance */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <code className="text-primary font-mono text-xs font-semibold shrink-0">
+                        {material.code}
+                      </code>
+                      {/* Stock Balance — prominent badge next to code */}
+                      {stockLoaded && stockBalances[material.id] && (() => {
+                        const bal = stockBalances[material.id];
+                        const qty = Number(bal.qty);
+                        const requiresRatio = materialShapeRequiresRatio(material.materialType);
+                        const usableQty = requiresRatio && material.ratio ? qty * material.ratio : null;
+                        const hasStock = qty > 0;
+                        return (
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-md px-1.5 py-0.5 font-mono text-xs font-bold border",
+                              hasStock
+                                ? "bg-success/10 text-success border-success/30"
+                                : "bg-danger/10 text-danger border-danger/30",
+                            )}
+                          >
+                            {qty.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                            <span className="ml-0.5 text-[10px] font-medium">{bal.unit}</span>
+                            {usableQty !== null && (
+                              <span className="ml-1 text-[10px] font-semibold text-success/80">
+                                ({usableQty.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ชิ้น)
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <span className="text-muted-foreground shrink-0 text-[10px]">
                       {new Date(material.updatedAt).toLocaleDateString("th-TH", {
                         year: "numeric",

@@ -121,6 +121,126 @@ function downloadQrCode(dataUrl: string, filename: string) {
   document.body.removeChild(link);
 }
 
+function getQrCodeUrl(text: string, size: number = 100): string {
+  const encoded = encodeURIComponent(text);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encoded}&format=png`;
+}
+
+function PiecesQrGrid({
+  piecesQty,
+  ratio,
+  baseInternalLotNo,
+}: {
+  piecesQty: number;
+  ratio: number;
+  baseInternalLotNo: string;
+}) {
+  const [showAll, setShowAll] = React.useState(false);
+  const INITIAL_SHOW = 20;
+  const allLots = React.useMemo<{ lotNo: string; pkg: number; piece: number }[]>(() => {
+    const result: { lotNo: string; pkg: number; piece: number }[] = [];
+    for (let p = 1; p <= piecesQty; p++) {
+      const pkg = Math.ceil(p / ratio);
+      const pieceInPkg = p - (pkg - 1) * ratio;
+      result.push({
+        lotNo: `${baseInternalLotNo}-${String(pkg).padStart(3, "0")}-${String(pieceInPkg).padStart(3, "0")}`,
+        pkg,
+        piece: pieceInPkg,
+      });
+    }
+    return result;
+  }, [piecesQty, ratio, baseInternalLotNo]);
+
+  const visible = showAll ? allLots : allLots.slice(0, INITIAL_SHOW);
+  const hidden = allLots.length - INITIAL_SHOW;
+
+  return (
+    <div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+        {visible.map((item) => (
+          <PiecesQrCard
+            key={item.lotNo}
+            lotNo={item.lotNo}
+            onCopy={() => copyToClipboard(item.lotNo, "Lot No.")}
+            onDownload={() => {
+              const url = getQrCodeUrl(item.lotNo, 200);
+              downloadQrCode(url, `${item.lotNo}.png`);
+            }}
+          />
+        ))}
+      </div>
+      {!showAll && hidden > 0 && (
+        <div className="mt-3 text-center">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAll(true)}
+          >
+            แสดงทั้งหมด ({allLots.length} ชิ้น)
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PiecesQrCard({
+  lotNo,
+  onCopy,
+  onDownload,
+}: {
+  lotNo: string;
+  onCopy: () => void;
+  onDownload: () => void;
+}) {
+  const [imgSrc, setImgSrc] = React.useState<string>("");
+  // Generate QR on mount
+  React.useEffect(() => {
+    setImgSrc(getQrCodeUrl(lotNo, 120));
+  }, [lotNo]);
+  return (
+    <div className="min-w-0 rounded-md border bg-white p-2 flex flex-col items-center gap-1.5">
+      {imgSrc ? (
+        <img
+          src={imgSrc}
+          alt={`QR ${lotNo}`}
+          width={120}
+          height={120}
+          className="block max-w-full h-auto"
+        />
+      ) : (
+        <div className="h-[120px] w-[120px] grid place-items-center text-muted-foreground text-xs">
+          ...
+        </div>
+      )}
+      <div className="w-full min-w-0 text-xs font-mono text-center break-all px-1">{lotNo}</div>
+      <div className="flex flex-col gap-1 w-full">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full h-7 text-xs"
+          onClick={onCopy}
+        >
+          <Copy className="h-3 w-3 mr-1" />
+          คัดลอก Lot
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full h-7 text-xs"
+          onClick={onDownload}
+        >
+          <Download className="h-3 w-3 mr-1" />
+          ดาวน์โหลด PNG
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function InfoRow({
   label,
   value,
@@ -133,12 +253,17 @@ function InfoRow({
   mono?: boolean;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3 py-2 border-b last:border-b-0">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0">
+    <div className="flex items-start justify-between gap-4 py-2 border-b last:border-b-0">
+      <div className="flex items-center gap-2 text-sm text-muted-foreground shrink-0 min-w-0">
         {icon}
-        <span>{label}</span>
+        <span className="truncate">{label}</span>
       </div>
-      <div className={cn("min-w-0 text-sm font-medium text-right", mono && "font-mono")}>
+      <div
+        className={cn(
+          "min-w-0 text-sm font-medium text-right break-words",
+          mono && "font-mono"
+        )}
+      >
         {value || "—"}
       </div>
     </div>
@@ -193,131 +318,11 @@ export function MaterialsReceivingDetailDialog({
             ไม่พบข้อมูลการรับเข้า
           </div>
         ) : (
-          <div className="space-y-4">
-            {/* QR + Quick actions */}
-            <div className="grid gap-4 md:grid-cols-4">
-              {/* Pieces QR — ชุดจำนวนชิ้นที่ใช้ได้ (PIPE/SHEET/COIL เท่านั้น) */}
-              {receiving.piecesQrCode ? (
-                <Card className="min-w-0 md:col-span-1">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Scissors className="h-4 w-4 text-primary" />
-                      QR Code ชิ้นที่ใช้ได้
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col items-center gap-3">
-                    <div className="max-w-full rounded-md border bg-white p-2">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={receiving.piecesQrCode}
-                        alt={`Pieces QR for ${receiving.internalLotNo}`}
-                        width={160}
-                        height={160}
-                        className="block max-w-full h-auto"
-                      />
-                    </div>
-                    {receiving.piecesQrPayload && (
-                      <div className="w-full space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">ชิ้นที่ใช้ได้</span>
-                          <span className="font-mono font-semibold">
-                            {Number(receiving.piecesQrPayload.piecesQuantity).toLocaleString("th-TH")}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">ประเภท</span>
-                          <Badge variant="outline" className="text-xs">
-                            {receiving.piecesQrPayload.materialType}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">Run No.</span>
-                          <span className="font-mono">
-                            {receiving.piecesQrPayload.runNo ?? "—"}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1.5 w-full">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          downloadQrCode(
-                            receiving.piecesQrCode!,
-                            `pieces-${receiving.internalLotNo}.png`,
-                          );
-                        }}
-                      >
-                        <Download className="h-3.5 w-3.5 mr-1" />
-                        PNG
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div />
-              )}
-
-              {/* Main QR — ชุดจำนวนรับเข้า (ต้นทาง) */}
-              <Card className="min-w-0 md:col-span-1">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <QrCode className="h-4 w-4" />
-                    QR Code
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center gap-3">
-                  {receiving.qrCode ? (
-                    <>
-                      <div className="max-w-full rounded-md border bg-white p-2">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={receiving.qrCode}
-                          alt={`QR code for ${receiving.internalLotNo}`}
-                          width={180}
-                          height={180}
-                          className="block max-w-full h-auto"
-                        />
-                      </div>
-                      <div className="flex flex-col gap-1.5 w-full">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            copyToClipboard(
-                              receiving.internalLotNo,
-                              "Internal Lot No.",
-                            )
-                          }
-                        >
-                          <Copy className="h-3.5 w-3.5 mr-1" />
-                          คัดลอก Lot
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            if (receiving.qrCode) {
-                              downloadQrCode(
-                                receiving.qrCode,
-                                `${receiving.internalLotNo}.png`,
-                              );
-                            }
-                          }}
-                        >
-                          <Download className="h-3.5 w-3.5 mr-1" />
-                          ดาวน์โหลด PNG
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground text-sm">ไม่มี QR Code</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="min-w-0 md:col-span-2">
+          <div className="space-y-6">
+            {/* Document Info + QR Header */}
+            <div className="grid gap-4 grid-cols-1">
+              {/* Document Info — full width */}
+              <Card className="min-w-0">
                 <CardHeader>
                   <CardTitle className="text-base">ข้อมูลเอกสาร</CardTitle>
                 </CardHeader>
@@ -384,6 +389,31 @@ export function MaterialsReceivingDetailDialog({
                 </CardContent>
               </Card>
             </div>
+
+            {/* Pieces QR (Set 2) — for PIPE/SHEET/COIL only */}
+            {receiving.materialType &&
+              receiving.materialType !== "PCS" &&
+              receiving.piecesQrPayload && (
+                <Card className="min-w-0 border-primary/30">
+                  <CardHeader>
+                    <CardTitle className="text-base flex flex-wrap items-center gap-2">
+                      <QrCode className="h-4 w-4 text-primary" />
+                      QR Code ชุดที่ 2 — ชิ้นงาน
+                      <Badge variant="outline" className="ml-auto text-xs">
+                        {receiving.piecesQrPayload.piecesQuantity} ชิ้น
+                        {receiving.ratio ? ` (×${receiving.ratio})` : ""}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <PiecesQrGrid
+                      piecesQty={Number(receiving.piecesQrPayload.piecesQuantity)}
+                      ratio={receiving.ratio ?? 1}
+                      baseInternalLotNo={receiving.piecesQrPayload.internalLotNo}
+                    />
+                  </CardContent>
+                </Card>
+              )}
 
             {/* Package Breakdown */}
             {receiving.packages && receiving.packages.length > 0 && (

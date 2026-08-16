@@ -11,6 +11,7 @@
  *  - รวมสอง column ที่ซ้ำซ้อน (หน่วย) ไว้ใน chip ภายใน cell "วัสดุ"
  */
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ChevronDown,
@@ -48,7 +49,7 @@ import {
   getMaterialShapeLabel,
   getMaterialShapeColor,
 } from "../utils";
-import type { ListMaterialsParams, Material } from "../api/materials-api";
+import { stockBalanceApi, materialShapeRequiresRatio, type ListMaterialsParams, type Material } from "../api/materials-api";
 
 type MaterialSortBy = NonNullable<ListMaterialsParams["sortBy"]>;
 type MaterialSortOrder = NonNullable<ListMaterialsParams["sortOrder"]>;
@@ -170,10 +171,31 @@ export function MaterialTable({
   const start = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
   const end = Math.min(page * pageSize, totalItems);
 
+  // Stock balances
+  const [stockBalances, setStockBalances] = useState<Record<string, { qty: string; unit: string }>>({});
+  const [stockLoaded, setStockLoaded] = useState(false);
+  useEffect(() => {
+    if (!materials.length) return;
+    setStockLoaded(false);
+    stockBalanceApi
+      .getAll()
+      .then((data) => {
+        const map: Record<string, { qty: string; unit: string }> = {};
+        for (const sb of data ?? []) {
+          map[sb.materialId] = { qty: sb.quantity, unit: sb.unitCode };
+        }
+        setStockBalances(map);
+      })
+      .catch(() => {
+        // silently ignore
+      })
+      .finally(() => setStockLoaded(true));
+  }, [materials.map((m) => m.id).join(",")]);
+
   return (
     <div className="space-y-3">
       <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
-        <Table className="min-w-[820px]">
+        <Table className="min-w-[920px]">
           <TableHeader>
             <TableRow className="bg-muted/60 hover:bg-muted/60">
               <TableHead className="min-w-[320px] py-2.5">
@@ -188,6 +210,7 @@ export function MaterialTable({
               </TableHead>
               <TableHead className="w-[100px]">ประเภท</TableHead>
               <TableHead className="w-[140px]">ลักษณะวัสดุ</TableHead>
+              <TableHead className="w-[100px] text-center">คงเหลือ</TableHead>
               <TableHead>ผู้ขาย</TableHead>
               <TableHead>
                 <SortableHeader
@@ -216,14 +239,14 @@ export function MaterialTable({
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
                 <TableRow key={`skel-${index}`} className="hover:bg-transparent">
-                  <TableCell colSpan={7} className="py-2">
+                  <TableCell colSpan={8} className="py-2">
                     <Skeleton className="h-14 w-full" />
                   </TableCell>
                 </TableRow>
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center">
+                <TableCell colSpan={8} className="py-12 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                     <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
                       <Slash className="size-5" />
@@ -242,7 +265,7 @@ export function MaterialTable({
               </TableRow>
             ) : materials.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="p-0">
+                <TableCell colSpan={8} className="p-0">
                   <EmptyState
                     icon={<Package className="size-6" />}
                     title="ยังไม่มีข้อมูลวัสดุ"
@@ -431,6 +454,39 @@ export function MaterialTable({
                         </span>
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    {/* Stock Balance */}
+                    <TableCell className="py-2 text-center">
+                      {stockLoaded && stockBalances[material.id] ? (() => {
+                        const bal = stockBalances[material.id];
+                        const qty = Number(bal.qty);
+                        const requiresRatio = materialShapeRequiresRatio(material.materialType);
+                        const usableQty = requiresRatio && material.ratio ? qty * material.ratio : null;
+                        const hasStock = qty > 0;
+                        return (
+                          <span
+                            className={cn(
+                              "inline-flex flex-col items-center rounded-md px-2 py-1 font-mono border min-w-[60px]",
+                              hasStock
+                                ? "bg-success/10 text-success border-success/30"
+                                : "bg-danger/10 text-danger border-danger/30",
+                            )}
+                          >
+                            <span className="text-xs font-bold">
+                              {qty.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                            </span>
+                            {usableQty !== null && (
+                              <span className="text-[9px] font-semibold text-success/70 leading-tight">
+                                {usableQty.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ชิ้น
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })() : stockLoaded ? (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      ) : (
+                        <span className="text-muted-foreground/40 text-xs">…</span>
                       )}
                     </TableCell>
                     <TableCell className="py-2">
