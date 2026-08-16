@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
 import {
   Table,
   TableBody,
@@ -263,6 +264,37 @@ export function MaterialTable({
                 const href = detailHref?.(material);
                 const suppliers = supplierSummary(material);
                 const imageUrl = resolveMaterialImage(material.imagePath);
+                const actions: ActionItem[] = [
+                  {
+                    label: "ดูรายละเอียด",
+                    icon: <Eye className="size-4" />,
+                    hidden: !href,
+                    onClick: () => href && router.push(href),
+                  },
+                  {
+                    label: "แก้ไข",
+                    icon: <Pencil className="size-4" />,
+                    hidden: !onEdit,
+                    onClick: () => onEdit?.(material),
+                  },
+                  {
+                    label: "ดูสต็อก",
+                    icon: <Scale className="size-4" />,
+                    hidden: !onViewStockBalance,
+                    onClick: () => onViewStockBalance?.(material),
+                  },
+                  {
+                    label: material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน",
+                    icon: material.isActive ? (
+                      <Power className="size-4" />
+                    ) : (
+                      <RotateCcw className="size-4" />
+                    ),
+                    hidden: !onStatusChange,
+                    variant: material.isActive ? "danger" : "default",
+                    onClick: () => onStatusChange?.(material),
+                  },
+                ];
                 return (
                   <TableRow
                     key={material.id}
@@ -446,81 +478,8 @@ export function MaterialTable({
                         {formatDate(material.updatedAt)}
                       </span>
                     </TableCell>
-                    <TableCell className="py-2">
-                      <div
-                        className="flex items-center justify-end gap-0.5"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        {href && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => {
-                              router.push(href);
-                            }}
-                            aria-label={`ดูรายละเอียด ${material.code}`}
-                            title="ดูรายละเอียด"
-                            className="text-muted-foreground hover:text-primary"
-                          >
-                            <Eye className="size-4" />
-                          </Button>
-                        )}
-                        {onEdit && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => onEdit(material)}
-                            aria-label={`แก้ไข ${material.code}`}
-                            title="แก้ไข"
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                        )}
-                        {onStatusChange && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => onStatusChange(material)}
-                            aria-label={
-                              material.isActive
-                                ? `ปิดใช้งาน ${material.code}`
-                                : `เปิดใช้งาน ${material.code}`
-                            }
-                            title={material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                            className={cn(
-                              material.isActive
-                                ? "text-muted-foreground hover:text-danger"
-                                : "text-success hover:text-success",
-                            )}
-                          >
-                            {material.isActive ? (
-                              <Power className="size-4" />
-                            ) : (
-                              <RotateCcw className="size-4" />
-                            )}
-                          </Button>
-                        )}
-                        {onViewStockBalance && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => onViewStockBalance(material)}
-                            aria-label={`ดูสต็อก ${material.code}`}
-                            title="ดูสต็อก"
-                            className="text-muted-foreground hover:text-primary"
-                          >
-                            <Scale className="size-4" />
-                          </Button>
-                        )}
-                        {!href && !onEdit && !onStatusChange && !onViewStockBalance && (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </div>
+                    <TableCell className="py-2 text-right">
+                      <ActionMenu label={`จัดการวัสดุ ${material.code}`} items={actions} />
                     </TableCell>
                   </TableRow>
                 );
