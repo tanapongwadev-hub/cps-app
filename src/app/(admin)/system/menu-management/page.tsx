@@ -618,8 +618,8 @@ function MenuFormDialog({
                 value={form.menuType}
                 onValueChange={(v) => setForm({ ...form, menuType: v as MenuFormData["menuType"] })}
               >
-                <SelectTrigger id={menuTypeId}>
-                  <SelectValue />
+                <SelectTrigger id={menuTypeId} className="w-full">
+                  <SelectValue className="truncate" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="MAIN">MAIN — เมนูหลัก (top-level)</SelectItem>
@@ -635,8 +635,8 @@ function MenuFormDialog({
                   setForm({ ...form, parentId: v === "_root" ? null : v })
                 }
               >
-                <SelectTrigger id={parentIdField}>
-                  <SelectValue />
+                <SelectTrigger id={parentIdField} className="w-full">
+                  <SelectValue className="truncate" placeholder="เลือกเมนูหลัก..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_root">(ไม่มี — top level)</SelectItem>

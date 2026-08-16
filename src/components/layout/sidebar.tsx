@@ -154,17 +154,21 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
     if (collapsed) return null;
     return (
       <div className="space-y-1">
+        {/* Main Menu Group Header - slightly indented */}
         <div
           className={cn(
-            "flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted-foreground/80",
-            level > 0 && "pl-6",
+            "flex items-center gap-2 px-2 py-2 text-xs font-bold text-sidebar-foreground/60",
+            level > 0 && "pl-4",
           )}
         >
-          <span className="h-px flex-1 bg-sidebar-border/20" />
-          <span>{pickMenuName(item)}</span>
-          <span className="h-px flex-1 bg-sidebar-border/20" />
+          {item.icon && (
+            <Icon name={item.icon} className="h-4 w-4 shrink-0 text-sidebar-foreground/40" />
+          )}
+          <span className="flex-1 uppercase tracking-wide">{pickMenuName(item)}</span>
+          <ChevronRight className="h-3 w-3 shrink-0 text-sidebar-muted-foreground/40" />
         </div>
-        <div className="space-y-1">
+        {/* Submenu Items - indented from main menu */}
+        <div className="ml-4 space-y-0.5 border-l border-sidebar-border/30 pl-3">
           {item.children?.map((child) => (
             <SidebarMenuItem
               key={child.id}
@@ -189,24 +193,27 @@ function SidebarMenuItem({ item, level = 0, collapsed, onNavigate }: SidebarMenu
     );
   };
 
+  // Determine if this is a submenu item (has level > 0, meaning it's inside a group)
+  const isSubmenu = level > 0;
+
   const content = (
     <div
       className={cn(
-        "group/menu relative flex items-center gap-3 rounded-md text-sm font-medium transition-all duration-200",
+        "group/menu relative flex items-center gap-2 rounded-md text-sm font-medium transition-all duration-200",
         "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         // Active state: subtle bg + animated left bar
         isActive && [
           "bg-sidebar-accent text-sidebar-accent-foreground",
           "active-glow",
         ],
-        collapsed ? "h-10 w-10 justify-center mx-auto" : "h-9 px-3 py-1",
-        level > 0 && !collapsed && "ml-4 w-[calc(100%-1rem)]",
+        collapsed ? "h-10 w-10 justify-center mx-auto" : isSubmenu ? "h-8 px-2.5 py-1 text-xs" : "h-9 px-3 py-1",
       )}
     >
       <Icon
         name={item.icon}
         className={cn(
-          "h-4 w-4 shrink-0 transition-all duration-200",
+          "shrink-0 transition-all duration-200",
+          isSubmenu ? "h-3.5 w-3.5" : "h-4 w-4",
           isActive && "text-sidebar-foreground",
         )}
       />

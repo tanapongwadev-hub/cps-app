@@ -25,12 +25,8 @@ export const MENU_PATH_OVERRIDES: Record<string, string | null> = {
   // Newly built pages (frontend now has dedicated screens for these)
   PERMISSION_MANAGEMENT: "/permissions",
   SESSION_MANAGEMENT: "/sessions",
-  MATERIALS_MANAGEMENTS: "/materials",
-  MATERIALS_PC_MANAGEMENTS: "/materials/pc",
-  MATERIALS_OF_MANAGEMENTS: "/materials/of",
-  MATERIALS_OF_MAT_MANAGEMENTS: "/materials/of-mat",
-  // Materials Receiving - submenu under Materials
-  // (single material per receiving + package breakdown + QR + stock balance)
+  // Materials Management
+  MATERIALS_PC: "/materials/pc",
   MATERIALS_RECEIVING: "/materials/materials-receiving",
 };
 

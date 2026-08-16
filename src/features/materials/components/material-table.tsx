@@ -194,11 +194,13 @@ export function MaterialTable({
 
   return (
     <div className="space-y-3">
+      {/* Horizontal scroll wrapper for mobile */}
       <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
-        <Table className="min-w-[920px]">
+        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:rounded-full [&::-webkit-scrollbar]:bg-muted">
+        <Table className="min-w-[640px]">
           <TableHeader>
             <TableRow className="bg-muted/60 hover:bg-muted/60">
-              <TableHead className="min-w-[320px] py-2.5">
+              <TableHead className="w-[180px] min-w-[180px] py-2.5">
                 <SortableHeader
                   label="วัสดุ"
                   field="code"
@@ -208,11 +210,11 @@ export function MaterialTable({
                   ariaLabel="เรียงตามรหัสวัสดุ"
                 />
               </TableHead>
-              <TableHead className="w-[100px]">ประเภท</TableHead>
-              <TableHead className="w-[140px]">ลักษณะวัสดุ</TableHead>
-              <TableHead className="w-[100px] text-center">คงเหลือ</TableHead>
-              <TableHead>ผู้ขาย</TableHead>
-              <TableHead>
+              <TableHead className="hidden sm:table-cell w-[80px]">ประเภท</TableHead>
+              <TableHead className="hidden md:table-cell w-[100px]">ลักษณะ</TableHead>
+              <TableHead className="w-[70px] text-center">คงเหลือ</TableHead>
+              <TableHead className="hidden lg:table-cell">ผู้ขาย</TableHead>
+              <TableHead className="w-[70px]">
                 <SortableHeader
                   label="สถานะ"
                   field="isActive"
@@ -222,9 +224,9 @@ export function MaterialTable({
                   ariaLabel="เรียงตามสถานะ"
                 />
               </TableHead>
-              <TableHead>
+              <TableHead className="hidden lg:table-cell">
                 <SortableHeader
-                  label="อัปเดตล่าสุด"
+                  label="อัปเดต"
                   field="updatedAt"
                   sortBy={sortBy}
                   sortOrder={sortOrder}
@@ -232,21 +234,21 @@ export function MaterialTable({
                   ariaLabel="เรียงตามวันที่อัปเดต"
                 />
               </TableHead>
-              <TableHead className="w-14 text-right">การทำงาน</TableHead>
+              <TableHead className="w-10 text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 6 }).map((_, index) => (
                 <TableRow key={`skel-${index}`} className="hover:bg-transparent">
-                  <TableCell colSpan={8} className="py-2">
-                    <Skeleton className="h-14 w-full" />
+                  <TableCell colSpan={6} className="py-2">
+                    <Skeleton className="h-12 w-full" />
                   </TableCell>
                 </TableRow>
               ))
             ) : isError ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-12 text-center">
+                <TableCell colSpan={6} className="py-12 text-center">
                   <div className="mx-auto flex max-w-sm flex-col items-center gap-2">
                     <div className="bg-danger/10 text-danger flex size-12 items-center justify-center rounded-full">
                       <Slash className="size-5" />
@@ -265,7 +267,7 @@ export function MaterialTable({
               </TableRow>
             ) : materials.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="p-0">
+                <TableCell colSpan={6} className="p-0">
                   <EmptyState
                     icon={<Package className="size-6" />}
                     title="ยังไม่มีข้อมูลวัสดุ"
@@ -337,9 +339,9 @@ export function MaterialTable({
                     }
                   >
                     <TableCell className="py-2.5">
-                      <div className="flex items-center gap-3">
-                        {/* Thumbnail — 40px compact, no border-radius heavy */}
-                        <div className="bg-muted relative size-10 shrink-0 overflow-hidden rounded">
+                      <div className="flex items-center gap-2">
+                        {/* Thumbnail — 32px compact on mobile */}
+                        <div className="bg-muted relative size-8 sm:size-10 shrink-0 overflow-hidden rounded">
                           {imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
@@ -364,33 +366,29 @@ export function MaterialTable({
                           />
                         </div>
 
-                        {/* Content — single column, 2-line clamp */}
+                        {/* Content — compact on mobile */}
                         <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
-                          {/* Line 1: code (mono) + name */}
-                          <div className="flex items-baseline gap-2">
-                            <code className="text-primary shrink-0 font-mono text-[11px] font-semibold tracking-tight">
+                          {/* Line 1: code (mono) + unit + name */}
+                          <div className="flex items-baseline gap-1 sm:gap-2">
+                            <code className="text-primary shrink-0 font-mono text-[10px] sm:text-[11px] font-semibold tracking-tight">
                               {material.code}
                             </code>
                             {material.unit && (
                               <>
                                 <span className="bg-border/60 size-0.5 shrink-0 rounded-full" />
-                                <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
+                                <span className="text-muted-foreground shrink-0 font-mono text-[9px] sm:text-[10px]">
                                   {unitLabel(material)}
                                 </span>
                               </>
                             )}
-                            <span className="bg-border/60 size-0.5 shrink-0 rounded-full" />
-                            <span
-                              className="text-foreground truncate text-sm font-medium"
-                              title={material.name}
-                            >
+                            <span className="text-foreground truncate text-xs sm:text-sm font-medium" title={material.name}>
                               {material.name}
                             </span>
                           </div>
 
-                          {/* Line 2: meta — model • delivery (single inline string) */}
+                          {/* Line 2: model • delivery (hidden on xs) */}
                           {(material.model?.nameTh || material.deliveryType?.nameTh) && (
-                            <div className="text-muted-foreground flex items-center gap-1.5 truncate text-[11px]">
+                            <div className="hidden sm:flex items-center gap-1.5 truncate text-[11px] text-muted-foreground">
                               {material.model?.nameTh && (
                                 <span className="truncate">
                                   <span className="text-muted-foreground/60">รุ่น</span>{" "}
@@ -400,10 +398,7 @@ export function MaterialTable({
                                 </span>
                               )}
                               {material.model?.nameTh && material.deliveryType?.nameTh && (
-                                <span
-                                  className="bg-border/70 size-0.5 shrink-0 rounded-full"
-                                  aria-hidden="true"
-                                />
+                                <span className="bg-border/70 size-0.5 shrink-0 rounded-full" aria-hidden="true" />
                               )}
                               {material.deliveryType?.nameTh && (
                                 <span className="truncate">
@@ -418,11 +413,11 @@ export function MaterialTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="hidden sm:table-cell py-2">
                       {material.type ? (
                         <span
                           className={cn(
-                            "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold",
+                            "inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold",
                             getMaterialTypeColor(material.type),
                           )}
                         >
@@ -432,7 +427,7 @@ export function MaterialTable({
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="hidden md:table-cell py-2">
                       {material.materialType ? (
                         <span
                           className={cn(
@@ -467,17 +462,17 @@ export function MaterialTable({
                         return (
                           <span
                             className={cn(
-                              "inline-flex flex-col items-center rounded-md px-2 py-1 font-mono border min-w-[60px]",
+                              "inline-flex flex-col items-center rounded-md px-1.5 py-0.5 font-mono border text-[10px] sm:text-xs",
                               hasStock
                                 ? "bg-success/10 text-success border-success/30"
                                 : "bg-danger/10 text-danger border-danger/30",
                             )}
                           >
-                            <span className="text-xs font-bold">
+                            <span className="font-bold">
                               {qty.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                             </span>
                             {usableQty !== null && (
-                              <span className="text-[9px] font-semibold text-success/70 leading-tight">
+                              <span className="font-semibold text-success/70 leading-tight">
                                 {usableQty.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} ชิ้น
                               </span>
                             )}
@@ -489,7 +484,7 @@ export function MaterialTable({
                         <span className="text-muted-foreground/40 text-xs">…</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="hidden lg:table-cell py-2">
                       <div className="flex max-w-[220px] flex-wrap items-center gap-1">
                         {material.suppliers.length > 0 ? (
                           <>
@@ -509,7 +504,7 @@ export function MaterialTable({
                       </div>
                     </TableCell>
                     <TableCell className="py-2">
-                      <Badge variant={material.isActive ? "success" : "muted"} className="gap-1">
+                      <Badge variant={material.isActive ? "success" : "muted"} className="gap-1 text-[10px] sm:text-xs px-1.5">
                         <span
                           className={cn(
                             "size-1.5 rounded-full",
@@ -518,15 +513,15 @@ export function MaterialTable({
                               : "bg-muted-foreground/60",
                           )}
                         />
-                        {material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
+                        {material.isActive ? "ใช้งาน" : "ปิด"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="hidden lg:table-cell py-2">
                       <span className="text-foreground text-xs font-medium">
                         {formatDate(material.updatedAt)}
                       </span>
                     </TableCell>
-                    <TableCell className="w-14 py-2 text-right">
+                    <TableCell className="w-10 py-2 text-right">
                       <ActionMenu label={`จัดการวัสดุ ${material.code}`} items={actions} />
                     </TableCell>
                   </TableRow>
@@ -535,20 +530,22 @@ export function MaterialTable({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <div className="text-muted-foreground flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap items-center gap-3">
-          <span>
-            {start}–{end} จาก {totalItems} รายการ
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <span className="text-xs sm:text-sm">
+            {start}–{end} จาก {totalItems}
           </span>
-          <label className="flex items-center gap-2">
-            จำนวนต่อหน้า
+          <label className="flex items-center gap-1 sm:gap-2">
+            <span className="hidden sm:inline">จำนวนต่อหน้า</span>
+            <span className="text-xs sm:hidden">/หน้า</span>
             <select
               aria-label="จำนวนต่อหน้า"
               value={pageSize}
               onChange={(event) => onPageSizeChange(Number(event.target.value))}
-              className="border-input bg-background text-foreground focus-visible:ring-ring h-8 rounded-md border px-2 outline-none focus-visible:ring-2"
+              className="border-input bg-background text-foreground focus-visible:ring-ring h-8 rounded-md border px-2 text-xs outline-none focus-visible:ring-2 sm:text-sm"
               disabled={isLoading}
             >
               {[10, 25, 50, 100].map((size) => (
@@ -559,7 +556,7 @@ export function MaterialTable({
             </select>
           </label>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <Button
             type="button"
             variant="outline"
