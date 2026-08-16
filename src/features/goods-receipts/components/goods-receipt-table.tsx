@@ -23,10 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type {
-  GoodsReceipt,
-  ListGoodsReceiptsParams,
-} from "../api/goods-receipts-api";
+import type { GoodsReceipt, ListGoodsReceiptsParams } from "../api/goods-receipts-api";
 
 type SortBy = NonNullable<ListGoodsReceiptsParams["sortBy"]>;
 type SortOrder = NonNullable<ListGoodsReceiptsParams["sortOrder"]>;
@@ -70,7 +67,7 @@ function SortableHeader({
 
   return (
     <TableHead
-      className="cursor-pointer select-none hover:bg-muted/50"
+      className="hover:bg-muted/50 cursor-pointer select-none"
       onClick={() => onSortChange(field, nextOrder)}
     >
       <div className="flex items-center gap-1">
@@ -82,7 +79,7 @@ function SortableHeader({
             <ChevronsUpDown className="h-4 w-4" />
           )
         ) : (
-          <ChevronsUpDown className="h-4 w-4 text-muted-foreground/40" />
+          <ChevronsUpDown className="text-muted-foreground/40 h-4 w-4" />
         )}
       </div>
     </TableHead>
@@ -175,13 +172,7 @@ export function GoodsReceiptTable({
       <EmptyState
         title="ยังไม่มีรายการรับวัสดุ"
         description="เริ่มต้นโดยการสร้างรายการรับวัสดุใหม่"
-        action={
-          onCreate ? (
-            <Button onClick={onCreate}>
-              + สร้างรายการรับวัสดุ
-            </Button>
-          ) : undefined
-        }
+        action={onCreate ? <Button onClick={onCreate}>+ สร้างรายการรับวัสดุ</Button> : undefined}
       />
     );
   }
@@ -279,7 +270,7 @@ export function GoodsReceiptTable({
 
       {/* Pagination */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <span>แสดง</span>
           <select
             value={pageSize}
@@ -296,7 +287,7 @@ export function GoodsReceiptTable({
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
+          <span className="text-muted-foreground text-sm">
             หน้า {page} จาก {totalPages} ({totalItems} รายการ)
           </span>
           <Button

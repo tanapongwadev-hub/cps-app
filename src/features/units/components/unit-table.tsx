@@ -4,10 +4,9 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/tables/data-table";
-import { ActionMenu } from "@/components/tables/action-menu";
+import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
 import { Pencil, Power, RotateCcw } from "lucide-react";
 import type { Unit } from "../api/units-api";
-import { PERMISSIONS } from "@/constants/permissions";
 
 export interface UnitTableProps {
   units: Unit[];
@@ -74,16 +73,13 @@ export function UnitTable({
             id: "nameEn",
             header: "ชื่อ (EN)",
             cell: ({ row }: { row: { original: Unit } }) => (
-              <span className="text-muted-foreground">
-                {row.original.nameEn ?? "-"}
-              </span>
+              <span className="text-muted-foreground">{row.original.nameEn ?? "-"}</span>
             ),
           },
           {
             id: "symbol",
             header: "สัญลักษณ์",
-            cell: ({ row }: { row: { original: Unit } }) =>
-              row.original.symbol ?? "-",
+            cell: ({ row }: { row: { original: Unit } }) => row.original.symbol ?? "-",
           },
           {
             id: "status",
@@ -98,7 +94,7 @@ export function UnitTable({
             id: "actions",
             header: "",
             cell: ({ row }: { row: { original: Unit } }) => {
-              const actions = [];
+              const actions: ActionItem[] = [];
               if (canEdit) {
                 actions.push({
                   label: "แก้ไข",
@@ -121,7 +117,9 @@ export function UnitTable({
                   onClick: () => onStatusChange(row.original),
                 });
               }
-              return actions.length > 0 ? <ActionMenu items={actions as any} /> : null;
+              return actions.length > 0 ? (
+                <ActionMenu label={`จัดการหน่วย ${row.original.code}`} items={actions} />
+              ) : null;
             },
           },
         ]}

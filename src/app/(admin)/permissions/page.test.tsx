@@ -40,8 +40,13 @@ vi.mock("@/features/permissions/components/permission-form-dialog", () => ({
 }));
 
 vi.mock("@/features/permissions/components/department-permission-dialog", () => ({
-  DepartmentPermissionDialog: ({ open, permission }: { open: boolean; permission: { code: string } | null }) =>
-    open ? <div data-testid="department-permission-dialog">{permission?.code}</div> : null,
+  DepartmentPermissionDialog: ({
+    open,
+    permission,
+  }: {
+    open: boolean;
+    permission: { code: string } | null;
+  }) => (open ? <div data-testid="department-permission-dialog">{permission?.code}</div> : null),
 }));
 
 describe("PermissionsPage visibility", () => {
@@ -69,6 +74,9 @@ describe("PermissionsPage visibility", () => {
 
     await user.click(screen.getByRole("tab", { name: "แคตตาล็อกสิทธิ์" }));
 
+    expect(
+      screen.getByText("permission.read").closest("table")?.querySelector("thead th:last-child"),
+    ).toHaveClass("w-12", "text-right");
     expect(screen.queryByRole("button", { name: "กำหนดแผนก" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "เมนู permission.read" }));
     expect(screen.getByRole("menuitem", { name: "กำหนดแผนก" })).toBeInTheDocument();

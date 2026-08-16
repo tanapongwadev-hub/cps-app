@@ -4,7 +4,7 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/tables/data-table";
-import { ActionMenu } from "@/components/tables/action-menu";
+import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
 import { Pencil, Power, RotateCcw } from "lucide-react";
 import type { Supplier } from "../api/suppliers-api";
 
@@ -70,20 +70,17 @@ export function SupplierTable({
           {
             id: "taxId",
             header: "เลขผู้เสียภาษี",
-            cell: ({ row }: { row: { original: Supplier } }) =>
-              row.original.taxId ?? "-",
+            cell: ({ row }: { row: { original: Supplier } }) => row.original.taxId ?? "-",
           },
           {
             id: "contact",
             header: "ผู้ติดต่อ",
-            cell: ({ row }: { row: { original: Supplier } }) =>
-              row.original.contactName ?? "-",
+            cell: ({ row }: { row: { original: Supplier } }) => row.original.contactName ?? "-",
           },
           {
             id: "telephone",
             header: "โทรศัพท์",
-            cell: ({ row }: { row: { original: Supplier } }) =>
-              row.original.telephone ?? "-",
+            cell: ({ row }: { row: { original: Supplier } }) => row.original.telephone ?? "-",
           },
           {
             id: "status",
@@ -98,7 +95,7 @@ export function SupplierTable({
             id: "actions",
             header: "",
             cell: ({ row }: { row: { original: Supplier } }) => {
-              const items: any[] = [
+              const items: ActionItem[] = [
                 {
                   label: "แก้ไข",
                   icon: <Pencil className="h-3 w-3" />,
@@ -119,7 +116,9 @@ export function SupplierTable({
                   onClick: () => onStatusChange(row.original),
                 });
               }
-              return <ActionMenu items={items} />;
+              return (
+                <ActionMenu label={`จัดการผู้จัดจำหน่าย ${row.original.code}`} items={items} />
+              );
             },
           },
         ]}

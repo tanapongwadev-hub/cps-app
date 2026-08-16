@@ -138,9 +138,7 @@ function SortableHeader({
     >
       {label}
       {isActive ? (
-        <ChevronDown
-          className={cn("size-3.5", sortOrder === "asc" && "rotate-180")}
-        />
+        <ChevronDown className={cn("size-3.5", sortOrder === "asc" && "rotate-180")} />
       ) : (
         <ChevronsUpDown className="text-muted-foreground/60 size-3.5" />
       )}
@@ -336,10 +334,8 @@ export function MaterialTable({
                           {/* Active dot — bottom-right corner */}
                           <span
                             className={cn(
-                              "absolute right-0.5 bottom-0.5 size-2 rounded-full ring-[1.5px] ring-card",
-                              material.isActive
-                                ? "bg-emerald-500"
-                                : "bg-slate-400",
+                              "ring-card absolute right-0.5 bottom-0.5 size-2 rounded-full ring-[1.5px]",
+                              material.isActive ? "bg-emerald-500" : "bg-slate-400",
                             )}
                             aria-label={material.isActive ? "ใช้งาน" : "ปิดใช้งาน"}
                           />
@@ -426,8 +422,7 @@ export function MaterialTable({
                               : undefined
                           }
                         >
-                          {getMaterialShapeLabel(material.materialType) ??
-                            material.materialType}
+                          {getMaterialShapeLabel(material.materialType) ?? material.materialType}
                           {material.ratio != null && (
                             <span className="ml-0.5 rounded bg-white/40 px-1 text-[10px] font-semibold">
                               ×{material.ratio}
@@ -458,10 +453,7 @@ export function MaterialTable({
                       </div>
                     </TableCell>
                     <TableCell className="py-2">
-                      <Badge
-                        variant={material.isActive ? "success" : "muted"}
-                        className="gap-1"
-                      >
+                      <Badge variant={material.isActive ? "success" : "muted"} className="gap-1">
                         <span
                           className={cn(
                             "size-1.5 rounded-full",

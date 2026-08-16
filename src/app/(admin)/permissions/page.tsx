@@ -138,9 +138,9 @@ function MyPermissionsCard({
           <div>
             <CardTitle>สิทธิ์ที่ใช้งานได้</CardTitle>
             <CardDescription>
-              ผู้ใช้งาน: <span className="font-medium text-foreground">{userName ?? "—"}</span>{" "}
-              · ได้รับ {totalCount} สิทธิ์
-              <span className="ml-1 text-[10px] text-muted-foreground/80">
+              ผู้ใช้งาน: <span className="text-foreground font-medium">{userName ?? "—"}</span> ·
+              ได้รับ {totalCount} สิทธิ์
+              <span className="text-muted-foreground/80 ml-1 text-[10px]">
                 (จาก GET /permissions)
               </span>
             </CardDescription>
@@ -163,9 +163,9 @@ function MyPermissionsCard({
             ))}
           </div>
         ) : isError ? (
-          <div className="rounded-md border border-danger/30 bg-danger/5 p-4 text-sm text-danger">
+          <div className="border-danger/30 bg-danger/5 text-danger rounded-md border p-4 text-sm">
             <p className="font-medium">โหลดสิทธิ์ไม่สำเร็จ</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               {error instanceof Error ? error.message : "Unknown error"}
             </p>
           </div>
@@ -174,13 +174,13 @@ function MyPermissionsCard({
             <p className="font-medium text-emerald-700 dark:text-emerald-300">
               ผู้ใช้นี้มีสิทธิ์ SUPER ADMIN
             </p>
-            <p className="mt-1 text-muted-foreground">
-              เข้าถึงทุก endpoint และเมนูในระบบได้โดยไม่ต้องตรวจสอบ permission แต่ละตัว — แสดงสิทธิ์ทั้งหมด{" "}
-              {allItems.length} รายการจากแคตตาล็อก
+            <p className="text-muted-foreground mt-1">
+              เข้าถึงทุก endpoint และเมนูในระบบได้โดยไม่ต้องตรวจสอบ permission แต่ละตัว —
+              แสดงสิทธิ์ทั้งหมด {allItems.length} รายการจากแคตตาล็อก
             </p>
           </div>
         ) : groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             ไม่มีสิทธิ์ที่ระบุในระบบ (session permissions ไม่ตรงกับแคตตาล็อก)
           </p>
         ) : (
@@ -199,20 +199,19 @@ function MyPermissionsCard({
                       readActionCode(p.action) ??
                       readActionCode((p as { actionRef?: unknown }).actionRef) ??
                       p.code.split(/[._]/).slice(1).join(".");
-                    const menuName =
-                      p.menu?.nameTh ?? p.menu?.nameEn ?? p.menu?.code ?? "—";
+                    const menuName = p.menu?.nameTh ?? p.menu?.nameEn ?? p.menu?.code ?? "—";
                     return (
                       <li
                         key={p.id}
-                        className="flex flex-col gap-0.5 rounded-sm px-1.5 py-1 hover:bg-muted/50"
+                        className="hover:bg-muted/50 flex flex-col gap-0.5 rounded-sm px-1.5 py-1"
                       >
                         <div className="flex items-center gap-1.5">
                           <ShieldCheck className="h-3 w-3 shrink-0 text-emerald-600" />
-                          <span className="truncate font-mono text-xs text-foreground/80">
+                          <span className="text-foreground/80 truncate font-mono text-xs">
                             {p.code}
                           </span>
                         </div>
-                        <div className="ml-4 flex flex-wrap items-center gap-1 text-[10px] text-muted-foreground">
+                        <div className="text-muted-foreground ml-4 flex flex-wrap items-center gap-1 text-[10px]">
                           <Badge variant="outline" className="px-1 py-0 text-[10px]">
                             {actionCode}
                           </Badge>
@@ -236,8 +235,7 @@ function PermissionCatalog() {
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Permission | null>(null);
-  const [departmentPermission, setDepartmentPermission] =
-    React.useState<Permission | null>(null);
+  const [departmentPermission, setDepartmentPermission] = React.useState<Permission | null>(null);
   const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const deleteMutation = useDeletePermission();
 
@@ -267,7 +265,7 @@ function PermissionCatalog() {
           </div>
           <div className="flex items-center gap-2">
             <div className="relative sm:w-64">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -296,20 +294,20 @@ function PermissionCatalog() {
             ))}
           </div>
         ) : isError ? (
-          <div className="rounded-md border border-danger/30 bg-danger/5 p-4 text-sm text-danger">
+          <div className="border-danger/30 bg-danger/5 text-danger rounded-md border p-4 text-sm">
             <p className="font-medium">โหลดสิทธิ์ไม่สำเร็จ</p>
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-xs">
               {error instanceof Error ? error.message : "Unknown error"}
             </p>
           </div>
         ) : items.length === 0 ? (
-          <div className="py-10 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground py-10 text-center text-sm">
             ไม่พบสิทธิ์ที่ตรงกับ &ldquo;{debouncedSearch}&rdquo;
           </div>
         ) : (
           <div className="overflow-hidden rounded-md border">
             <table className="w-full text-sm">
-              <thead className="border-b bg-muted/40 text-xs uppercase text-muted-foreground">
+              <thead className="bg-muted/40 text-muted-foreground border-b text-xs uppercase">
                 <tr>
                   <th className="px-3 py-2 text-left font-medium">Code</th>
                   <th className="px-3 py-2 text-left font-medium">Module</th>
@@ -317,7 +315,7 @@ function PermissionCatalog() {
                   <th className="px-3 py-2 text-left font-medium">Menu</th>
                   <th className="px-3 py-2 text-left font-medium">แผนกที่ใช้งานได้</th>
                   <th className="px-3 py-2 text-center font-medium">Status</th>
-                  <th className="w-44 px-3 py-2 text-right font-medium"></th>
+                  <th className="w-12 px-3 py-2 text-right font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -395,15 +393,15 @@ function PermissionRow({
   const isActive = permission.isActive ?? true;
 
   return (
-    <tr className="border-b last:border-0 hover:bg-muted/30">
+    <tr className="hover:bg-muted/30 border-b last:border-0">
       <td className="px-3 py-2 font-mono text-xs">{permission.code}</td>
-      <td className="px-3 py-2 capitalize text-muted-foreground">{moduleName}</td>
+      <td className="text-muted-foreground px-3 py-2 capitalize">{moduleName}</td>
       <td className="px-3 py-2">
         <Badge variant="outline" className="text-[10px]">
           {action}
         </Badge>
       </td>
-      <td className="px-3 py-2 text-muted-foreground">{menuName}</td>
+      <td className="text-muted-foreground px-3 py-2">{menuName}</td>
       <td className="px-3 py-2">
         <PermissionDepartmentSummary departments={permission.departments ?? []} />
       </td>

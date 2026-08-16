@@ -128,10 +128,9 @@ export function DataTable<TData, TValue>({
   size = "default",
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>(controlledSorting ?? []);
-  const [columnVisibility, setColumnVisibility] =
-    React.useState<VisibilityState>(() =>
-      defaultHiddenColumns.reduce<VisibilityState>((acc, id) => ({ ...acc, [id]: false }), {}),
-    );
+  const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>(() =>
+    defaultHiddenColumns.reduce<VisibilityState>((acc, id) => ({ ...acc, [id]: false }), {}),
+  );
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({});
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [globalFilter, setGlobalFilter] = React.useState("");
@@ -183,7 +182,7 @@ export function DataTable<TData, TValue>({
     data,
     columns: finalColumns,
     state: {
-      sorting: manualSorting ? controlledSorting ?? [] : sorting,
+      sorting: manualSorting ? (controlledSorting ?? []) : sorting,
       columnVisibility,
       rowSelection,
       columnFilters,
@@ -236,11 +235,11 @@ export function DataTable<TData, TValue>({
 
   const selectedCount = Object.keys(rowSelection).length;
   const isSm = size === "sm";
-  const effectivePageSize = manualPagination ? controlledPageSize ?? 10 : pagination.pageSize;
-  const effectivePageIndex = manualPagination ? controlledPageIndex ?? 0 : pagination.pageIndex;
-  const totalRows = manualPagination ? totalItems ?? data.length : data.length;
+  const effectivePageSize = manualPagination ? (controlledPageSize ?? 10) : pagination.pageSize;
+  const effectivePageIndex = manualPagination ? (controlledPageIndex ?? 0) : pagination.pageIndex;
+  const totalRows = manualPagination ? (totalItems ?? data.length) : data.length;
   const totalPageCount = manualPagination
-    ? pageCount ?? 1
+    ? (pageCount ?? 1)
     : Math.max(1, Math.ceil(totalRows / effectivePageSize));
 
   const startRow = totalRows === 0 ? 0 : effectivePageIndex * effectivePageSize + 1;
@@ -253,7 +252,7 @@ export function DataTable<TData, TValue>({
         <div className="flex flex-1 items-center gap-2">
           {globalSearch && (
             <div className="relative flex-1 sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2" />
               <Input
                 value={searchValue ?? globalFilter}
                 onChange={(e) => {
@@ -261,7 +260,7 @@ export function DataTable<TData, TValue>({
                   else setGlobalFilter(e.target.value);
                 }}
                 placeholder={searchPlaceholder}
-                className="h-9 pl-8 pr-8"
+                className="h-9 pr-8 pl-8"
                 aria-label={searchPlaceholder}
               />
               {(searchValue || globalFilter) && (
@@ -271,7 +270,7 @@ export function DataTable<TData, TValue>({
                     if (onSearchChange) onSearchChange("");
                     else setGlobalFilter("");
                   }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="text-muted-foreground hover:text-foreground absolute top-1/2 right-2 -translate-y-1/2"
                   aria-label="ล้างการค้นหา"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -284,7 +283,7 @@ export function DataTable<TData, TValue>({
 
         <div className="flex items-center gap-2">
           {enableRowSelection && selectedCount > 0 && (
-            <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-1.5 text-sm">
+            <div className="bg-muted/50 flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm">
               <span className="font-medium">เลือก {selectedCount} รายการ</span>
               {bulkActions?.(table.getFilteredSelectedRowModel().rows.map((r) => r.original))}
               <Button
@@ -317,7 +316,9 @@ export function DataTable<TData, TValue>({
                       onCheckedChange={(v) => column.toggleVisibility(!!v)}
                       className="capitalize"
                     >
-                      {typeof column.columnDef.header === "string" ? column.columnDef.header : column.id}
+                      {typeof column.columnDef.header === "string"
+                        ? column.columnDef.header
+                        : column.id}
                     </DropdownMenuCheckboxItem>
                   ))}
               </DropdownMenuContent>
@@ -327,7 +328,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border bg-card overflow-hidden">
+      <div className="bg-card overflow-hidden rounded-lg border">
         <div className="relative w-full overflow-auto">
           <table className="w-full caption-bottom text-sm">
             <thead className="bg-muted/40 sticky top-0 z-10 [&_tr]:border-b">
@@ -335,13 +336,15 @@ export function DataTable<TData, TValue>({
                 <tr key={headerGroup.id} className="border-b">
                   {headerGroup.headers.map((header) => {
                     const canSort = header.column.getCanSort();
+                    const isActionColumn = header.column.id === "actions";
                     return (
                       <th
                         key={header.id}
-                        style={{ width: header.getSize() }}
+                        style={{ width: isActionColumn ? 56 : header.getSize() }}
                         className={cn(
-                          "px-3 text-left align-middle font-medium text-muted-foreground text-xs uppercase tracking-wide",
+                          "text-muted-foreground px-3 text-left align-middle text-xs font-medium tracking-wide uppercase",
                           isSm ? "h-8" : "h-10",
+                          isActionColumn && "text-right",
                         )}
                       >
                         {header.isPlaceholder ? null : (
@@ -349,6 +352,7 @@ export function DataTable<TData, TValue>({
                             className={cn(
                               "flex items-center gap-1.5",
                               canSort && "cursor-pointer select-none",
+                              isActionColumn && "justify-end",
                             )}
                             onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                           >
@@ -398,7 +402,9 @@ export function DataTable<TData, TValue>({
                   <td colSpan={finalColumns.length} className="p-0">
                     <EmptyState
                       title={emptyState?.title ?? "ไม่พบข้อมูล"}
-                      description={emptyState?.description ?? "ลองเปลี่ยนเงื่อนไขการค้นหาหรือเพิ่มข้อมูลใหม่"}
+                      description={
+                        emptyState?.description ?? "ลองเปลี่ยนเงื่อนไขการค้นหาหรือเพิ่มข้อมูลใหม่"
+                      }
                       action={emptyState?.action}
                     />
                   </td>
@@ -408,20 +414,27 @@ export function DataTable<TData, TValue>({
                   <tr
                     key={row.id}
                     className={cn(
-                      "border-b transition-colors hover:bg-muted/40",
+                      "hover:bg-muted/40 border-b transition-colors",
                       row.getIsSelected() && "bg-muted/60",
                     )}
                     data-state={row.getIsSelected() ? "selected" : undefined}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        style={{ width: cell.column.getSize() }}
-                        className={cn("p-3 align-middle", isSm && "p-2")}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const isActionColumn = cell.column.id === "actions";
+                      return (
+                        <td
+                          key={cell.id}
+                          style={{ width: isActionColumn ? 56 : cell.column.getSize() }}
+                          className={cn(
+                            "p-3 align-middle",
+                            isSm && "p-2",
+                            isActionColumn && "text-right",
+                          )}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      );
+                    })}
                   </tr>
                 ))
               )}
@@ -432,12 +445,12 @@ export function DataTable<TData, TValue>({
 
       {/* Pagination */}
       {totalRows > 0 && (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
+        <div className="text-muted-foreground flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <span>
-              แสดง <span className="font-medium text-foreground">{startRow}</span>-
-              <span className="font-medium text-foreground">{endRow}</span> จาก{" "}
-              <span className="font-medium text-foreground">{totalRows}</span> รายการ
+              แสดง <span className="text-foreground font-medium">{startRow}</span>-
+              <span className="text-foreground font-medium">{endRow}</span> จาก{" "}
+              <span className="text-foreground font-medium">{totalRows}</span> รายการ
             </span>
             <span className="hidden sm:inline">·</span>
             <div className="flex items-center gap-2">
@@ -472,7 +485,8 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="icon-sm"
               onClick={() => {
-                if (manualPagination) onPaginationChange?.({ pageIndex: 0, pageSize: effectivePageSize });
+                if (manualPagination)
+                  onPaginationChange?.({ pageIndex: 0, pageSize: effectivePageSize });
                 else setPagination((p) => ({ ...p, pageIndex: 0 }));
               }}
               disabled={effectivePageIndex === 0 || isLoading}
@@ -485,7 +499,10 @@ export function DataTable<TData, TValue>({
               size="icon-sm"
               onClick={() => {
                 if (manualPagination)
-                  onPaginationChange?.({ pageIndex: effectivePageIndex - 1, pageSize: effectivePageSize });
+                  onPaginationChange?.({
+                    pageIndex: effectivePageIndex - 1,
+                    pageSize: effectivePageSize,
+                  });
                 else setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }));
               }}
               disabled={effectivePageIndex === 0 || isLoading}
@@ -501,7 +518,10 @@ export function DataTable<TData, TValue>({
               size="icon-sm"
               onClick={() => {
                 if (manualPagination)
-                  onPaginationChange?.({ pageIndex: effectivePageIndex + 1, pageSize: effectivePageSize });
+                  onPaginationChange?.({
+                    pageIndex: effectivePageIndex + 1,
+                    pageSize: effectivePageSize,
+                  });
                 else setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }));
               }}
               disabled={effectivePageIndex >= totalPageCount - 1 || isLoading}
@@ -514,7 +534,10 @@ export function DataTable<TData, TValue>({
               size="icon-sm"
               onClick={() => {
                 if (manualPagination)
-                  onPaginationChange?.({ pageIndex: totalPageCount - 1, pageSize: effectivePageSize });
+                  onPaginationChange?.({
+                    pageIndex: totalPageCount - 1,
+                    pageSize: effectivePageSize,
+                  });
                 else setPagination((p) => ({ ...p, pageIndex: totalPageCount - 1 }));
               }}
               disabled={effectivePageIndex >= totalPageCount - 1 || isLoading}
@@ -532,7 +555,9 @@ export function DataTable<TData, TValue>({
 /** Reusable loading spinner wrapper */
 export function TableLoading({ className }: { className?: string }) {
   return (
-    <div className={cn("flex items-center justify-center gap-2 py-8 text-muted-foreground", className)}>
+    <div
+      className={cn("text-muted-foreground flex items-center justify-center gap-2 py-8", className)}
+    >
       <Spinner size="lg" />
       <span>กำลังโหลด...</span>
     </div>

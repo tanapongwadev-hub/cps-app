@@ -4,7 +4,7 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/tables/data-table";
-import { ActionMenu } from "@/components/tables/action-menu";
+import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
 import { Pencil, Power, RotateCcw } from "lucide-react";
 import type { MaterialModel } from "../api/material-models-api";
 
@@ -66,8 +66,7 @@ export function MaterialModelTable({
           {
             id: "nameEn",
             header: "ชื่อ (EN)",
-            cell: ({ row }: { row: { original: MaterialModel } }) =>
-              row.original.nameEn ?? "-",
+            cell: ({ row }: { row: { original: MaterialModel } }) => row.original.nameEn ?? "-",
           },
           {
             id: "status",
@@ -82,19 +81,35 @@ export function MaterialModelTable({
             id: "actions",
             header: "",
             cell: ({ row }: { row: { original: MaterialModel } }) => {
-              const items: any[] = [
-                { label: "แก้ไข", icon: <Pencil className="h-3 w-3" />, onClick: () => onEdit(row.original) },
+              const items: ActionItem[] = [
+                {
+                  label: "แก้ไข",
+                  icon: <Pencil className="h-3 w-3" />,
+                  onClick: () => onEdit(row.original),
+                },
               ];
               if (row.original.isActive) {
-                items.push({ label: "ปิดใช้งาน", icon: <Power className="h-3 w-3" />, onClick: () => onStatusChange(row.original), variant: "danger" as const });
+                items.push({
+                  label: "ปิดใช้งาน",
+                  icon: <Power className="h-3 w-3" />,
+                  onClick: () => onStatusChange(row.original),
+                  variant: "danger" as const,
+                });
               } else {
-                items.push({ label: "เปิดใช้งาน", icon: <RotateCcw className="h-3 w-3" />, onClick: () => onStatusChange(row.original) });
+                items.push({
+                  label: "เปิดใช้งาน",
+                  icon: <RotateCcw className="h-3 w-3" />,
+                  onClick: () => onStatusChange(row.original),
+                });
               }
-              return <ActionMenu items={items} />;
+              return <ActionMenu label={`จัดการรุ่นวัสดุ ${row.original.code}`} items={items} />;
             },
           },
         ]}
-        emptyState={{ title: "ไม่พบรุ่นวัสดุ", description: "เพิ่มรุ่นวัสดุใหม่เพื่อเริ่มต้นใช้งาน" }}
+        emptyState={{
+          title: "ไม่พบรุ่นวัสดุ",
+          description: "เพิ่มรุ่นวัสดุใหม่เพื่อเริ่มต้นใช้งาน",
+        }}
       />
     </Card>
   );

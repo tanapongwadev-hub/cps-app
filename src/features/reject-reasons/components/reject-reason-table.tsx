@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/tables/data-table";
-import { ActionMenu } from "@/components/tables/action-menu";
+import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
 import { Pencil, Power, RotateCcw } from "lucide-react";
 import type { RejectReason } from "../api/reject-reasons-api";
 
@@ -49,31 +49,31 @@ export function RejectReasonTable({
           {
             id: "code",
             header: "รหัส",
-            cell: ({ row }: any) => (
+            cell: ({ row }: { row: { original: RejectReason } }) => (
               <code className="text-xs">{row.original.code}</code>
             ),
           },
           {
             id: "nameTh",
             header: "ชื่อ (ไทย)",
-            cell: ({ row }: any) => (
+            cell: ({ row }: { row: { original: RejectReason } }) => (
               <span className="font-medium">{row.original.nameTh}</span>
             ),
           },
           {
             id: "nameEn",
             header: "ชื่อ (EN)",
-            cell: ({ row }: any) => row.original.nameEn ?? "—",
+            cell: ({ row }: { row: { original: RejectReason } }) => row.original.nameEn ?? "—",
           },
           {
             id: "description",
             header: "คำอธิบาย",
-            cell: ({ row }: any) => row.original.description ?? "—",
+            cell: ({ row }: { row: { original: RejectReason } }) => row.original.description ?? "—",
           },
           {
             id: "status",
             header: "สถานะ",
-            cell: ({ row }: any) => (
+            cell: ({ row }: { row: { original: RejectReason } }) => (
               <Badge variant={row.original.isActive ? "success" : "muted"}>
                 {row.original.isActive ? "ใช้งาน" : "ระงับ"}
               </Badge>
@@ -82,8 +82,8 @@ export function RejectReasonTable({
           {
             id: "actions",
             header: "",
-            cell: ({ row }: any) => {
-              const items: any[] = [
+            cell: ({ row }: { row: { original: RejectReason } }) => {
+              const items: ActionItem[] = [
                 {
                   label: "แก้ไข",
                   icon: <Pencil className="h-3 w-3" />,
@@ -103,7 +103,9 @@ export function RejectReasonTable({
                   icon: <RotateCcw className="h-3 w-3" />,
                   onClick: () => onStatusChange(row.original),
                 });
-              return <ActionMenu items={items} />;
+              return (
+                <ActionMenu label={`จัดการเหตุผลการปฏิเสธ ${row.original.code}`} items={items} />
+              );
             },
           },
         ]}
