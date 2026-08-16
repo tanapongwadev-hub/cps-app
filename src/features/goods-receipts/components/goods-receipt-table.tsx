@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ActionMenu } from "@/components/tables/action-menu";
 import {
   Table,
   TableBody,
@@ -22,7 +23,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { cn } from "@/utils/cn";
 import type {
   GoodsReceipt,
   ListGoodsReceiptsParams,
@@ -211,7 +211,7 @@ export function GoodsReceiptTable({
               <TableHead>สถานะ</TableHead>
               <TableHead className="text-right">จำนวนรายการ</TableHead>
               <TableHead className="text-right">น้ำหนักรับ (ตัน)</TableHead>
-              <TableHead className="w-[120px]">จัดการ</TableHead>
+              <TableHead className="w-12 text-right">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -232,62 +232,44 @@ export function GoodsReceiptTable({
                 <TableCell className="text-right">
                   {formatNumber(receipt.totalQtyReceived)}
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    {onView && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onView(receipt)}
-                        title="ดูรายละเอียด"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onEdit && receipt.status === "draft" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onEdit(receipt)}
-                        title="แก้ไข"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onPost && receipt.status === "draft" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onPost(receipt)}
-                        title="รับรองเอกสาร"
-                        className="text-green-600 hover:text-green-700"
-                      >
-                        <FileCheck className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onCancel && receipt.status === "posted" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onCancel(receipt)}
-                        title="ยกเลิกเอกสาร"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <FileX className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {onDelete && receipt.status === "draft" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => onDelete(receipt)}
-                        title="ลบ"
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                <TableCell className="text-right">
+                  <ActionMenu
+                    label={`จัดการรายการรับสินค้า ${receipt.receiptNo ?? receipt.id}`}
+                    items={[
+                      {
+                        label: "ดูรายละเอียด",
+                        icon: <Eye className="h-4 w-4" />,
+                        hidden: !onView,
+                        onClick: () => onView?.(receipt),
+                      },
+                      {
+                        label: "แก้ไข",
+                        icon: <Pencil className="h-4 w-4" />,
+                        hidden: !onEdit || receipt.status !== "draft",
+                        onClick: () => onEdit?.(receipt),
+                      },
+                      {
+                        label: "รับรองเอกสาร",
+                        icon: <FileCheck className="h-4 w-4" />,
+                        hidden: !onPost || receipt.status !== "draft",
+                        onClick: () => onPost?.(receipt),
+                      },
+                      {
+                        label: "ยกเลิกเอกสาร",
+                        icon: <FileX className="h-4 w-4" />,
+                        variant: "danger",
+                        hidden: !onCancel || receipt.status !== "posted",
+                        onClick: () => onCancel?.(receipt),
+                      },
+                      {
+                        label: "ลบ",
+                        icon: <Trash2 className="h-4 w-4" />,
+                        variant: "danger",
+                        hidden: !onDelete || receipt.status !== "draft",
+                        onClick: () => onDelete?.(receipt),
+                      },
+                    ]}
+                  />
                 </TableCell>
               </TableRow>
             ))}
