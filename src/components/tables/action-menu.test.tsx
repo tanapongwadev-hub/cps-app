@@ -4,6 +4,24 @@ import { describe, expect, it, vi } from "vitest";
 import { ActionMenu } from "./action-menu";
 
 describe("ActionMenu", () => {
+  it("does not bubble trigger or menu-item clicks to a clickable parent", async () => {
+    const user = userEvent.setup();
+    const onParentClick = vi.fn();
+    const onEdit = vi.fn();
+    render(
+      <div onClick={onParentClick}>
+        <ActionMenu items={[{ label: "แก้ไข", onClick: onEdit }]} />
+      </div>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "เมนู" }));
+    expect(onParentClick).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("menuitem", { name: "แก้ไข" }));
+    expect(onEdit).toHaveBeenCalledOnce();
+    expect(onParentClick).not.toHaveBeenCalled();
+  });
+
   it("renders one responsive three-dot trigger and touch-friendly menu items", async () => {
     const user = userEvent.setup();
     render(<ActionMenu label="จัดการ MAT-001" items={[{ label: "แก้ไข", onClick: vi.fn() }]} />);

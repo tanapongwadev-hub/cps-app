@@ -181,6 +181,11 @@ for (const viewport of viewports) {
       await expect(page.getByTestId("materials-receiving-cards")).toBeHidden();
       await expect(table).toBeVisible();
       await expect(table.getByText(receiving.internalLotNo)).toBeVisible();
+
+      await table
+        .getByRole("button", { name: `จัดการรายการรับเข้า ${receiving.internalLotNo}` })
+        .click();
+      await expectSurfaceWithinViewport(page, page.getByRole("menu"));
     }
 
     await expectNoDocumentOverflow(page);

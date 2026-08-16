@@ -209,7 +209,7 @@ export function MaterialTable({
                   ariaLabel="เรียงตามวันที่อัปเดต"
                 />
               </TableHead>
-              <TableHead className="text-right">การทำงาน</TableHead>
+              <TableHead className="w-14 text-right">การทำงาน</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -470,7 +470,7 @@ export function MaterialTable({
                         {formatDate(material.updatedAt)}
                       </span>
                     </TableCell>
-                    <TableCell className="py-2 text-right">
+                    <TableCell className="w-14 py-2 text-right">
                       <ActionMenu label={`จัดการวัสดุ ${material.code}`} items={actions} />
                     </TableCell>
                   </TableRow>

@@ -59,6 +59,19 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof MaterialTabl
 }
 
 describe("MaterialTable row actions", () => {
+  it("uses a compact right-aligned action column", () => {
+    renderTable();
+
+    expect(screen.getByRole("columnheader", { name: "การทำงาน" })).toHaveClass(
+      "w-14",
+      "text-right",
+    );
+    expect(screen.getByRole("button", { name: "จัดการวัสดุ MAT-001" }).closest("td")).toHaveClass(
+      "w-14",
+      "text-right",
+    );
+  });
+
   it("opens the material action menu and sends the selected stock callback its material", async () => {
     const user = userEvent.setup();
     const onViewStockBalance = vi.fn();
