@@ -247,6 +247,32 @@ describe("MaterialsReceivingTable", () => {
     expect(onConfirm).toHaveBeenCalledWith(row);
   });
 
+  it("uses a compact right-aligned desktop action column", () => {
+    const row = makeRow({ internalLotNo: "CCI-20260809-001" });
+    render(
+      <MaterialsReceivingTable
+        receivings={[row]}
+        page={1}
+        pageSize={20}
+        totalItems={1}
+        onView={vi.fn()}
+        onSortChange={vi.fn()}
+        onPageChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+
+    const desktopTable = screen.getByTestId("materials-receiving-table");
+    expect(within(desktopTable).getByRole("columnheader", { name: "การจัดการ" })).toHaveClass(
+      "w-14",
+      "text-right",
+    );
+    const desktopRow = within(desktopTable).getByRole("row", {
+      name: new RegExp(row.internalLotNo),
+    });
+    expect(within(desktopRow).getAllByRole("cell").at(-1)).toHaveClass("w-14", "text-right");
+  });
+
   it("offers view and cancel for confirmed rows and invokes cancel", async () => {
     const user = userEvent.setup();
     const row = makeRow({ status: "confirmed" });

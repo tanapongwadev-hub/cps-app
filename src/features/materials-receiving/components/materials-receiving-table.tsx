@@ -383,7 +383,7 @@ export function MaterialsReceivingTable({
                     onSortChange={onSortChange}
                   />
                   <TableHead>สถานะ</TableHead>
-                  <TableHead className="text-right">การจัดการ</TableHead>
+                  <TableHead className="w-14 text-right">การจัดการ</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -414,7 +414,7 @@ export function MaterialsReceivingTable({
                       <TableCell>
                         <StatusBadge status={receiving.status} />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="w-14 text-right">
                         <ReceivingActions
                           receiving={receiving}
                           onView={onView}
