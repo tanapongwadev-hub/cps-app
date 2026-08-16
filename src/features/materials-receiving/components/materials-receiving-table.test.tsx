@@ -7,7 +7,7 @@
  *  4. Loading state
  *  5. Sort callback
  */
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { MaterialsReceivingTable } from "./materials-receiving-table";
@@ -132,7 +132,7 @@ describe("MaterialsReceivingTable", () => {
     expect(card).toHaveTextContent("SUP-20260801");
   });
 
-  it("calls onView from the mobile receiving card menu", async () => {
+  it("uses the shared responsive action menu from the mobile receiving card", async () => {
     const user = userEvent.setup();
     const onView = vi.fn();
     const row = makeRow({ internalLotNo: "CCI-20260809-001" });
@@ -149,13 +149,16 @@ describe("MaterialsReceivingTable", () => {
       />,
     );
 
-    const menuTrigger = screen.getByRole("button", {
-      name: "เปิดเมนูการจัดการ CCI-20260809-001",
+    const card = screen.getByRole("article", {
+      name: "รายการรับเข้า CCI-20260809-001",
     });
-    expect(menuTrigger).toHaveClass("h-10", "w-10");
+    const menuTrigger = within(card).getByRole("button", {
+      name: "จัดการรายการรับเข้า CCI-20260809-001",
+    });
+    expect(menuTrigger).toHaveClass("h-10", "w-10", "sm:h-8", "sm:w-8");
     await user.click(menuTrigger);
-    expect(screen.getByRole("menuitem", { name: /ดูรายละเอียด/ })).toHaveClass("min-h-10");
-    await user.click(screen.getByRole("menuitem", { name: /ดูรายละเอียด/ }));
+    expect(screen.getByRole("menuitem", { name: "ดูรายละเอียด" })).toHaveClass("min-h-10");
+    await user.click(screen.getByRole("menuitem", { name: "ดูรายละเอียด" }));
     expect(onView).toHaveBeenCalledWith(row);
   });
 
@@ -204,14 +207,17 @@ describe("MaterialsReceivingTable", () => {
     expect(screen.getAllByText("ยกเลิก").length).toBeGreaterThan(0);
   });
 
-  it("only shows edit/delete/confirm actions for draft status", () => {
+  it("offers every draft action from the desktop row menu and invokes confirm", async () => {
+    const user = userEvent.setup();
+    const row = makeRow({ status: "draft" });
     const onEdit = vi.fn();
     const onDelete = vi.fn();
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
+    const onView = vi.fn();
     render(
       <MaterialsReceivingTable
-        receivings={[makeRow({ status: "draft" })]}
+        receivings={[row]}
         page={1}
         pageSize={20}
         totalItems={1}
@@ -219,22 +225,68 @@ describe("MaterialsReceivingTable", () => {
         onDelete={onDelete}
         onConfirm={onConfirm}
         onCancel={onCancel}
+        onView={onView}
+        onSortChange={vi.fn()}
+        onPageChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    );
+    const trigger = within(screen.getByTestId("materials-receiving-table")).getByRole("button", {
+      name: `จัดการรายการรับเข้า ${row.internalLotNo}`,
+    });
+    await user.click(trigger);
+
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent?.trim())).toEqual([
+      "ดูรายละเอียด",
+      "แก้ไข",
+      "ยืนยันรับเข้า",
+      "ยกเลิก",
+      "ลบ",
+    ]);
+    await user.click(screen.getByRole("menuitem", { name: "ยืนยันรับเข้า" }));
+    expect(onConfirm).toHaveBeenCalledWith(row);
+  });
+
+  it("offers view and cancel for confirmed rows and invokes cancel", async () => {
+    const user = userEvent.setup();
+    const row = makeRow({ status: "confirmed" });
+    const onCancel = vi.fn();
+    render(
+      <MaterialsReceivingTable
+        receivings={[row]}
+        page={1}
+        pageSize={20}
+        totalItems={1}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onConfirm={vi.fn()}
+        onCancel={onCancel}
         onView={vi.fn()}
         onSortChange={vi.fn()}
         onPageChange={vi.fn()}
         onPageSizeChange={vi.fn()}
       />,
     );
-    expect(screen.getByTitle("แก้ไข")).toBeInTheDocument();
-    expect(screen.getByTitle("ลบ")).toBeInTheDocument();
-    expect(screen.getByTitle("ยืนยันรับเข้า")).toBeInTheDocument();
-    expect(screen.getByTitle("ยกเลิก")).toBeInTheDocument();
+    const trigger = within(screen.getByTestId("materials-receiving-table")).getByRole("button", {
+      name: `จัดการรายการรับเข้า ${row.internalLotNo}`,
+    });
+    await user.click(trigger);
+
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent?.trim())).toEqual([
+      "ดูรายละเอียด",
+      "ยกเลิก",
+    ]);
+    await user.click(screen.getByRole("menuitem", { name: "ยกเลิก" }));
+    expect(onCancel).toHaveBeenCalledWith(row);
   });
 
-  it("hides edit/delete/confirm actions for confirmed status (only cancel remains)", () => {
+  it("offers only view for cancelled rows and invokes view", async () => {
+    const user = userEvent.setup();
+    const row = makeRow({ status: "cancelled" });
+    const onView = vi.fn();
     render(
       <MaterialsReceivingTable
-        receivings={[makeRow({ status: "confirmed" })]}
+        receivings={[row]}
         page={1}
         pageSize={20}
         totalItems={1}
@@ -242,40 +294,22 @@ describe("MaterialsReceivingTable", () => {
         onDelete={vi.fn()}
         onConfirm={vi.fn()}
         onCancel={vi.fn()}
-        onView={vi.fn()}
+        onView={onView}
         onSortChange={vi.fn()}
         onPageChange={vi.fn()}
         onPageSizeChange={vi.fn()}
       />,
     );
-    expect(screen.queryByTitle("แก้ไข")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("ลบ")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("ยืนยันรับเข้า")).not.toBeInTheDocument();
-    expect(screen.getByTitle("ยกเลิก")).toBeInTheDocument();
-  });
+    const trigger = within(screen.getByTestId("materials-receiving-table")).getByRole("button", {
+      name: `จัดการรายการรับเข้า ${row.internalLotNo}`,
+    });
+    await user.click(trigger);
 
-  it("hides all action buttons except view for cancelled status", () => {
-    render(
-      <MaterialsReceivingTable
-        receivings={[makeRow({ status: "cancelled" })]}
-        page={1}
-        pageSize={20}
-        totalItems={1}
-        onEdit={vi.fn()}
-        onDelete={vi.fn()}
-        onConfirm={vi.fn()}
-        onCancel={vi.fn()}
-        onView={vi.fn()}
-        onSortChange={vi.fn()}
-        onPageChange={vi.fn()}
-        onPageSizeChange={vi.fn()}
-      />,
-    );
-    expect(screen.queryByTitle("แก้ไข")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("ลบ")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("ยืนยันรับเข้า")).not.toBeInTheDocument();
-    expect(screen.queryByTitle("ยกเลิก")).not.toBeInTheDocument();
-    expect(screen.getByTitle("ดูรายละเอียด")).toBeInTheDocument();
+    expect(screen.getAllByRole("menuitem").map((item) => item.textContent?.trim())).toEqual([
+      "ดูรายละเอียด",
+    ]);
+    await user.click(screen.getByRole("menuitem", { name: "ดูรายละเอียด" }));
+    expect(onView).toHaveBeenCalledWith(row);
   });
 
   it("shows empty state with create button when no receivings", () => {
@@ -311,27 +345,6 @@ describe("MaterialsReceivingTable", () => {
       />,
     );
     expect(screen.getByText("โหลดข้อมูลไม่สำเร็จ")).toBeInTheDocument();
-  });
-
-  it("calls onConfirm when the confirm action is clicked on a draft row", async () => {
-    const user = userEvent.setup();
-    const onConfirm = vi.fn();
-    const row = makeRow({ status: "draft", id: "mr-x" });
-    render(
-      <MaterialsReceivingTable
-        receivings={[row]}
-        page={1}
-        pageSize={20}
-        totalItems={1}
-        onConfirm={onConfirm}
-        onView={vi.fn()}
-        onSortChange={vi.fn()}
-        onPageChange={vi.fn()}
-        onPageSizeChange={vi.fn()}
-      />,
-    );
-    await user.click(screen.getByTitle("ยืนยันรับเข้า"));
-    expect(onConfirm).toHaveBeenCalledWith(row);
   });
 
   it("calls onSortChange when a sortable header is clicked", async () => {

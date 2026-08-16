@@ -207,7 +207,7 @@ test("mobile: filters, row actions, dialogs, and sticky actions stay within the 
   await expectSurfaceWithinViewport(page, advancedSurface);
 
   const rowMenuTrigger = page.getByRole("button", {
-    name: `เปิดเมนูการจัดการ ${receiving.internalLotNo}`,
+    name: `จัดการรายการรับเข้า ${receiving.internalLotNo}`,
   });
   await rowMenuTrigger.click();
   const rowMenu = page.getByRole("menu");
