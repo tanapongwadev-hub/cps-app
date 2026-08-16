@@ -421,28 +421,27 @@ function PermissionRow({
         )}
       </td>
       <td className="px-3 py-2 text-right">
-        <div className="flex items-center justify-end gap-1">
-          <Button size="sm" variant="outline" onClick={onManageDepartments}>
-            <Building2 className="h-3.5 w-3.5" />
-            กำหนดแผนก
-          </Button>
-          <ActionMenu
-            label={`เมนู ${permission.code}`}
-            items={[
-              {
-                label: "แก้ไข",
-                icon: <Pencil className="h-3.5 w-3.5" />,
-                onClick: onEdit,
-              },
-              {
-                label: "ลบ",
-                icon: <Trash2 className="h-3.5 w-3.5" />,
-                variant: "danger",
-                onClick: onDelete,
-              },
-            ]}
-          />
-        </div>
+        <ActionMenu
+          label={`เมนู ${permission.code}`}
+          items={[
+            {
+              label: "กำหนดแผนก",
+              icon: <Building2 className="h-3.5 w-3.5" />,
+              onClick: onManageDepartments,
+            },
+            {
+              label: "แก้ไข",
+              icon: <Pencil className="h-3.5 w-3.5" />,
+              onClick: onEdit,
+            },
+            {
+              label: "ลบ",
+              icon: <Trash2 className="h-3.5 w-3.5" />,
+              variant: "danger",
+              onClick: onDelete,
+            },
+          ]}
+        />
       </td>
     </tr>
   );
