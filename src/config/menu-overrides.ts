@@ -29,8 +29,6 @@ export const MENU_PATH_OVERRIDES: Record<string, string | null> = {
   MATERIALS_PC_MANAGEMENTS: "/materials/pc",
   MATERIALS_OF_MANAGEMENTS: "/materials/of",
   MATERIALS_OF_MAT_MANAGEMENTS: "/materials/of-mat",
-  // Goods Receipts - submenu under Materials
-  GOODS_RECEIPTS: "/materials/goods-receipts",
   // Materials Receiving - submenu under Materials
   // (single material per receiving + package breakdown + QR + stock balance)
   MATERIALS_RECEIVING: "/materials/materials-receiving",

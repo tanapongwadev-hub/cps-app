@@ -34,10 +34,9 @@ describe("ConfirmDialog", () => {
     expect(descriptionWrapper).toHaveClass("min-w-0", "break-words");
     expect(screen.getByRole("textbox", { name: "เหตุผลในการยกเลิก" })).toHaveClass("w-full");
 
-    const cancelButton = screen.getByRole("button", { name: "ยกเลิก", exact: true });
+    const cancelButton = screen.getByRole("button", { name: "ยกเลิก" });
     const confirmButton = screen.getByRole("button", {
       name: "ยกเลิกการรับเข้า",
-      exact: true,
     });
     expect(cancelButton).toHaveClass("w-full", "sm:w-auto");
     expect(confirmButton).toHaveClass("w-full", "sm:w-auto");

@@ -113,14 +113,6 @@ export const PERMISSIONS = {
   SYSTEM_SETTINGS_VIEW: "system-settings.view",
   SYSTEM_SETTINGS_UPDATE: "system-settings.update",
 
-  // Goods Receipt
-  GOODS_RECEIPT_VIEW: "goods_receipt.read",
-  GOODS_RECEIPT_CREATE: "goods_receipt.create",
-  GOODS_RECEIPT_UPDATE: "goods_receipt.update",
-  GOODS_RECEIPT_DELETE: "goods_receipt.delete",
-  GOODS_RECEIPT_POST: "goods_receipt.post",
-  GOODS_RECEIPT_CANCEL: "goods_receipt.cancel",
-
   // Materials Receiving (รับเข้าวัตถุดิบ + Stock Balance + QR Code)
   // ใช้ permission code เดียวกับ backend MATERIALS_RECEIVING_*
   MATERIALS_RECEIVING_VIEW: "MATERIALS_RECEIVING_VIEW",
@@ -305,18 +297,6 @@ export const PERMISSION_GROUPS = [
       { key: "create", code: PERMISSIONS.REJECT_REASON_CREATE, label: "สร้าง" },
       { key: "update", code: PERMISSIONS.REJECT_REASON_UPDATE, label: "แก้ไข" },
       { key: "delete", code: PERMISSIONS.REJECT_REASON_DELETE, label: "ลบ" },
-    ],
-  },
-  {
-    module: "goods-receipt",
-    label: "รับเข้าวัตถุดิบ",
-    permissions: [
-      { key: "view", code: PERMISSIONS.GOODS_RECEIPT_VIEW, label: "ดู" },
-      { key: "create", code: PERMISSIONS.GOODS_RECEIPT_CREATE, label: "สร้าง" },
-      { key: "update", code: PERMISSIONS.GOODS_RECEIPT_UPDATE, label: "แก้ไข" },
-      { key: "delete", code: PERMISSIONS.GOODS_RECEIPT_DELETE, label: "ลบ" },
-      { key: "post", code: PERMISSIONS.GOODS_RECEIPT_POST, label: "รับรอง" },
-      { key: "cancel", code: PERMISSIONS.GOODS_RECEIPT_CANCEL, label: "ยกเลิก" },
     ],
   },
   {

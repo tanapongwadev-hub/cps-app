@@ -56,7 +56,7 @@ export function StockBalanceDialog({
         const message =
           err instanceof Error ? err.message : "ไม่สามารถดึงข้อมูลสต็อกได้";
         setError(message);
-        showToast(message, "error");
+        showToast.error(message);
       } finally {
         setLoading(false);
       }

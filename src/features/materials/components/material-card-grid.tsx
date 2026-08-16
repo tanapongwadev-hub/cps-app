@@ -353,7 +353,7 @@ export function MaterialCardGrid({
                       </code>
                       {/* Stock Balance — prominent badge next to code */}
                       {stockLoaded && stockBalances[material.id] && (() => {
-                        const bal = stockBalances[material.id];
+                        const bal = stockBalances[material.id]!;
                         const qty = Number(bal.qty);
                         const requiresRatio = materialShapeRequiresRatio(material.materialType);
                         const usableQty = requiresRatio && material.ratio ? qty * material.ratio : null;
