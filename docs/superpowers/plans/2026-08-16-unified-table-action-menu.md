@@ -23,10 +23,12 @@
 ### Task 1: Shared responsive action menu
 
 **Files:**
+
 - Create: `src/components/tables/action-menu.test.tsx`
 - Modify: `src/components/tables/action-menu.tsx`
 
 **Interfaces:**
+
 - Consumes: existing `ActionItem` with `label`, `icon`, `onClick`, `variant`, `disabled`, and `hidden`.
 - Produces: `ActionMenu({ items, label })` with one responsive three-dot trigger, touch-friendly items, propagation isolation, hidden filtering, and danger separation.
 
@@ -50,11 +52,15 @@ it("filters hidden actions, separates danger actions, and invokes callbacks", as
   const user = userEvent.setup();
   const onEdit = vi.fn();
   const onDelete = vi.fn();
-  render(<ActionMenu items={[
-    { label: "แก้ไข", onClick: onEdit },
-    { label: "ซ่อน", hidden: true, onClick: vi.fn() },
-    { label: "ลบ", variant: "danger", onClick: onDelete },
-  ]} />);
+  render(
+    <ActionMenu
+      items={[
+        { label: "แก้ไข", onClick: onEdit },
+        { label: "ซ่อน", hidden: true, onClick: vi.fn() },
+        { label: "ลบ", variant: "danger", onClick: onDelete },
+      ]}
+    />,
+  );
 
   await user.click(screen.getByRole("button", { name: "เมนู" }));
   expect(screen.queryByRole("menuitem", { name: "ซ่อน" })).not.toBeInTheDocument();
@@ -106,10 +112,12 @@ git commit -m "refactor: standardize table action menu"
 ### Task 2: Materials table action consolidation
 
 **Files:**
+
 - Create: `src/features/materials/components/material-table.test.tsx`
 - Modify: `src/features/materials/components/material-table.tsx`
 
 **Interfaces:**
+
 - Consumes: `ActionMenu` and `ActionItem[]` from Task 1; existing `MaterialTableProps` callbacks remain unchanged.
 - Produces: one row-specific action trigger containing detail, edit, enable/disable, and stock-balance actions.
 
@@ -143,9 +151,24 @@ Import `ActionMenu` and build the array inside the row map:
 
 ```tsx
 const actions: ActionItem[] = [
-  { label: "ดูรายละเอียด", icon: <Eye className="size-4" />, hidden: !href, onClick: () => href && router.push(href) },
-  { label: "แก้ไข", icon: <Pencil className="size-4" />, hidden: !onEdit, onClick: () => onEdit?.(material) },
-  { label: "ดูสต็อก", icon: <Scale className="size-4" />, hidden: !onViewStockBalance, onClick: () => onViewStockBalance?.(material) },
+  {
+    label: "ดูรายละเอียด",
+    icon: <Eye className="size-4" />,
+    hidden: !href,
+    onClick: () => href && router.push(href),
+  },
+  {
+    label: "แก้ไข",
+    icon: <Pencil className="size-4" />,
+    hidden: !onEdit,
+    onClick: () => onEdit?.(material),
+  },
+  {
+    label: "ดูสต็อก",
+    icon: <Scale className="size-4" />,
+    hidden: !onViewStockBalance,
+    onClick: () => onViewStockBalance?.(material),
+  },
   {
     label: material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน",
     icon: material.isActive ? <Power className="size-4" /> : <RotateCcw className="size-4" />,
@@ -176,10 +199,12 @@ git commit -m "refactor: consolidate material row actions"
 ### Task 3: Goods receipt action consolidation
 
 **Files:**
+
 - Create: `src/features/goods-receipts/components/goods-receipt-table.test.tsx`
 - Modify: `src/features/goods-receipts/components/goods-receipt-table.tsx`
 
 **Interfaces:**
+
 - Consumes: shared `ActionMenu`; existing goods-receipt callbacks and `draft`/`posted` status values.
 - Produces: one trigger with the exact action visibility currently encoded by inline buttons.
 
@@ -204,11 +229,29 @@ Replace the inline button group with `ActionMenu` items whose `hidden` condition
 ```tsx
 [
   { label: "ดูรายละเอียด", hidden: !onView, onClick: () => onView?.(receipt) },
-  { label: "แก้ไข", hidden: !onEdit || receipt.status !== "draft", onClick: () => onEdit?.(receipt) },
-  { label: "รับรองเอกสาร", hidden: !onPost || receipt.status !== "draft", onClick: () => onPost?.(receipt) },
-  { label: "ยกเลิกเอกสาร", variant: "danger", hidden: !onCancel || receipt.status !== "posted", onClick: () => onCancel?.(receipt) },
-  { label: "ลบ", variant: "danger", hidden: !onDelete || receipt.status !== "draft", onClick: () => onDelete?.(receipt) },
-]
+  {
+    label: "แก้ไข",
+    hidden: !onEdit || receipt.status !== "draft",
+    onClick: () => onEdit?.(receipt),
+  },
+  {
+    label: "รับรองเอกสาร",
+    hidden: !onPost || receipt.status !== "draft",
+    onClick: () => onPost?.(receipt),
+  },
+  {
+    label: "ยกเลิกเอกสาร",
+    variant: "danger",
+    hidden: !onCancel || receipt.status !== "posted",
+    onClick: () => onCancel?.(receipt),
+  },
+  {
+    label: "ลบ",
+    variant: "danger",
+    hidden: !onDelete || receipt.status !== "draft",
+    onClick: () => onDelete?.(receipt),
+  },
+];
 ```
 
 Retain the corresponding Lucide icons and narrow/right-align the action header and cell.
@@ -231,10 +274,12 @@ git commit -m "refactor: consolidate goods receipt actions"
 ### Task 4: Permissions action consolidation
 
 **Files:**
+
 - Modify: `src/app/(admin)/permissions/page.test.tsx`
 - Modify: `src/app/(admin)/permissions/page.tsx`
 
 **Interfaces:**
+
 - Consumes: shared `ActionMenu`; existing `onManageDepartments`, `onEdit`, and `onDelete` handlers.
 - Produces: one permission-row trigger containing all three actions.
 
@@ -290,11 +335,13 @@ git commit -m "refactor: move permission actions into menu"
 ### Task 5: Materials receiving migration and final verification
 
 **Files:**
+
 - Modify: `src/features/materials-receiving/components/materials-receiving-table.test.tsx`
 - Modify: `src/features/materials-receiving/components/materials-receiving-table.tsx`
 - Modify: `tests/e2e/materials-receiving-responsive.spec.ts`
 
 **Interfaces:**
+
 - Consumes: shared `ActionMenu`; existing `ReceivingActions` predicates and callbacks.
 - Produces: materials-receiving desktop rows and mobile cards using the same shared menu as all other tables.
 
@@ -315,10 +362,7 @@ Expected: FAIL on the new shared trigger label/contract because the feature stil
 Keep `ReceivingActions` as the feature boundary, but make it construct `ActionItem[]` and return:
 
 ```tsx
-<ActionMenu
-  label={`จัดการรายการรับเข้า ${receiving.internalLotNo}`}
-  items={items}
-/>
+<ActionMenu label={`จัดการรายการรับเข้า ${receiving.internalLotNo}`} items={items} />
 ```
 
 Delete now-unused direct dropdown imports and `MoreHorizontal`. Keep every existing `canView`, `canEdit`, `canConfirm`, `canCancel`, and `canDelete` predicate and callback argument unchanged.
