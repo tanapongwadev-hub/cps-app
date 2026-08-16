@@ -37,11 +37,11 @@ export function ActionMenu({ items, label = "เมนู" }: ActionMenuProps) {
         <Button
           variant="ghost"
           size="icon-sm"
-          className="h-7 w-7"
+          className="h-10 w-10 sm:h-8 sm:w-8"
           aria-label={label}
           onClick={(e) => e.stopPropagation()}
         >
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -58,6 +58,7 @@ export function ActionMenu({ items, label = "เมนู" }: ActionMenuProps) {
                 }}
                 disabled={item.disabled}
                 className={cn(
+                  "min-h-10",
                   item.variant === "danger" && "text-danger focus:text-danger",
                 )}
               >
