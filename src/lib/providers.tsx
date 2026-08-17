@@ -7,9 +7,7 @@ import { ThemeProvider } from "@/lib/theme-provider";
 import { queryClient } from "@/lib/query-client";
 import { apiClient } from "@/services/api-client";
 import { useAuthStore } from "@/stores/auth-store";
-import { setupMockHandler } from "@/mocks";
 import { Toaster } from "@/components/ui/toaster";
-import { isMockMode } from "@/config/env";
 import { authApi } from "@/features/auth/api/auth-api";
 
 interface ProvidersProps {
@@ -23,9 +21,7 @@ export function Providers({ children }: ProvidersProps) {
     apiClient.setOnUnauthorized(() => {
       // 401 after refresh failed → mark session as expired (so /session-expired
       // can be shown) but keep the user so the page can render personalised copy.
-      if (!isMockMode) {
-        useAuthStore.getState().expireSession();
-      }
+      useAuthStore.getState().expireSession();
     });
     apiClient.setRefreshHandler(async () => {
       const { refreshToken } = useAuthStore.getState();
@@ -43,9 +39,7 @@ export function Providers({ children }: ProvidersProps) {
         return false;
       }
     });
-    if (isMockMode) {
-      setupMockHandler(apiClient);
-    }
+
   }, []);
 
   return (
