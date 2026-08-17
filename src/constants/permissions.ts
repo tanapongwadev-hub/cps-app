@@ -127,6 +127,14 @@ export const PERMISSIONS = {
   REJECT_REASON_CREATE: "REJECT_REASON_CREATE",
   REJECT_REASON_UPDATE: "REJECT_REASON_UPDATE",
   REJECT_REASON_DELETE: "REJECT_REASON_DELETE",
+
+  // Materials Disbursement (การจ่ายออกวัสดุ)
+  MATERIALS_DISBURSEMENT_VIEW: "MATERIALS_DISBURSEMENT_VIEW",
+  MATERIALS_DISBURSEMENT_CREATE: "MATERIALS_DISBURSEMENT_CREATE",
+  MATERIALS_DISBURSEMENT_UPDATE: "MATERIALS_DISBURSEMENT_UPDATE",
+  MATERIALS_DISBURSEMENT_DELETE: "MATERIALS_DISBURSEMENT_DELETE",
+  MATERIALS_DISBURSEMENT_CONFIRM: "MATERIALS_DISBURSEMENT_CONFIRM",
+  MATERIALS_DISBURSEMENT_CANCEL: "MATERIALS_DISBURSEMENT_CANCEL",
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
@@ -309,6 +317,18 @@ export const PERMISSION_GROUPS = [
       { key: "delete", code: PERMISSIONS.MATERIALS_RECEIVING_DELETE, label: "ลบ" },
       { key: "confirm", code: PERMISSIONS.MATERIALS_RECEIVING_CONFIRM, label: "ยืนยันรับ" },
       { key: "cancel", code: PERMISSIONS.MATERIALS_RECEIVING_CANCEL, label: "ยกเลิก" },
+    ],
+  },
+  {
+    module: "materials-disbursement",
+    label: "การจ่ายออกวัสดุ (Materials Disbursement)",
+    permissions: [
+      { key: "view", code: PERMISSIONS.MATERIALS_DISBURSEMENT_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.MATERIALS_DISBURSEMENT_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.MATERIALS_DISBURSEMENT_DELETE, label: "ลบ" },
+      { key: "confirm", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CONFIRM, label: "ยืนยันจ่าย" },
+      { key: "cancel", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CANCEL, label: "ยกเลิก" },
     ],
   },
 ] as const;
