@@ -10,8 +10,9 @@ import {
   useDeleteMaterialsDisbursement,
   useMaterialsDisbursementDetail,
   useMaterialsDisbursementLookups,
-  useMaterialsDisbursement,
+  useMaterialsDisbursements,
   useConfirmMaterialsDisbursement,
+  useUpdateMaterialsDisbursement,
 } from "@/features/materials-disbursement/hooks/use-materials-disbursement";
 import { MaterialsDisbursementTable } from "@/features/materials-disbursement/components/materials-disbursement-table";
 import { MaterialsDisbursementFilters } from "@/features/materials-disbursement/components/materials-disbursement-filters";
@@ -19,20 +20,22 @@ import { MaterialsDisbursementFormDialog } from "@/features/materials-disburseme
 import { MaterialsDisbursementDetailDialog } from "@/features/materials-disbursement/components/materials-disbursement-detail-dialog";
 import { QrTrackingDialog } from "@/features/materials-disbursement/components/qr-tracking-dialog";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
-import { usePermission } from "@/hooks/use-permission";
+import { useHasPermission } from "@/hooks/use-permission";
 import { PERMISSIONS } from "@/constants/permissions";
 import type {
+  CreateMaterialsDisbursementPayload,
   ListMaterialsDisbursementParams,
   MaterialsDisbursement,
+  UpdateMaterialsDisbursementPayload,
 } from "@/features/materials-disbursement/api/materials-disbursement-api";
 
 export default function MaterialsDisbursementPage() {
   // ── Permission ──────────────────────────────────────────────────────────────
-  const canCreate = usePermission(PERMISSIONS.MATERIALS_DISBURSEMENT_CREATE);
-  const canEdit = usePermission(PERMISSIONS.MATERIALS_DISBURSEMENT_UPDATE);
-  const canDelete = usePermission(PERMISSIONS.MATERIALS_DISBURSEMENT_DELETE);
-  const canConfirm = usePermission(PERMISSIONS.MATERIALS_DISBURSEMENT_CONFIRM);
-  const canCancel = usePermission(PERMISSIONS.MATERIALS_DISBURSEMENT_CANCEL);
+  const canCreate = useHasPermission(PERMISSIONS.MATERIALS_DISBURSEMENT_CREATE);
+  const canEdit = useHasPermission(PERMISSIONS.MATERIALS_DISBURSEMENT_UPDATE);
+  const canDelete = useHasPermission(PERMISSIONS.MATERIALS_DISBURSEMENT_DELETE);
+  const canConfirm = useHasPermission(PERMISSIONS.MATERIALS_DISBURSEMENT_CONFIRM);
+  const canCancel = useHasPermission(PERMISSIONS.MATERIALS_DISBURSEMENT_CANCEL);
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [filters, setFilters] = React.useState<ListMaterialsDisbursementParams>({
@@ -89,9 +92,19 @@ export default function MaterialsDisbursementPage() {
 
   // ── Create / Edit ───────────────────────────────────────────────────────────
   const createMutation = useCreateMaterialsDisbursement();
+  const updateMutation = useUpdateMaterialsDisbursement();
 
-  const handleSave = async (payload: Parameters<typeof createMutation.mutateAsync>[0]) => {
-    await createMutation.mutateAsync(payload as Parameters<typeof createMutation.mutateAsync>[0]);
+  const handleSave = async (
+    payload: CreateMaterialsDisbursementPayload | UpdateMaterialsDisbursementPayload,
+  ) => {
+    if (!selectedDisbursement) {
+      await createMutation.mutateAsync(payload as CreateMaterialsDisbursementPayload);
+    } else {
+      await updateMutation.mutateAsync({
+        id: selectedDisbursement.id,
+        data: payload as UpdateMaterialsDisbursementPayload,
+      });
+    }
   };
 
   // ── Handlers ────────────────────────────────────────────────────────────────
@@ -131,23 +144,23 @@ export default function MaterialsDisbursementPage() {
           { label: "วัสดุ", href: "/materials" },
           { label: "การจ่ายออกวัสดุ" },
         ]}
-        actions={
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setQrTrackingOpen(true)}
-            >
-              <QrCode className="h-4 w-4 mr-1" />
-              ติดตาม QR
+        secondaryActions={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setQrTrackingOpen(true)}
+          >
+            <QrCode className="h-4 w-4 mr-1" />
+            ติดตาม QR
+          </Button>
+        }
+        primaryAction={
+          canCreate ? (
+            <Button size="sm" onClick={handleCreate}>
+              <Plus className="h-4 w-4 mr-1" />
+              สร้างใบจ่ายออก
             </Button>
-            {canCreate && (
-              <Button size="sm" onClick={handleCreate}>
-                <Plus className="h-4 w-4 mr-1" />
-                สร้างใบจ่ายออก
-              </Button>
-            )}
-          </>
+          ) : undefined
         }
       />
 
@@ -214,10 +227,10 @@ export default function MaterialsDisbursementPage() {
             ? `ยืนยันการจ่ายออก ${confirmTarget.disbursementNo}? ระบบจะตัดสต็อกวัสดุตาม FIFO โดยอัตโนมัติ`
             : ""
         }
-        confirmLabel="ยืนยันจ่ายออก"
+        confirmText="ยืนยันจ่ายออก"
         onConfirm={handleConfirm}
-        confirmPending={confirmMutation.isPending}
-        variant="default"
+        loading={confirmMutation.isPending}
+        variant="info"
       />
 
       {/* Cancel Dialog */}
@@ -235,10 +248,10 @@ export default function MaterialsDisbursementPage() {
             ? `ยกเลิก ${cancelTarget.disbursementNo}? หากเคยยืนยันแล้ว ระบบจะคืนสต็อกวัสดุ`
             : ""
         }
-        confirmLabel="ยกเลิก"
+        confirmText="ยกเลิก"
         onConfirm={handleCancel}
-        confirmPending={cancelMutation.isPending}
-        variant="destructive"
+        loading={cancelMutation.isPending}
+        variant="danger"
         showTextInput
         textInputLabel="เหตุผลการยกเลิก"
         textInputValue={cancelReason}
@@ -256,10 +269,10 @@ export default function MaterialsDisbursementPage() {
             ? `ลบใบจ่ายออก ${deleteTarget.disbursementNo}? สามารถลบได้เฉพาะฉบับร่างเท่านั้น`
             : ""
         }
-        confirmLabel="ลบ"
+        confirmText="ลบ"
         onConfirm={handleDelete}
-        confirmPending={deleteMutation.isPending}
-        variant="destructive"
+        loading={deleteMutation.isPending}
+        variant="danger"
       />
     </div>
   );

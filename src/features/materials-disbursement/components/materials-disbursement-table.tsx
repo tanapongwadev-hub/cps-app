@@ -10,10 +10,12 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
+import { ActionMenu } from "@/components/tables/action-menu";
+import type { ActionItem } from "@/components/tables/action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -171,7 +173,7 @@ export function MaterialsDisbursementTable({
             icon: XCircle,
             onClick: (row) => onCancel(row),
             disabled: (row) => row.status !== "draft",
-            variant: "destructive" as const,
+            variant: "danger" as const,
           },
         ]
       : []),
@@ -182,7 +184,7 @@ export function MaterialsDisbursementTable({
             icon: Trash2,
             onClick: (row) => onDelete(row),
             disabled: (row) => row.status !== "draft",
-            variant: "destructive" as const,
+            variant: "danger" as const,
           },
         ]
       : []),

@@ -29,6 +29,7 @@ import { cn } from "@/utils/cn";
 import type {
   CreateMaterialsDisbursementPayload,
   MaterialsDisbursement,
+  MaterialsDisbursementDetail,
   MaterialsDisbursementLookups,
   UpdateMaterialsDisbursementPayload,
 } from "../api/materials-disbursement-api";
@@ -61,8 +62,9 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-function getDefaultValues(disbursement?: MaterialsDisbursement | null): FormValues {
+function getDefaultValues(disbursement?: MaterialsDisbursement | MaterialsDisbursementDetail | null): FormValues {
   if (disbursement) {
+    const detailItems = 'items' in disbursement ? disbursement.items : undefined;
     return {
       disbursementType: disbursement.disbursementType,
       disbursementDate: disbursement.disbursementDate,
@@ -70,7 +72,7 @@ function getDefaultValues(disbursement?: MaterialsDisbursement | null): FormValu
       attachmentUrl: disbursement.attachmentUrl ?? "",
       attachmentName: disbursement.attachmentName ?? "",
       items:
-        disbursement.items?.map((item) => ({
+        detailItems?.map((item) => ({
           materialId: item.materialId,
           requestedQuantity: item.requestedQuantity,
         })) ?? [],
@@ -98,7 +100,7 @@ function formatNumber(value: string | number): string {
 export interface MaterialsDisbursementFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  disbursement?: MaterialsDisbursement | null;
+  disbursement?: MaterialsDisbursement | MaterialsDisbursementDetail | null;
   lookups: MaterialsDisbursementLookups;
   onSave: (
     payload: CreateMaterialsDisbursementPayload | UpdateMaterialsDisbursementPayload,

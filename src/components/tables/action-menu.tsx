@@ -12,22 +12,25 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/cn";
 
-export interface ActionItem {
+export interface ActionItem<T = unknown> {
   label: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon?: React.ReactElement<any>;
-  onClick: () => void;
+  onClick: (row: T) => void;
   variant?: "default" | "danger";
-  disabled?: boolean;
+  disabled?: ((row: T) => boolean) | boolean;
   hidden?: boolean;
 }
 
-interface ActionMenuProps {
-  items: ActionItem[];
+interface ActionMenuProps<T = unknown> {
+  items: ActionItem<T>[];
+  row: T;
   label?: string;
 }
 
-export function ActionMenu({ items, label = "เมนู" }: ActionMenuProps) {
+export type { ActionItem };
+
+export function ActionMenu<T = unknown>({ items, row, label = "เมนู" }: ActionMenuProps<T>) {
   const visible = items.filter((i) => !i.hidden);
   if (visible.length === 0) return null;
 
@@ -48,15 +51,16 @@ export function ActionMenu({ items, label = "เมนู" }: ActionMenuProps) {
         {visible.map((item, idx) => {
           const prev = visible[idx - 1];
           const showSeparator = prev && prev.variant !== item.variant;
+          const isDisabled = typeof item.disabled === "function" ? item.disabled(row) : item.disabled;
           return (
             <React.Fragment key={item.label}>
               {showSeparator && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  item.onClick();
+                  item.onClick(row);
                 }}
-                disabled={item.disabled}
+                disabled={isDisabled}
                 className={cn(
                   "min-h-10",
                   item.variant === "danger" && "text-danger focus:text-danger",
