@@ -21,13 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ViewToggle, type ViewMode } from "@/components/ui/view-toggle";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
-import { PERMISSIONS } from "@/constants/permissions";
 import { MaterialTable } from "./material-table";
 import { MaterialCardGrid } from "./material-card-grid";
 import { MaterialFilters } from "./material-filters";
 import { MaterialFormDialog } from "./material-form-dialog";
 import { MaterialStatusDialog } from "./material-status-dialog";
-import type { Material, MaterialLookups, ListMaterialsParams, MaterialPayload, UpdateMaterialPayload } from "../api/materials-api";
+import type { Material, MaterialLookups, ListMaterialsParams, MaterialPayload, UpdateMaterialPayload, MaterialImageUpload } from "../api/materials-api";
 
 // ============================================================================
 // Props Types
@@ -80,6 +79,9 @@ export interface MaterialsListPresenterProps {
   
   // Permission
   canCreate: boolean;
+  
+  // Additional
+  className?: string;
 }
 
 // ============================================================================
@@ -120,11 +122,29 @@ export function MaterialsListPresenter({
   onPageChange,
   onPageSizeChange,
   canCreate,
+  className,
 }: MaterialsListPresenterProps) {
   const canSave = !isLookupsLoading && !isLookupsError;
 
+  // Wrap callbacks to match dialog's expected types
+  const handleSave = React.useCallback(
+    async (payload: MaterialPayload | UpdateMaterialPayload) => {
+      onSave(payload);
+    },
+    [onSave],
+  );
+
+  const handleUploadImage = React.useCallback(
+    async (file: File): Promise<MaterialImageUpload> => {
+      onUploadImage(file);
+      // Return a promise that resolves when mutation completes
+      return Promise.resolve({ imagePath: "", previewUrl: "" });
+    },
+    [onUploadImage],
+  );
+
   return (
-    <>
+    <div className={className}>
       <PageContainer>
         <PageHeader
           title="จัดการอะไหล่"
@@ -242,8 +262,8 @@ export function MaterialsListPresenter({
         onOpenChange={onFormOpenChange}
         material={editingMaterial}
         lookups={lookups}
-        onSave={onSave}
-        onUploadImage={onUploadImage}
+        onSave={handleSave}
+        onUploadImage={handleUploadImage}
         savePending={isCreatePending || isUpdatePending}
         uploadPending={isUploadPending}
       />
@@ -256,6 +276,6 @@ export function MaterialsListPresenter({
         onConfirm={onConfirmStatusChange}
         pending={isDeactivatePending || isRestorePending}
       />
-    </>
+    </div>
   );
 }

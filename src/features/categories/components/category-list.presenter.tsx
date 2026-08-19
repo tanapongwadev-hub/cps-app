@@ -15,7 +15,7 @@ import { CategoryTable } from "./category-table";
 import { CategoryFilters } from "./category-filters";
 import { CategoryFormDialog } from "./category-form-dialog";
 import { CategoryStatusDialog } from "./category-status-dialog";
-import type { Category, CategoryPayload, UpdateCategoryPayload } from "../api/categories-api";
+import type { Category } from "../api/categories-api";
 import type { CategoryFormValues } from "../schemas/category-schema";
 
 // ============================================================================
@@ -32,7 +32,7 @@ export interface CategoryListPresenterProps {
   page: number;
   pageSize: number;
   search: string;
-  isActive: boolean | undefined;
+  isActive?: boolean;
   formOpen: boolean;
   editing: Category | null;
   statusChange: Category | null;
@@ -59,6 +59,9 @@ export interface CategoryListPresenterProps {
   onStatusChange: (category: Category) => void;
   onStatusConfirm: (category: Category) => void;
   onStatusDialogOpenChange: (open: boolean) => void;
+  
+  // Additional
+  className?: string;
 }
 
 // ============================================================================
@@ -93,9 +96,10 @@ export function CategoryListPresenter({
   onStatusChange,
   onStatusConfirm,
   onStatusDialogOpenChange,
+  className,
 }: CategoryListPresenterProps) {
   const handleFiltersChange = React.useCallback(
-    (values: { search: string; isActive: boolean | undefined }) => {
+    (values: { search: string; isActive?: boolean }) => {
       onFiltersChange(values.search, values.isActive);
     },
     [onFiltersChange],
@@ -103,24 +107,19 @@ export function CategoryListPresenter({
 
   const handleSubmit = React.useCallback(
     async (values: CategoryFormValues) => {
-      const payload: CategoryPayload | UpdateCategoryPayload = {
-        code: values.code,
-        nameTh: values.nameTh,
-        nameEn: values.nameEn?.trim() ? values.nameEn.trim() : null,
-        parentId: values.parentId?.trim() ? values.parentId.trim() : null,
-        sortOrder: values.sortOrder,
-        iconColor: values.iconColor?.trim() ? values.iconColor.trim() : null,
-        description: values.description?.trim() ? values.description.trim() : null,
-        isActive: values.isActive,
-        ...(editing ? { updatedAt: editing.updatedAt } : {}),
-      };
       await onSubmit(values);
     },
-    [editing, onSubmit],
+    [onSubmit],
   );
 
+  const handleConfirmStatus = React.useCallback(() => {
+    if (statusChange) {
+      onStatusConfirm(statusChange);
+    }
+  }, [statusChange, onStatusConfirm]);
+
   return (
-    <>
+    <div className={className}>
       <PageContainer>
         <PageHeader
           title="จัดการหมวดหมู่"
@@ -184,8 +183,8 @@ export function CategoryListPresenter({
         category={statusChange}
         onOpenChange={onStatusDialogOpenChange}
         pending={isDeactivatePending || isRestorePending}
-        onConfirm={() => statusChange && onStatusConfirm(statusChange)}
+        onConfirm={handleConfirmStatus}
       />
-    </>
+    </div>
   );
 }

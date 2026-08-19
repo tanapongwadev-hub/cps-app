@@ -8,7 +8,7 @@
 import type { ReactNode } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -65,8 +65,10 @@ function ErrorDisplay({
 }) {
   return (
     <Alert variant="destructive" className="mx-auto max-w-md">
-      <Alert.Title>เกิดข้อผิดพลาด</Alert.Description>
-      <p className="mt-2 text-sm">{error?.message ?? "ไม่สามารถโหลดข้อมูลได้"}</p>
+      <AlertTitle>เกิดข้อผิดพลาด</AlertTitle>
+      <AlertDescription>
+        <p className="mt-2">{error?.message ?? "ไม่สามารถโหลดข้อมูลได้"}</p>
+      </AlertDescription>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry} className="mt-3">
           ลองใหม่

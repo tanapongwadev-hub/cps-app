@@ -71,7 +71,7 @@ export interface FilterRequest {
   status?: string;
   dateFrom?: string;
   dateTo?: string;
-  [key: string]: string | number | boolean | undefined | null;
+  [key: string]: string | number | boolean | string[] | undefined | null;
 }
 
 /**

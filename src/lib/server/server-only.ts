@@ -14,11 +14,14 @@
  * ```
  */
 
-if (typeof window !== "undefined") {
-  throw new Error(
-    "This module cannot be imported from a client component. " +
-    "This error helps you find accidental client-side imports of server-only code."
-  );
-}
+const serverOnly = (() => {
+  if (typeof window !== "undefined") {
+    throw new Error(
+      "This module cannot be imported from a client component. " +
+      "This error helps you find accidental client-side imports of server-only code."
+    );
+  }
+  return true;
+})();
 
-export {};
+export { serverOnly, serverOnly as default };

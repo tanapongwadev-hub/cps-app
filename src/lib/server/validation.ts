@@ -78,10 +78,13 @@ export const schemas = {
 /**
  * Format Zod errors for API response
  */
-export function formatZodErrors(error: z.ZodError) {
-  return error.errors.map((err) => ({
-    code: err.code,
-    message: err.message,
-    field: err.path.join("."),
+export function formatZodErrors(error: z.ZodError | { issues?: Array<{ code: string; message: string; path: (string | number)[] }> }) {
+  // Zod v3 uses `.issues`, Zod v4 may use `.errors`
+  // @ts-expect-error - Zod version compatibility
+  const issues: Array<{ code: string; message: string; path: (string | number)[] }> = error.issues ?? error.errors ?? [];
+  return issues.map((issue) => ({
+    code: issue.code,
+    message: issue.message,
+    field: issue.path.join("."),
   }));
 }
