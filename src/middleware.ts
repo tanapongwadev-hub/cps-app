@@ -11,11 +11,12 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 // Routes that don't require authentication
+// Note: Route groups (auth) are NOT included in the URL path
 const PUBLIC_ROUTES = [
-  "/(auth)/login",
-  "/(auth)/forgot-password",
-  "/(auth)/reset-password",
-  "/(auth)/select-department",
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/select-department",
 ] as const;
 
 // Route prefixes that are always public
@@ -64,7 +65,7 @@ export function middleware(request: NextRequest) {
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
-    const loginUrl = new URL("/(auth)/login", request.url);
+    const loginUrl = new URL("/login", request.url);
     
     // Preserve the original URL for redirect after login
     loginUrl.searchParams.set("redirect", pathname);
