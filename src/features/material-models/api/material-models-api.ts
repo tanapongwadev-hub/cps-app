@@ -1,4 +1,9 @@
-import { apiClient } from "@/services/api-client";
+/**
+ * Material Models API - using centralized endpoints
+ */
+
+import { apiClient } from "@/infra/api/client";
+import { endpoints } from "@/infra/api/endpoints";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 
@@ -46,12 +51,13 @@ export const materialModelsApi = {
     if (params.isActive !== undefined) query.isActive = params.isActive;
     if (params.sortBy) query.sortBy = params.sortBy;
     if (params.sortOrder) query.sortOrder = params.sortOrder;
-    return apiClient.get<PaginatedList<MaterialModel>>("/material-models", { params: query });
+    
+    return apiClient.get<PaginatedList<MaterialModel>>(endpoints.materials.materialModels, { params: query });
   },
+
   get: (id: string) => apiClient.get<MaterialModel>(`/material-models/${id}`),
-  create: (data: MaterialModelPayload) => apiClient.post<MaterialModel>("/material-models", data),
-  update: (id: string, data: UpdateMaterialModelPayload) =>
-    apiClient.patch<MaterialModel>(`/material-models/${id}`, data),
+  create: (data: MaterialModelPayload) => apiClient.post<MaterialModel>(endpoints.materials.materialModels, data),
+  update: (id: string, data: UpdateMaterialModelPayload) => apiClient.patch<MaterialModel>(`/material-models/${id}`, data),
   deactivate: (id: string) => apiClient.delete<MaterialModel>(`/material-models/${id}`),
   restore: (id: string) => apiClient.patch<MaterialModel>(`/material-models/${id}/restore`),
 };

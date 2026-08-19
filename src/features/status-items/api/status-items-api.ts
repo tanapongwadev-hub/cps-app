@@ -1,4 +1,5 @@
-import { apiClient } from "@/services/api-client";
+import { apiClient } from "@/infra/api/client";
+import { endpoints } from "@/infra/api/endpoints";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 
@@ -53,11 +54,11 @@ export const statusItemsApi = {
     if (p.module) q.module = p.module;
     if (p.sortBy) q.sortBy = p.sortBy;
     if (p.sortOrder) q.sortOrder = p.sortOrder;
-    return apiClient.get<PaginatedList<StatusItem>>("/status-items", { params: q });
+    return apiClient.get<PaginatedList<StatusItem>>(endpoints.materials.statusItems, { params: q });
   },
-  get: (id: string) => apiClient.get<StatusItem>(`/status-items/${id}`),
-  create: (d: StatusItemPayload) => apiClient.post<StatusItem>("/status-items", d),
-  update: (id: string, d: UpdateStatusItemPayload) => apiClient.patch<StatusItem>(`/status-items/${id}`, d),
-  deactivate: (id: string) => apiClient.delete<StatusItem>(`/status-items/${id}`),
-  restore: (id: string) => apiClient.patch<StatusItem>(`/status-items/${id}/restore`),
+  get: (id: string) => apiClient.get<StatusItem>(`${endpoints.materials.statusItems}/${id}`),
+  create: (d: StatusItemPayload) => apiClient.post<StatusItem>(endpoints.materials.statusItems, d),
+  update: (id: string, d: UpdateStatusItemPayload) => apiClient.patch<StatusItem>(`${endpoints.materials.statusItems}/${id}`, d),
+  deactivate: (id: string) => apiClient.delete<StatusItem>(`${endpoints.materials.statusItems}/${id}`),
+  restore: (id: string) => apiClient.patch<StatusItem>(`${endpoints.materials.statusItems}/${id}/restore`),
 };

@@ -1,4 +1,9 @@
-import { apiClient } from "@/services/api-client";
+/**
+ * Organizations API - using centralized endpoints
+ */
+
+import { apiClient } from "@/infra/api/client";
+import { endpoints } from "@/infra/api/endpoints";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 
@@ -55,16 +60,21 @@ export interface ListOrganizationsParams {
 
 export const organizationsApi = {
   list: (p: ListOrganizationsParams) => {
-    const q: Record<string, string | number | boolean> = { page: p.page, limit: toLimit(p.pageSize) };
+    const q: Record<string, string | number | boolean> = { 
+      page: p.page, 
+      limit: toLimit(p.pageSize) 
+    };
     if (p.search) q.search = p.search;
     if (p.isActive !== undefined) q.isActive = p.isActive;
     if (p.type) q.type = p.type;
     if (p.sortBy) q.sortBy = p.sortBy;
     if (p.sortOrder) q.sortOrder = p.sortOrder;
-    return apiClient.get<PaginatedList<Organization>>("/organizations", { params: q });
+    
+    return apiClient.get<PaginatedList<Organization>>(endpoints.materials.organizations, { params: q });
   },
+
   get: (id: string) => apiClient.get<Organization>(`/organizations/${id}`),
-  create: (d: OrganizationPayload) => apiClient.post<Organization>("/organizations", d),
+  create: (d: OrganizationPayload) => apiClient.post<Organization>(endpoints.materials.organizations, d),
   update: (id: string, d: UpdateOrganizationPayload) => apiClient.patch<Organization>(`/organizations/${id}`, d),
   deactivate: (id: string) => apiClient.delete<Organization>(`/organizations/${id}`),
   restore: (id: string) => apiClient.patch<Organization>(`/organizations/${id}/restore`),
