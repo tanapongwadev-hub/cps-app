@@ -1,6 +1,19 @@
-import { apiClient } from "@/services/api-client";
+/**
+ * Materials API - using centralized endpoints
+ * 
+ * Refactored to use @/infra/api/endpoints for maintainability.
+ * Following Vercel Best Practices for API layer.
+ */
+
+import { apiClient } from "@/infra/api/client";
+import { endpoints } from "@/infra/api/endpoints";
+import type { PaginatedResponse } from "@/infra/api";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface MaterialLookupOption {
   id: string;
@@ -144,7 +157,15 @@ export interface MaterialImageUpload {
   previewUrl: string;
 }
 
+// ============================================================================
+// API Functions
+// ============================================================================
+
 export const materialsApi = {
+  /**
+   * List materials with pagination and filters
+   * Using centralized endpoint from @/infra/api/endpoints
+   */
   list: (params: ListMaterialsParams) => {
     const query: Record<string, string | number | boolean> = {
       page: params.page,
@@ -161,31 +182,61 @@ export const materialsApi = {
     if (params.supplierId) query.supplierId = params.supplierId;
     if (params.sortBy) query.sortBy = params.sortBy;
     if (params.sortOrder) query.sortOrder = params.sortOrder;
-    return apiClient.get<PaginatedList<Material>>("/materials", { params: query });
+    
+    return apiClient.get<PaginatedList<Material>>(endpoints.materials.list, { params: query });
   },
 
-  get: (id: string) => apiClient.get<Material>(`/materials/${id}`),
+  /**
+   * Get single material by ID
+   */
+  get: (id: string) => 
+    apiClient.get<Material>(endpoints.materials.detail(id)),
 
-  lookups: () => apiClient.get<MaterialLookups>("/materials/lookups"),
+  /**
+   * Get lookup data for forms (units, suppliers, models, etc.)
+   */
+  lookups: () => 
+    apiClient.get<MaterialLookups>(`${endpoints.materials.list}/lookups`),
 
-  create: (data: MaterialPayload) => apiClient.post<Material>("/materials", data),
+  /**
+   * Create new material
+   */
+  create: (data: MaterialPayload) => 
+    apiClient.post<Material>(endpoints.materials.create, data),
 
+  /**
+   * Update existing material
+   */
   update: (id: string, data: UpdateMaterialPayload) =>
-    apiClient.patch<Material>(`/materials/${id}`, data),
+    apiClient.patch<Material>(endpoints.materials.update(id), data),
 
-  deactivate: (id: string) => apiClient.delete<Material>(`/materials/${id}`),
+  /**
+   * Deactivate material (soft delete)
+   */
+  deactivate: (id: string) => 
+    apiClient.delete<Material>(endpoints.materials.delete(id)),
 
-  restore: (id: string) => apiClient.patch<Material>(`/materials/${id}/restore`),
+  /**
+   * Restore deactivated material
+   */
+  restore: (id: string) => 
+    apiClient.patch<Material>(`${endpoints.materials.detail(id)}/restore`),
 
+  /**
+   * Upload material image
+   */
   uploadImage: (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
-    return apiClient.upload<MaterialImageUpload>("/materials/images", formData);
+    return apiClient.upload<MaterialImageUpload>(
+      `${endpoints.materials.list}/images`, 
+      formData
+    );
   },
 };
 
 // ============================================================================
-// Stock Balance
+// Stock Balance API
 // ============================================================================
 
 export interface StockBalance {
@@ -202,5 +253,6 @@ export const stockBalanceApi = {
   getByMaterialId: (materialId: string) =>
     apiClient.get<StockBalance>(`/stock-balances/${materialId}`),
 
-  getAll: () => apiClient.get<StockBalance[]>("/stock-balances"),
+  getAll: () => 
+    apiClient.get<StockBalance[]>("/stock-balances"),
 };
