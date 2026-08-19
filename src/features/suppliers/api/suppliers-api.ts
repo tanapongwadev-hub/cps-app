@@ -1,6 +1,18 @@
-import { apiClient } from "@/services/api-client";
+/**
+ * Suppliers API - using centralized endpoints
+ * 
+ * Refactored to use @/infra/api/endpoints for maintainability.
+ * Following Vercel Best Practices for API layer.
+ */
+
+import { apiClient } from "@/infra/api/client";
+import { endpoints } from "@/infra/api/endpoints";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface Supplier {
   id: string;
@@ -44,7 +56,15 @@ export interface ListSuppliersParams {
   sortOrder?: "asc" | "desc";
 }
 
+// ============================================================================
+// API Functions - using centralized endpoints
+// ============================================================================
+
 export const suppliersApi = {
+  /**
+   * List suppliers with pagination and filters
+   * Using centralized endpoint from @/infra/api/endpoints
+   */
   list: (params: ListSuppliersParams) => {
     const query: Record<string, string | number | boolean> = {
       page: params.page,
@@ -54,17 +74,37 @@ export const suppliersApi = {
     if (params.isActive !== undefined) query.isActive = params.isActive;
     if (params.sortBy) query.sortBy = params.sortBy;
     if (params.sortOrder) query.sortOrder = params.sortOrder;
-    return apiClient.get<PaginatedList<Supplier>>("/suppliers", { params: query });
+    
+    return apiClient.get<PaginatedList<Supplier>>(endpoints.materials.suppliers, { params: query });
   },
 
-  get: (id: string) => apiClient.get<Supplier>(`/suppliers/${id}`),
+  /**
+   * Get single supplier by ID
+   */
+  get: (id: string) => 
+    apiClient.get<Supplier>(`/suppliers/${id}`),
 
-  create: (data: SupplierPayload) => apiClient.post<Supplier>("/suppliers", data),
+  /**
+   * Create new supplier
+   */
+  create: (data: SupplierPayload) => 
+    apiClient.post<Supplier>(endpoints.materials.suppliers, data),
 
-  update: (id: string, data: UpdateSupplierPayload) =>
+  /**
+   * Update existing supplier
+   */
+  update: (id: string, data: UpdateSupplierPayload) => 
     apiClient.patch<Supplier>(`/suppliers/${id}`, data),
 
-  deactivate: (id: string) => apiClient.delete<Supplier>(`/suppliers/${id}`),
+  /**
+   * Deactivate supplier (soft delete)
+   */
+  deactivate: (id: string) => 
+    apiClient.delete<Supplier>(`/suppliers/${id}`),
 
-  restore: (id: string) => apiClient.patch<Supplier>(`/suppliers/${id}/restore`),
+  /**
+   * Restore deactivated supplier
+   */
+  restore: (id: string) => 
+    apiClient.patch<Supplier>(`/suppliers/${id}/restore`),
 };
