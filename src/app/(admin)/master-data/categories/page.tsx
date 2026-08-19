@@ -12,11 +12,12 @@
 
 import { CategoryListContainer } from "@/features/categories/components/category-list.container";
 import { PermissionGuard } from "@/components/ui/permission-guard";
+import { PERMISSIONS } from "@/constants/permissions";
 
 export default function CategoriesPage() {
   return (
     <PermissionGuard
-      permission="categories.view"
+      permission={PERMISSIONS.CATEGORY_VIEW}
       fallback={
         <div className="flex h-[50vh] items-center justify-center">
           <p className="text-muted-foreground">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</p>

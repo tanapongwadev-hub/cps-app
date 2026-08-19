@@ -12,11 +12,12 @@
 
 import { UnitListContainer } from "@/features/units/components/unit-list.container";
 import { PermissionGuard } from "@/components/ui/permission-guard";
+import { PERMISSIONS } from "@/constants/permissions";
 
 export default function UnitsPage() {
   return (
     <PermissionGuard
-      permission="units.view"
+      permission={PERMISSIONS.UNIT_VIEW}
       fallback={
         <div className="flex h-[50vh] items-center justify-center">
           <p className="text-muted-foreground">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</p>
