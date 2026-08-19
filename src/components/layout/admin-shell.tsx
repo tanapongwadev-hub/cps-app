@@ -123,11 +123,11 @@ export function AdminShell({ children, noAuthCheck }: AdminShellProps) {
   }
 
   return (
-    <div className="flex h-screen gap-4 overflow-hidden bg-slate-100 p-4 dark:bg-slate-900">
+    <div className="flex h-screen gap-2 overflow-hidden bg-slate-100 p-2 sm:gap-3 sm:p-3 md:gap-4 md:p-4 dark:bg-slate-900">
       <Sidebar />
       <div
         className={cn(
-          "flex h-full flex-1 flex-col gap-5 transition-[padding] duration-300",
+          "flex h-full flex-1 flex-col gap-3 sm:gap-4 md:gap-5 transition-[padding] duration-300",
         )}
       >
         <TopNav />

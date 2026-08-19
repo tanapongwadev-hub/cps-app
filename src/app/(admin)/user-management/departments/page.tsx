@@ -198,7 +198,7 @@ export default function DepartmentsPage() {
               items={[
                 {
                   label: "แก้ไข",
-                  icon: <Pencil className="h-3.5 w-3.5" />,
+                  icon: Pencil,
                   onClick: () => {
                     setEditingDept(d);
                     setFormOpen(true);
@@ -206,7 +206,7 @@ export default function DepartmentsPage() {
                 },
                 {
                   label: "ลบ",
-                  icon: <Trash2 className="h-3.5 w-3.5" />,
+                  icon: Trash2,
                   variant: "danger",
                   onClick: () => setDeleteId(d.id),
                 },

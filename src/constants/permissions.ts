@@ -135,6 +135,11 @@ export const PERMISSIONS = {
   MATERIALS_DISBURSEMENT_DELETE: "MATERIALS_DISBURSEMENT_DELETE",
   MATERIALS_DISBURSEMENT_CONFIRM: "MATERIALS_DISBURSEMENT_CONFIRM",
   MATERIALS_DISBURSEMENT_CANCEL: "MATERIALS_DISBURSEMENT_CANCEL",
+
+  // Report — inherits VIEW permission from parent module
+  MATERIALS_RECEIVING_REPORT_VIEW: "MATERIALS_RECEIVING_VIEW",
+  MATERIALS_DISBURSEMENT_REPORT_VIEW: "MATERIALS_DISBURSEMENT_VIEW",
+  MATERIALS_REPORT_VIEW: "MATERIALS_RECEIVING_VIEW",
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
@@ -329,6 +334,27 @@ export const PERMISSION_GROUPS = [
       { key: "delete", code: PERMISSIONS.MATERIALS_DISBURSEMENT_DELETE, label: "ลบ" },
       { key: "confirm", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CONFIRM, label: "ยืนยันจ่าย" },
       { key: "cancel", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CANCEL, label: "ยกเลิก" },
+    ],
+  },
+  {
+    module: "materials-receiving-report",
+    label: "รายงานรับเข้า",
+    permissions: [
+      { key: "view", code: PERMISSIONS.MATERIALS_RECEIVING_REPORT_VIEW, label: "ดูรายงาน" },
+    ],
+  },
+  {
+    module: "materials-disbursement-report",
+    label: "รายงานจ่ายออก",
+    permissions: [
+      { key: "view", code: PERMISSIONS.MATERIALS_DISBURSEMENT_REPORT_VIEW, label: "ดูรายงาน" },
+    ],
+  },
+  {
+    module: "materials-report",
+    label: "รายงานวัสดุคงคลัง",
+    permissions: [
+      { key: "view", code: PERMISSIONS.MATERIALS_REPORT_VIEW, label: "ดูรายงาน" },
     ],
   },
 ] as const;

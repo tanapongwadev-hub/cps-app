@@ -98,21 +98,21 @@ export function SupplierTable({
               const items: ActionItem[] = [
                 {
                   label: "แก้ไข",
-                  icon: <Pencil className="h-3 w-3" />,
+                  icon: Pencil,
                   onClick: () => onEdit(row.original),
                 },
               ];
               if (row.original.isActive) {
                 items.push({
                   label: "ปิดใช้งาน",
-                  icon: <Power className="h-3 w-3" />,
+                  icon: Power,
                   onClick: () => onStatusChange(row.original),
                   variant: "danger" as const,
                 });
               } else {
                 items.push({
                   label: "เปิดใช้งาน",
-                  icon: <RotateCcw className="h-3 w-3" />,
+                  icon: RotateCcw,
                   onClick: () => onStatusChange(row.original),
                 });
               }

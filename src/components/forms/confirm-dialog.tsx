@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/cn";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -24,6 +26,11 @@ interface ConfirmDialogProps {
   loading?: boolean;
   onConfirm: () => void | Promise<void>;
   hideCancel?: boolean;
+  showTextInput?: boolean;
+  textInputLabel?: string;
+  textInputValue?: string;
+  onTextInputChange?: (value: string) => void;
+  textInputRequired?: boolean;
 }
 
 export function ConfirmDialog({
@@ -37,6 +44,11 @@ export function ConfirmDialog({
   loading,
   onConfirm,
   hideCancel,
+  showTextInput,
+  textInputLabel,
+  textInputValue,
+  onTextInputChange,
+  textInputRequired,
 }: ConfirmDialogProps) {
   const icons = {
     danger: <AlertTriangle className="h-6 w-6" />,
@@ -86,6 +98,23 @@ export function ConfirmDialog({
             </div>
           </div>
         </DialogHeader>
+
+        {showTextInput && (
+          <div className="space-y-2">
+            <Label htmlFor="dialog-text-input" className="text-sm font-medium">
+              {textInputLabel ?? ""}
+              {textInputRequired && <span className="text-danger ml-1">*</span>}
+            </Label>
+            <Textarea
+              id="dialog-text-input"
+              value={textInputValue}
+              onChange={(e) => onTextInputChange?.(e.target.value)}
+              rows={3}
+              placeholder={`กรุณากรอก${textInputLabel ?? ""}`}
+            />
+          </div>
+        )}
+
         <DialogFooter className="gap-2 sm:space-x-0">
           {!hideCancel && (
             <Button

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -12,25 +12,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/cn";
 
-export interface ActionItem<T = unknown> {
+export interface ActionItem {
   label: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon?: React.ReactElement<any>;
-  onClick: (row: T) => void;
+  icon?: LucideIcon;
+  onClick: () => void;
   variant?: "default" | "danger";
-  disabled?: ((row: T) => boolean) | boolean;
+  disabled?: boolean;
   hidden?: boolean;
 }
 
-interface ActionMenuProps<T = unknown> {
-  items: ActionItem<T>[];
-  row: T;
+interface ActionMenuProps {
+  items: ActionItem[];
   label?: string;
 }
 
-export type { ActionItem };
-
-export function ActionMenu<T = unknown>({ items, row, label = "เมนู" }: ActionMenuProps<T>) {
+export function ActionMenu({ items, label = "เมนู" }: ActionMenuProps) {
   const visible = items.filter((i) => !i.hidden);
   if (visible.length === 0) return null;
 
@@ -51,22 +47,22 @@ export function ActionMenu<T = unknown>({ items, row, label = "เมนู" }: 
         {visible.map((item, idx) => {
           const prev = visible[idx - 1];
           const showSeparator = prev && prev.variant !== item.variant;
-          const isDisabled = typeof item.disabled === "function" ? item.disabled(row) : item.disabled;
+          const Icon = item.icon;
           return (
             <React.Fragment key={item.label}>
               {showSeparator && <DropdownMenuSeparator />}
               <DropdownMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
-                  item.onClick(row);
+                  item.onClick();
                 }}
-                disabled={isDisabled}
+                disabled={item.disabled}
                 className={cn(
                   "min-h-10",
                   item.variant === "danger" && "text-danger focus:text-danger",
                 )}
               >
-                {item.icon}
+                {Icon && <Icon className="mr-2 h-4 w-4" />}
                 {item.label}
               </DropdownMenuItem>
             </React.Fragment>
@@ -76,3 +72,4 @@ export function ActionMenu<T = unknown>({ items, row, label = "เมนู" }: 
     </DropdownMenu>
   );
 }
+

@@ -424,17 +424,17 @@ function PermissionRow({
           items={[
             {
               label: "กำหนดแผนก",
-              icon: <Building2 className="h-3.5 w-3.5" />,
+              icon: Building2,
               onClick: onManageDepartments,
             },
             {
               label: "แก้ไข",
-              icon: <Pencil className="h-3.5 w-3.5" />,
+              icon: Pencil,
               onClick: onEdit,
             },
             {
               label: "ลบ",
-              icon: <Trash2 className="h-3.5 w-3.5" />,
+              icon: Trash2,
               variant: "danger",
               onClick: onDelete,
             },

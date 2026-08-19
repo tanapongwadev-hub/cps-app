@@ -290,29 +290,25 @@ export function MaterialTable({
                 const actions: ActionItem[] = [
                   {
                     label: "ดูรายละเอียด",
-                    icon: <Eye className="size-4" />,
+                    icon: Eye,
                     hidden: !href,
                     onClick: () => href && router.push(href),
                   },
                   {
                     label: "แก้ไข",
-                    icon: <Pencil className="size-4" />,
+                    icon: Pencil,
                     hidden: !onEdit,
                     onClick: () => onEdit?.(material),
                   },
                   {
                     label: "ดูสต็อก",
-                    icon: <Scale className="size-4" />,
+                    icon: Scale,
                     hidden: !onViewStockBalance,
                     onClick: () => onViewStockBalance?.(material),
                   },
                   {
                     label: material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน",
-                    icon: material.isActive ? (
-                      <Power className="size-4" />
-                    ) : (
-                      <RotateCcw className="size-4" />
-                    ),
+                    icon: material.isActive ? Power : RotateCcw,
                     hidden: !onStatusChange,
                     variant: material.isActive ? "danger" : "default",
                     onClick: () => onStatusChange?.(material),
