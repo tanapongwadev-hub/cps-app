@@ -4,7 +4,7 @@ import * as React from "react";
 import { Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,7 +27,6 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 function LoginContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const pendingSelection = useAuthStore((s) => s.pendingSelection);
@@ -51,16 +50,18 @@ function LoginContent() {
   React.useEffect(() => {
     if (isAuthenticated) {
       const redirect = searchParams.get("redirect") ?? "/dashboard";
-      router.replace(redirect);
+      // Use window.location for hard redirect to ensure navigation works
+      window.location.href = redirect;
     }
-  }, [isAuthenticated, router, searchParams]);
+  }, [isAuthenticated, searchParams]);
 
   // If 2-step is required, redirect to select-department
   React.useEffect(() => {
     if (pendingSelection) {
-      router.push("/select-department");
+      // Use window.location for hard redirect to ensure navigation works
+      window.location.href = "/select-department";
     }
-  }, [pendingSelection, router]);
+  }, [pendingSelection]);
 
   const onSubmit = async (values: LoginFormValues) => {
     try {

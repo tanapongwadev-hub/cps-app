@@ -101,8 +101,11 @@ export function useLogin() {
 
       // Path 2: 1-step login (authentication + user + accessControl).
       if (isLoginSuccessResponse(response)) {
+        console.log("[Auth] Login success, building session...");
         const session = buildAuthSessionFromLogin(response);
+        console.log("[Auth] Setting session, token:", session.accessToken.substring(0, 20) + "...");
         setSession(session);
+        console.log("[Auth] Session set, triggering redirect...");
         const name =
           response.user.displayName ||
           response.user.fullName ||
@@ -114,17 +117,21 @@ export function useLogin() {
         // for multi-dept users, but we also catch it client-side in case
         // a 1-step response sneaks through with >1 dept in `user.departments`).
         if (userNeedsDepartmentSelection(response.user)) {
+          console.log("[Auth] User needs department selection, redirecting to /select-department");
           setPendingSelection({
             mode: "switch",
             user: response.user,
           });
-          router.push("/select-department");
+          // Use window.location for hard redirect to ensure navigation works
+        window.location.href = "/select-department";
           return;
         }
 
         const redirect =
           new URLSearchParams(window.location.search).get("redirect") ?? "/dashboard";
-        router.push(redirect);
+        console.log("[Auth] Redirecting to:", redirect);
+        // Use window.location for hard redirect to ensure navigation works
+        window.location.href = redirect;
         return;
       }
 
@@ -167,7 +174,8 @@ export function useSelectDepartment() {
         "เลือกแผนกเรียบร้อย",
         `เข้าสู่ระบบในฐานะ ${response.currentDepartmentRole.roleName}`,
       );
-      router.push("/dashboard");
+      // Use window.location for hard redirect to ensure navigation works
+      window.location.href = "/dashboard";
     },
   });
 }
@@ -209,7 +217,8 @@ export function useLogout() {
     onSettled: () => {
       logout();
       qc.clear();
-      router.push("/login");
+      // Use window.location for hard redirect to ensure navigation works
+      window.location.href = "/login";
     },
   });
 }
