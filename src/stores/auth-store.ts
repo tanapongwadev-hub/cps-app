@@ -16,6 +16,30 @@ import type {
 import { SESSION_STORAGE_KEYS } from "@/constants/app";
 
 /**
+ * Cookie name for middleware auth check
+ * Must match the cookie name in src/middleware.ts
+ */
+const AUTH_COOKIE_NAME = "cps-auth-token";
+
+/**
+ * Set auth cookie for middleware to read
+ * Cookie is httpOnly for security but accessible to middleware
+ */
+function setAuthCookie(token: string, expiresAt: number) {
+  if (typeof document === "undefined") return;
+  const expires = new Date(expiresAt);
+  document.cookie = `${AUTH_COOKIE_NAME}=${encodeURIComponent(token)};path=/;expires=${expires.toUTCString()};SameSite=Lax`;
+}
+
+/**
+ * Clear auth cookie (on logout)
+ */
+function clearAuthCookie() {
+  if (typeof document === "undefined") return;
+  document.cookie = `${AUTH_COOKIE_NAME}=;path=/;expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+}
+
+/**
  * Determine whether a user is a super admin.
  *
  * Two sources of truth:
@@ -142,7 +166,9 @@ export const useAuthStore = create<AuthState>()(
       needsDepartmentSelection: false,
       pendingSelection: null,
 
-      setSession: (session) =>
+      setSession: (session) => {
+        // Set cookie for middleware auth check
+        setAuthCookie(session.accessToken, session.expiresAt);
         set({
           user: session.user,
           currentDepartmentRole: session.currentDepartmentRole,
@@ -163,7 +189,8 @@ export const useAuthStore = create<AuthState>()(
               ? userNeedsDepartmentSelection(session.user)
               : false,
           pendingSelection: null,
-        }),
+        });
+      },
 
       /**
        * Update tokens after a refresh (keeps user, permissions, menu as-is).
@@ -203,7 +230,9 @@ export const useAuthStore = create<AuthState>()(
           needsDepartmentSelection: false,
         }),
 
-      logout: () =>
+      logout: () => {
+        // Clear cookie for middleware auth check
+        clearAuthCookie();
         set({
           user: null,
           currentDepartmentRole: null,
@@ -218,7 +247,8 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
           needsDepartmentSelection: false,
           pendingSelection: null,
-        }),
+        });
+      },
 
       hasPermission: (permission) => {
         const state = get();
