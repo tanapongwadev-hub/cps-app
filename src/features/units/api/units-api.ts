@@ -1,18 +1,6 @@
-/**
- * Units API - using centralized endpoints
- * 
- * Refactored to use @/infra/api/endpoints for maintainability.
- * Following Vercel Best Practices for API layer.
- */
-
-import { apiClient } from "@/infra/api/client";
-import { endpoints } from "@/infra/api/endpoints";
+import { apiClient } from "@/services/api-client";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
-
-// ============================================================================
-// Types
-// ============================================================================
 
 export interface Unit {
   id: string;
@@ -50,15 +38,7 @@ export interface ListUnitsParams {
   sortOrder?: "asc" | "desc";
 }
 
-// ============================================================================
-// API Functions - using centralized endpoints
-// ============================================================================
-
 export const unitsApi = {
-  /**
-   * List units with pagination and filters
-   * Using centralized endpoint from @/infra/api/endpoints
-   */
   list: (params: ListUnitsParams) => {
     const query: Record<string, string | number | boolean> = {
       page: params.page,
@@ -68,37 +48,17 @@ export const unitsApi = {
     if (params.isActive !== undefined) query.isActive = params.isActive;
     if (params.sortBy) query.sortBy = params.sortBy;
     if (params.sortOrder) query.sortOrder = params.sortOrder;
-    
-    return apiClient.get<PaginatedList<Unit>>(endpoints.materials.units, { params: query });
+    return apiClient.get<PaginatedList<Unit>>("/units", { params: query });
   },
 
-  /**
-   * Get single unit by ID
-   */
-  get: (id: string) => 
-    apiClient.get<Unit>(`/units/${id}`),
+  get: (id: string) => apiClient.get<Unit>(`/units/${id}`),
 
-  /**
-   * Create new unit
-   */
-  create: (data: UnitPayload) => 
-    apiClient.post<Unit>(endpoints.materials.units, data),
+  create: (data: UnitPayload) => apiClient.post<Unit>("/units", data),
 
-  /**
-   * Update existing unit
-   */
-  update: (id: string, data: UpdateUnitPayload) => 
+  update: (id: string, data: UpdateUnitPayload) =>
     apiClient.patch<Unit>(`/units/${id}`, data),
 
-  /**
-   * Deactivate unit (soft delete)
-   */
-  deactivate: (id: string) => 
-    apiClient.delete<Unit>(`/units/${id}`),
+  deactivate: (id: string) => apiClient.delete<Unit>(`/units/${id}`),
 
-  /**
-   * Restore deactivated unit
-   */
-  restore: (id: string) => 
-    apiClient.patch<Unit>(`/units/${id}/restore`),
+  restore: (id: string) => apiClient.patch<Unit>(`/units/${id}/restore`),
 };

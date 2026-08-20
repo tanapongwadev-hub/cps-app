@@ -189,13 +189,13 @@ export default function TicketsPage() {
               items={[
                 {
                   label: "ดูรายละเอียด",
-                  icon: Eye,
+                  icon: <Eye className="h-3.5 w-3.5" />,
                   onClick: () => (window.location.href = `/operations/tickets/${t.id}`),
                 },
-                { label: "แก้ไข", icon: Pencil, onClick: () => {} },
+                { label: "แก้ไข", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => {} },
                 {
                   label: "ลบ",
-                  icon: Trash2,
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
                   variant: "danger",
                   onClick: () => {
                     if (confirm(`ต้องการลบ ${t.ticketNumber}?`)) {

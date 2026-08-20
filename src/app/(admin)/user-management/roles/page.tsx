@@ -143,12 +143,12 @@ export default function RolesPage() {
               items={[
                 {
                   label: "ดูรายละเอียด",
-                  icon: Eye,
+                  icon: <Eye className="h-3.5 w-3.5" />,
                   onClick: () => setViewingId(r.id),
                 },
                 {
                   label: "แก้ไข",
-                  icon: Pencil,
+                  icon: <Pencil className="h-3.5 w-3.5" />,
                   onClick: () => {
                     setEditing(r);
                     setFormOpen(true);
@@ -156,13 +156,13 @@ export default function RolesPage() {
                 },
                 {
                   label: "คัดลอก",
-                  icon: Copy,
+                  icon: <Copy className="h-3.5 w-3.5" />,
                   onClick: () => cloneMutation.mutate(r.id),
                   disabled: cloneMutation.isPending,
                 },
                 {
                   label: "ลบ",
-                  icon: Trash2,
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
                   variant: "danger",
                   onClick: () => setDeletingId(r.id),
                   hidden: r.isSystem && !isSuperAdmin(),

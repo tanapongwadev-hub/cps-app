@@ -100,21 +100,21 @@ export function OrganizationTable({
               const items: ActionItem[] = [
                 {
                   label: "แก้ไข",
-                  icon: Pencil,
+                  icon: <Pencil className="h-3 w-3" />,
                   onClick: () => onEdit(row.original),
                 },
               ];
               if (row.original.isActive)
                 items.push({
                   label: "ปิดใช้งาน",
-                  icon: Power,
+                  icon: <Power className="h-3 w-3" />,
                   onClick: () => onStatusChange(row.original),
                   variant: "danger" as const,
                 });
               else
                 items.push({
                   label: "เปิดใช้งาน",
-                  icon: RotateCcw,
+                  icon: <RotateCcw className="h-3 w-3" />,
                   onClick: () => onStatusChange(row.original),
                 });
               return <ActionMenu label={`จัดการองค์กร ${row.original.code}`} items={items} />;

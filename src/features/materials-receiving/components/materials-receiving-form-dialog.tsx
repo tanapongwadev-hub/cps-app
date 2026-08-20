@@ -193,10 +193,6 @@ function previewPiecesLotNumbers(
 const formSchema = z
   .object({
     materialId: z.string().min(1, "กรุณาเลือกวัสดุ"),
-    materialTypeOverride: z
-      .enum(["PCS", "PIPE", "SHEET", "COIL"])
-      .optional()
-      .nullable(),
     supplierId: z.string().optional(),
     receiveQuantity: z
       .string()
@@ -218,7 +214,7 @@ const formSchema = z
       .regex(ISO_DATE, "รูปแบบวันที่ไม่ถูกต้อง (YYYY-MM-DD)"),
     ratioOverride: z
       .string()
-      .regex(DECIMAL_REGEX, "ชิ้นต่อเส้นต้องเป็นจำนวนเต็มบวก")
+      .regex(DECIMAL_REGEX, "ratio ต้องเป็นจำนวนเต็มบวก")
       .optional()
       .or(z.literal("")),
     packingQuantityOverride: z
@@ -237,7 +233,6 @@ function getDefaultValues(receiving: MaterialsReceiving | null | undefined): For
   if (receiving) {
     return {
       materialId: receiving.materialId,
-      materialTypeOverride: receiving.materialType ?? null,
       supplierId: receiving.supplierId,
       receiveQuantity: receiving.receiveQuantity,
       poNo: receiving.poNo ?? "",
@@ -253,7 +248,6 @@ function getDefaultValues(receiving: MaterialsReceiving | null | undefined): For
   const today = new Date().toISOString().slice(0, 10);
   return {
     materialId: "",
-    materialTypeOverride: null,
     supplierId: "",
     receiveQuantity: "",
     poNo: "",
@@ -551,10 +545,8 @@ export function MaterialsReceivingFormDialog({
     return null;
   }, [watchRatioOverride, selectedMaterial]);
 
-  const watchMaterialTypeOverride = form.watch("materialTypeOverride");
-
   const requiresRatio = materialShapeRequiresRatio(
-    watchMaterialTypeOverride ?? selectedMaterial?.materialType ?? null,
+    selectedMaterial?.materialType ?? null,
   );
 
   const packages = React.useMemo(
@@ -570,11 +562,11 @@ export function MaterialsReceivingFormDialog({
       requiresRatio
         ? computePiecesQuantity(
             watchQuantity,
-            watchMaterialTypeOverride ?? selectedMaterial?.materialType ?? null,
+            selectedMaterial?.materialType ?? null,
             effectiveRatio,
           )
         : null,
-    [requiresRatio, watchQuantity, watchMaterialTypeOverride, selectedMaterial, effectiveRatio],
+    [requiresRatio, watchQuantity, selectedMaterial, effectiveRatio],
   );
 
   // Preview lot numbers for QR codes
@@ -675,6 +667,11 @@ export function MaterialsReceivingFormDialog({
                 ? `แก้ไขการรับเข้า ${receiving?.internalLotNo ?? ""}`
                 : "สร้างรายการรับเข้าวัตถุดิบ"}
             </DialogTitle>
+            <DialogDescription>
+              {isEditing
+                ? "แก้ไขข้อมูลฉบับร่าง ระบบจะคำนวณจำนวนบรรจุภัณฑ์และ QR Code ใหม่"
+                : "กรอกข้อมูลการรับเข้า ระบบจะสร้าง Internal Lot No. และ QR Code ให้อัตโนมัติ"}
+            </DialogDescription>
           </DialogHeader>
 
           {/* Body - Two Column Layout */}
@@ -706,7 +703,7 @@ export function MaterialsReceivingFormDialog({
                       <option value="">เลือกวัสดุ...</option>
                       {lookups.materials.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.code} — {m.name} ({m.unitId})
+                          {m.code} — {m.name}
                         </option>
                       ))}
                     </select>
@@ -715,32 +712,7 @@ export function MaterialsReceivingFormDialog({
                         {form.formState.errors.materialId.message}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">
-                      รหัส ชื่อ และหน่วยคือข้อมูลหลักสำหรับค้นหาและตรวจรับ
-                    </p>
                   </div>
-
-                  {/* Material Type Override */}
-                  {watchMaterialId && (
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium">
-                        ลักษณะการรับเข้า
-                      </label>
-                      <select
-                        {...form.register("materialTypeOverride")}
-                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                      >
-                        <option value="">— ค่าจากวัสดุ —</option>
-                        <option value="PCS">PCS (ชิ้นเดี่ยว)</option>
-                        <option value="PIPE">PIPE (เหล็กเส้น)</option>
-                        <option value="SHEET">SHEET (แผ่น)</option>
-                        <option value="COIL">COIL (ม้วน)</option>
-                      </select>
-                      <p className="text-xs text-muted-foreground">
-                        เลือก PIPE/SHEET/COIL เพื่อกรอกจำนวนชิ้นต่อเส้น
-                      </p>
-                    </div>
-                  )}
 
                   {/* Quantity */}
                   <div className="space-y-1.5">
@@ -908,7 +880,7 @@ export function MaterialsReceivingFormDialog({
               {/* Section 4: การคำนวณพิเศษ (สำหรับ PIPE/SHEET/COIL) */}
               {requiresRatio && selectedMaterial && (
                 <AccordionSection
-                  title="จำนวนชิ้นต่อเส้น (Ratio)"
+                  title="การคำนวณพิเศษ"
                   icon={<Boxes className="h-4 w-4" />}
                   defaultOpen={true}
                 >
@@ -917,7 +889,7 @@ export function MaterialsReceivingFormDialog({
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-1.5">
                         <label className="text-sm font-medium flex items-center gap-2">
-                          จำนวนชิ้นต่อเส้น (Ratio)
+                          Ratio ต่อหน่วย
                           {selectedMaterial.ratio && (
                             <Badge variant="outline" className="text-xs">ค่าเดิม: {selectedMaterial.ratio}</Badge>
                           )}
@@ -929,9 +901,6 @@ export function MaterialsReceivingFormDialog({
                           placeholder="เช่น 6"
                           className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          ถ้าเป็นเหล็กเส้น/แผ่น/ม้วน ต้องระบุจำนวนชิ้นต่อเส้น
-                        </p>
                       </div>
 
                       <div className="space-y-1.5">
@@ -967,7 +936,7 @@ export function MaterialsReceivingFormDialog({
                           </div>
                         </div>
                         <div className="mt-2 text-xs text-muted-foreground text-center">
-                          = จำนวนรับ × ชิ้นต่อเส้น ({effectiveRatio ?? selectedMaterial.ratio})
+                          = จำนวนรับ × Ratio ({effectiveRatio ?? selectedMaterial.ratio})
                         </div>
                       </div>
                     )}

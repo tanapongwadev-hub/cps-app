@@ -155,32 +155,32 @@ function ReceivingActions({
   const items: ActionItem[] = [
     {
       label: "ดูรายละเอียด",
-      icon: Eye,
+      icon: <Eye className="h-4 w-4" />,
       hidden: !onView,
       onClick: () => onView?.(receiving),
     },
     {
       label: "แก้ไข",
-      icon: Pencil,
+      icon: <Pencil className="h-4 w-4" />,
       hidden: !canEdit,
       onClick: () => onEdit?.(receiving),
     },
     {
       label: "ยืนยันรับเข้า",
-      icon: Check,
+      icon: <Check className="h-4 w-4" />,
       hidden: !canConfirm,
       onClick: () => onConfirm?.(receiving),
     },
     {
       label: "ยกเลิก",
-      icon: XCircle,
+      icon: <XCircle className="h-4 w-4" />,
       variant: "danger",
       hidden: !canCancel,
       onClick: () => onCancel?.(receiving),
     },
     {
       label: "ลบ",
-      icon: Trash2,
+      icon: <Trash2 className="h-4 w-4" />,
       variant: "danger",
       hidden: !canDelete,
       onClick: () => onDelete?.(receiving),
@@ -260,8 +260,6 @@ export function MaterialsReceivingTable({
   onPageChange,
   onPageSizeChange,
 }: MaterialsReceivingTableProps) {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-
   if (isError) {
     return (
       <EmptyState
@@ -279,181 +277,68 @@ export function MaterialsReceivingTable({
   }
 
   return (
-    <div className="space-y-3">
-      {/* Mobile: Card view */}
-      <div className="space-y-3 md:hidden">
-        {isLoading ? (
-          <CardSkeleton />
-        ) : receivings.length === 0 ? (
-          <EmptyState
-            icon={<QrCode className="h-12 w-12" />}
-            title="ยังไม่มีรายการรับเข้า"
-            description="เริ่มรับเข้าวัตถุดิบใบแรกของคุณ"
-            action={
-              onCreate ? (
-                <Button size="sm" onClick={onCreate}>
-                  สร้างรายการรับเข้า
-                </Button>
-              ) : undefined
-            }
-          />
-        ) : (
-          receivings.map((receiving) => (
-            <article
-              key={receiving.id}
-              aria-label={`รายการรับเข้า ${receiving.internalLotNo}`}
-              className="rounded-lg border bg-card p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-mono text-sm font-semibold break-all">
-                    {receiving.internalLotNo}
-                  </p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    {formatDate(receiving.receiveDate)}
-                  </p>
-                </div>
-                <StatusBadge status={receiving.status} />
-              </div>
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <CardField
-                  className="col-span-2"
-                  label="วัสดุ"
-                  value={
-                    receiving.material
-                      ? `${receiving.material.code} — ${receiving.material.name}`
-                      : "—"
-                  }
-                />
-                <CardField
-                  className="col-span-2"
-                  label="ผู้จัดจำหน่าย"
-                  value={receiving.supplier?.nameTh ?? "—"}
-                />
-                <CardField label="จำนวนรับ" value={formatNumber(receiving.receiveQuantity)} />
-                <CardField label="บรรจุภัณฑ์" value={`${receiving.packageCount} ใบ`} />
-                <CardField
-                  className="col-span-2"
-                  label="Supplier Lot"
-                  value={receiving.supplierLotNo ?? "—"}
-                />
-              </dl>
-              <div className="mt-3 flex items-center justify-between border-t pt-3">
-                <Badge variant="outline" className="text-xs">
-                  {receiving.material?.code ?? "—"}
-                </Badge>
-                <ReceivingActions
-                  receiving={receiving}
-                  onView={onView}
-                  onEdit={onEdit}
-                  onConfirm={onConfirm}
-                  onCancel={onCancel}
-                  onDelete={onDelete}
-                />
-              </div>
-            </article>
-          ))
-        )}
-      </div>
-
-      {/* Desktop: Table */}
-      <div className="hidden overflow-x-auto rounded-lg border md:block">
-        {isLoading ? (
-          <Table className="min-w-[900px]">
-            <TableHeader>
-              <TableRow>
-                <SortableHeader
-                  label="Internal Lot No."
-                  field="internalLotNo"
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSortChange={onSortChange}
-                />
-                <SortableHeader
-                  label="วันที่รับ"
-                  field="receiveDate"
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSortChange={onSortChange}
-                />
-                <TableHead>ผู้จัดจำหน่าย</TableHead>
-                <TableHead>วัสดุ</TableHead>
-                <TableHead className="text-right whitespace-nowrap">จำนวนรับ</TableHead>
-                <TableHead className="text-right whitespace-nowrap">บรรจุภัณฑ์</TableHead>
-                <SortableHeader
-                  label="Supplier Lot"
-                  field="supplierLotNo"
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSortChange={onSortChange}
-                />
-                <TableHead className="whitespace-nowrap">สถานะ</TableHead>
-                <TableHead className="w-14 text-right whitespace-nowrap">การจัดการ</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableSkeleton />
-            </TableBody>
-          </Table>
-        ) : (
-          <Table className="min-w-[900px]">
-            <TableHeader>
-              <TableRow>
-                <SortableHeader
-                  label="Internal Lot No."
-                  field="internalLotNo"
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSortChange={onSortChange}
-                />
-                <SortableHeader
-                  label="วันที่รับ"
-                  field="receiveDate"
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSortChange={onSortChange}
-                />
-                <TableHead className="whitespace-nowrap">ผู้จัดจำหน่าย</TableHead>
-                <TableHead className="whitespace-nowrap">วัสดุ</TableHead>
-                <TableHead className="text-right whitespace-nowrap">จำนวนรับ</TableHead>
-                <TableHead className="text-right whitespace-nowrap">บรรจุภัณฑ์</TableHead>
-                <SortableHeader
-                  label="Supplier Lot"
-                  field="supplierLotNo"
-                  currentSortBy={sortBy}
-                  currentSortOrder={sortOrder}
-                  onSortChange={onSortChange}
-                />
-                <TableHead className="whitespace-nowrap">สถานะ</TableHead>
-                <TableHead className="w-14 text-right whitespace-nowrap">การจัดการ</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {receivings.map((receiving) => (
-                <TableRow key={receiving.id}>
-                  <TableCell className="font-mono text-xs font-semibold whitespace-nowrap">
-                    {receiving.internalLotNo}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">{formatDate(receiving.receiveDate)}</TableCell>
-                  <TableCell className="whitespace-nowrap">{receiving.supplier?.nameTh ?? "—"}</TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    {receiving.material
-                      ? `${receiving.material.code} — ${receiving.material.name}`
-                      : "—"}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums whitespace-nowrap">
-                    {formatNumber(receiving.receiveQuantity)}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums whitespace-nowrap">
-                    {receiving.packageCount} ใบ
-                  </TableCell>
-                  <TableCell className="font-mono text-xs whitespace-nowrap">
-                    {receiving.supplierLotNo ?? "—"}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
+    <div className="bg-card rounded-lg border">
+      {!isLoading && receivings.length === 0 ? (
+        <EmptyState
+          icon={<QrCode className="h-12 w-12" />}
+          title="ยังไม่มีรายการรับเข้า"
+          description="เริ่มรับเข้าวัตถุดิบใบแรกของคุณ"
+          action={
+            onCreate ? (
+              <Button size="sm" onClick={onCreate}>
+                สร้างรายการรับเข้า
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          <div data-testid="materials-receiving-cards" className="space-y-3 p-3 md:hidden">
+            {isLoading ? (
+              <CardSkeleton />
+            ) : (
+              receivings.map((receiving) => (
+                <article
+                  key={receiving.id}
+                  aria-label={`รายการรับเข้า ${receiving.internalLotNo}`}
+                  className="bg-background min-w-0 rounded-lg border p-4 shadow-sm"
+                >
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-mono text-sm font-semibold break-all">
+                        {receiving.internalLotNo}
+                      </p>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {formatDate(receiving.receiveDate)}
+                      </p>
+                    </div>
                     <StatusBadge status={receiving.status} />
-                  </TableCell>
-                  <TableCell className="w-14 text-right whitespace-nowrap">
+                  </div>
+                  <dl className="mt-4 grid min-w-0 grid-cols-2 gap-3 text-sm">
+                    <CardField
+                      className="col-span-2"
+                      label="วัสดุ"
+                      value={
+                        receiving.material
+                          ? `${receiving.material.code} — ${receiving.material.name}`
+                          : "—"
+                      }
+                    />
+                    <CardField
+                      className="col-span-2"
+                      label="ผู้จัดจำหน่าย"
+                      value={receiving.supplier?.nameTh ?? "—"}
+                    />
+                    <CardField label="จำนวนรับ" value={formatNumber(receiving.receiveQuantity)} />
+                    <CardField label="บรรจุภัณฑ์" value={`${receiving.packageCount} ใบ`} />
+                    <CardField
+                      className="col-span-2"
+                      label="Supplier Lot"
+                      mono
+                      value={receiving.supplierLotNo ?? "—"}
+                    />
+                  </dl>
+                  <div className="mt-3 flex justify-end border-t pt-2">
                     <ReceivingActions
                       receiving={receiving}
                       onView={onView}
@@ -462,23 +347,103 @@ export function MaterialsReceivingTable({
                       onCancel={onCancel}
                       onDelete={onDelete}
                     />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
 
-      {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
-        <div className="flex flex-col gap-3 border-t border-b bg-card px-4 py-3 first:rounded-b-lg last:rounded-t-lg sm:flex-row sm:items-center sm:justify-between">
+          <div data-testid="materials-receiving-table" className="hidden overflow-x-auto md:block">
+            <Table className="min-w-[900px]">
+              <TableHeader>
+                <TableRow>
+                  <SortableHeader
+                    label="Internal Lot No."
+                    field="internalLotNo"
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSortChange={onSortChange}
+                  />
+                  <SortableHeader
+                    label="วันที่รับ"
+                    field="receiveDate"
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSortChange={onSortChange}
+                  />
+                  <TableHead>ผู้จัดจำหน่าย</TableHead>
+                  <TableHead>วัสดุ</TableHead>
+                  <TableHead className="text-right">จำนวนรับ</TableHead>
+                  <TableHead className="text-right">บรรจุภัณฑ์</TableHead>
+                  <SortableHeader
+                    label="Supplier Lot"
+                    field="supplierLotNo"
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    onSortChange={onSortChange}
+                  />
+                  <TableHead>สถานะ</TableHead>
+                  <TableHead className="w-14 text-right">การจัดการ</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableSkeleton />
+                ) : (
+                  receivings.map((receiving) => (
+                    <TableRow key={receiving.id}>
+                      <TableCell className="font-mono text-xs font-semibold">
+                        {receiving.internalLotNo}
+                      </TableCell>
+                      <TableCell>{formatDate(receiving.receiveDate)}</TableCell>
+                      <TableCell>{receiving.supplier?.nameTh ?? "—"}</TableCell>
+                      <TableCell>
+                        {receiving.material
+                          ? `${receiving.material.code} — ${receiving.material.name}`
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {formatNumber(receiving.receiveQuantity)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {receiving.packageCount} ใบ
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {receiving.supplierLotNo ?? "—"}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={receiving.status} />
+                      </TableCell>
+                      <TableCell className="w-14 text-right">
+                        <ReceivingActions
+                          receiving={receiving}
+                          onView={onView}
+                          onEdit={onEdit}
+                          onConfirm={onConfirm}
+                          onCancel={onCancel}
+                          onDelete={onDelete}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
+      )}
+
+      {!isLoading && receivings.length > 0 && (
+        <div
+          data-testid="materials-receiving-pagination"
+          className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        >
           <div className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <span>แสดง</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded-md border bg-background px-2 py-1"
+              className="bg-background rounded-md border px-2 py-1"
             >
               {[10, 20, 50, 100].map((size) => (
                 <option key={size} value={size}>
@@ -493,7 +458,7 @@ export function MaterialsReceivingTable({
 
           <div className="flex items-center justify-between gap-2 sm:justify-end">
             <span className="text-muted-foreground text-sm">
-              หน้า {page} / {totalPages}
+              หน้า {page} / {Math.max(1, Math.ceil(totalItems / pageSize))}
             </span>
             <div className="flex items-center gap-1">
               <Button
@@ -511,7 +476,7 @@ export function MaterialsReceivingTable({
                 size="icon"
                 className="h-10 w-10 sm:h-8 sm:w-8"
                 onClick={() => onPageChange(page + 1)}
-                disabled={page >= totalPages}
+                disabled={page >= Math.ceil(totalItems / pageSize)}
                 aria-label="หน้าถัดไป"
               >
                 <ChevronRight className="h-4 w-4" />

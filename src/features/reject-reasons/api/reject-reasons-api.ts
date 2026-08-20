@@ -1,5 +1,4 @@
-import { apiClient } from "@/infra/api/client";
-import { endpoints } from "@/infra/api/endpoints";
+import { apiClient } from "@/services/api-client";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 
@@ -47,12 +46,12 @@ export const rejectReasonsApi = {
     if (params.isActive !== undefined) query.isActive = params.isActive;
     if (params.sortBy) query.sortBy = params.sortBy;
     if (params.sortOrder) query.sortOrder = params.sortOrder;
-    return apiClient.get<PaginatedList<RejectReason>>(endpoints.materials.rejectReasons, { params: query });
+    return apiClient.get<PaginatedList<RejectReason>>("/reject-reasons", { params: query });
   },
-  get: (id: string) => apiClient.get<RejectReason>(`${endpoints.materials.rejectReasons}/${id}`),
-  create: (data: RejectReasonPayload) => apiClient.post<RejectReason>(endpoints.materials.rejectReasons, data),
+  get: (id: string) => apiClient.get<RejectReason>(`/reject-reasons/${id}`),
+  create: (data: RejectReasonPayload) => apiClient.post<RejectReason>("/reject-reasons", data),
   update: (id: string, data: UpdateRejectReasonPayload) =>
-    apiClient.patch<RejectReason>(`${endpoints.materials.rejectReasons}/${id}`, data),
-  deactivate: (id: string) => apiClient.delete<RejectReason>(`${endpoints.materials.rejectReasons}/${id}`),
-  restore: (id: string) => apiClient.patch<RejectReason>(`${endpoints.materials.rejectReasons}/${id}/restore`),
+    apiClient.patch<RejectReason>(`/reject-reasons/${id}`, data),
+  deactivate: (id: string) => apiClient.delete<RejectReason>(`/reject-reasons/${id}`),
+  restore: (id: string) => apiClient.patch<RejectReason>(`/reject-reasons/${id}/restore`),
 };

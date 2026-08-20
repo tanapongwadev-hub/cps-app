@@ -197,12 +197,12 @@ export default function UsersPage() {
               items={[
                 {
                   label: "ดูรายละเอียด",
-                  icon: Eye,
+                  icon: <Eye className="h-3.5 w-3.5" />,
                   onClick: () => setViewingUser(u),
                 },
                 {
                   label: "แก้ไข",
-                  icon: Pencil,
+                  icon: <Pencil className="h-3.5 w-3.5" />,
                   onClick: () => {
                     setEditingUser(u);
                     setFormOpen(true);
@@ -210,7 +210,12 @@ export default function UsersPage() {
                 },
                 {
                   label: uiStatus === "active" ? "ระงับการใช้งาน" : "เปิดใช้งาน",
-                  icon: uiStatus === "active" ? ShieldOff : ShieldCheck,
+                  icon:
+                    uiStatus === "active" ? (
+                      <ShieldOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    ),
                   onClick: () => {
                     // Real backend uses {isActive: boolean} — send the opposite
                     // of the current status.
@@ -222,7 +227,7 @@ export default function UsersPage() {
                 },
                 {
                   label: "รีเซ็ตรหัสผ่าน",
-                  icon: KeyRound,
+                  icon: <KeyRound className="h-3.5 w-3.5" />,
                   onClick: () => {
                     confirm.open({
                       title: `รีเซ็ตรหัสผ่านของ ${u.firstName} ${u.lastName}?`,
@@ -237,7 +242,7 @@ export default function UsersPage() {
                 },
                 {
                   label: "บังคับออกจากระบบทั้งหมด",
-                  icon: LogOut,
+                  icon: <LogOut className="h-3.5 w-3.5" />,
                   onClick: () => {
                     confirm.open({
                       title: `บังคับ ${u.firstName} ${u.lastName} ออกจากระบบทุกอุปกรณ์?`,
@@ -260,7 +265,7 @@ export default function UsersPage() {
                 },
                 {
                   label: "ลบ",
-                  icon: Trash2,
+                  icon: <Trash2 className="h-3.5 w-3.5" />,
                   variant: "danger",
                   onClick: () => setDeleteId(u.id),
                 },

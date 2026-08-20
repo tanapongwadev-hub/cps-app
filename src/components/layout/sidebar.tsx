@@ -413,10 +413,7 @@ export function Sidebar() {
       className={cn(
         "sidebar-gradient sidebar-floating flex h-full flex-col text-sidebar-foreground transition-[width] duration-300",
         "overflow-hidden",
-        isCollapsedView
-          ? "w-[var(--sidebar-width-collapsed)]"
-          : // Responsive width: narrow on small/medium screens, full on large+
-            "w-[var(--sidebar-width-mobile)] sm:w-[var(--sidebar-width-tablet)] lg:w-[var(--sidebar-width)]",
+        isCollapsedView ? "w-[var(--sidebar-width-collapsed)]" : "w-[var(--sidebar-width)]",
       )}
     >
       {/* Header — logo + backend indicator */}
@@ -635,7 +632,7 @@ export function Sidebar() {
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />
-        <aside className="fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width-mobile)] animate-in slide-in-from-left duration-200">
+        <aside className="fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] animate-in slide-in-from-left duration-200">
           {content({ onNavigate: () => setMobileOpen(false) })}
         </aside>
       </>
@@ -658,7 +655,7 @@ export function Sidebar() {
             />
             <aside
               className={cn(
-                "fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width-tablet)] animate-in slide-in-from-left duration-200",
+                "fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] animate-in slide-in-from-left duration-200",
                 // Push the overlay to the right of the icon rail
                 "left-[var(--sidebar-width-collapsed)]",
               )}

@@ -10,7 +10,8 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { ActionMenu, type ActionItem } from "@/components/tables/action-menu";
+import { ActionMenu } from "@/components/tables/action-menu";
+import type { ActionItem } from "@/components/tables/action-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -72,7 +73,7 @@ function SortableHeader({
   const nextOrder: SortOrder = isActive && currentSortOrder === "asc" ? "desc" : "asc";
   return (
     <TableHead
-      className="hover:bg-muted/50 cursor-pointer select-none whitespace-nowrap"
+      className="hover:bg-muted/50 cursor-pointer select-none"
       onClick={() => onSortChange(field, nextOrder)}
     >
       <div className="flex items-center gap-1">
@@ -83,7 +84,7 @@ function SortableHeader({
   );
 }
 
-const STATUS_VARIANTS: Record<DisbursementStatus, "secondary" | "success" | "destructive" | "outline"> = {
+const STATUS_VARIANTS: Record<DisbursementStatus, "default" | "success" | "destructive" | "secondary" | "warning"> = {
   draft: "secondary",
   confirmed: "success",
   cancelled: "destructive",
@@ -112,115 +113,6 @@ function formatNumber(value: string | number): string {
   return n.toLocaleString("th-TH", { minimumFractionDigits: 0, maximumFractionDigits: 4 });
 }
 
-function CardField({
-  label,
-  value,
-  className,
-}: {
-  label: string;
-  value: string;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm font-medium">{value || "—"}</dd>
-    </div>
-  );
-}
-
-function DisbursementActions({
-  disbursement,
-  onView,
-  onEdit,
-  onDelete,
-  onConfirm,
-  onCancel,
-}: {
-  disbursement: MaterialsDisbursement;
-  onView?: (d: MaterialsDisbursement) => void;
-  onEdit?: (d: MaterialsDisbursement) => void;
-  onDelete?: (d: MaterialsDisbursement) => void;
-  onConfirm?: (d: MaterialsDisbursement) => void;
-  onCancel?: (d: MaterialsDisbursement) => void;
-}) {
-  const items: ActionItem[] = [
-    {
-      label: "ดูรายละเอียด",
-      icon: Eye,
-      onClick: () => onView?.(disbursement),
-    },
-    {
-      label: "แก้ไข",
-      icon: Pencil,
-      onClick: () => onEdit?.(disbursement),
-      disabled: disbursement.status !== "draft",
-    },
-    {
-      label: "ยืนยันจ่ายออก",
-      icon: Scissors,
-      onClick: () => onConfirm?.(disbursement),
-      disabled: disbursement.status !== "draft",
-      variant: "default" as const,
-    },
-    {
-      label: "ยกเลิก",
-      icon: XCircle,
-      onClick: () => onCancel?.(disbursement),
-      disabled: disbursement.status !== "draft",
-      variant: "danger" as const,
-    },
-    {
-      label: "ลบ",
-      icon: Trash2,
-      onClick: () => onDelete?.(disbursement),
-      disabled: disbursement.status !== "draft",
-      variant: "danger" as const,
-    },
-  ];
-
-  return <ActionMenu label={`จัดการ ${disbursement.disbursementNo}`} items={items} />;
-}
-
-function TableSkeleton() {
-  return (
-    <>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-          <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-        </TableRow>
-      ))}
-    </>
-  );
-}
-
-function CardSkeleton() {
-  return (
-    <>
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="rounded-lg border bg-card p-4 shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-5 w-16" />
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-20" />
-            <Skeleton className="h-3 w-32" />
-            <Skeleton className="h-3 w-32" />
-          </div>
-        </div>
-      ))}
-    </>
-  );
-}
-
 export function MaterialsDisbursementTable({
   disbursements,
   page,
@@ -243,6 +135,61 @@ export function MaterialsDisbursementTable({
 }: MaterialsDisbursementTableProps) {
   const totalPages = Math.ceil(totalItems / pageSize);
 
+  const actionItems: ActionItem<MaterialsDisbursement>[] = [
+    ...(onView
+      ? [
+          {
+            label: "ดูรายละเอียด",
+            icon: Eye,
+            onClick: (row) => onView(row),
+          },
+        ]
+      : []),
+    ...(onEdit
+      ? [
+          {
+            label: "แก้ไข",
+            icon: Pencil,
+            onClick: (row) => onEdit(row),
+            disabled: (row) => row.status !== "draft",
+          },
+        ]
+      : []),
+    ...(onConfirm
+      ? [
+          {
+            label: "ยืนยันจ่ายออก",
+            icon: Scissors,
+            onClick: (row) => onConfirm(row),
+            disabled: (row) => row.status !== "draft",
+            variant: "default" as const,
+          },
+        ]
+      : []),
+    ...(onCancel
+      ? [
+          {
+            label: "ยกเลิก",
+            icon: XCircle,
+            onClick: (row) => onCancel(row),
+            disabled: (row) => row.status !== "draft",
+            variant: "danger" as const,
+          },
+        ]
+      : []),
+    ...(onDelete
+      ? [
+          {
+            label: "ลบ",
+            icon: Trash2,
+            onClick: (row) => onDelete(row),
+            disabled: (row) => row.status !== "draft",
+            variant: "danger" as const,
+          },
+        ]
+      : []),
+  ];
+
   if (isError) {
     return (
       <EmptyState
@@ -253,61 +200,20 @@ export function MaterialsDisbursementTable({
     );
   }
 
+  if (!isLoading && disbursements.length === 0) {
+    return (
+      <EmptyState
+        title="ยังไม่มีรายการจ่ายออก"
+        description="เริ่มสร้างรายการจ่ายออกวัสดุใหม่"
+        action={onCreate ? <Button onClick={onCreate}>+ สร้างใบจ่ายออก</Button> : undefined}
+      />
+    );
+  }
+
   return (
-    <div className="space-y-3">
-      {/* Mobile: Card view */}
-      <div className="space-y-3 md:hidden">
-        {isLoading ? (
-          <CardSkeleton />
-        ) : disbursements.length === 0 ? (
-          <EmptyState
-            title="ยังไม่มีรายการจ่ายออก"
-            description="เริ่มสร้างรายการจ่ายออกวัสดุใหม่"
-            action={onCreate ? <Button size="sm" onClick={onCreate}>+ สร้างใบจ่ายออก</Button> : undefined}
-          />
-        ) : (
-          disbursements.map((d) => (
-            <article
-              key={d.id}
-              className="rounded-lg border bg-card p-4 shadow-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-mono text-sm font-semibold break-all">{d.disbursementNo}</p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">{formatDate(d.disbursementDate)}</p>
-                </div>
-                <Badge variant={STATUS_VARIANTS[d.status]}>
-                  {STATUS_LABELS[d.status] ?? d.status}
-                </Badge>
-              </div>
-
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                <CardField label="ประเภท" value={TYPE_LABELS[d.disbursementType] ?? d.disbursementType} />
-                <CardField label="สร้างเมื่อ" value={formatDate(d.createdAt)} />
-                <CardField className="col-span-2" label="เหตุผล" value={d.reason ?? "—"} />
-              </dl>
-
-              <div className="mt-3 flex items-center justify-between border-t pt-3">
-                <Badge variant="outline" className="text-xs">
-                  {TYPE_LABELS[d.disbursementType] ?? d.disbursementType}
-                </Badge>
-                <DisbursementActions
-                  disbursement={d}
-                  onView={onView}
-                  onEdit={onEdit}
-                  onDelete={onDelete}
-                  onConfirm={onConfirm}
-                  onCancel={onCancel}
-                />
-              </div>
-            </article>
-          ))
-        )}
-      </div>
-
-      {/* Desktop: Table view */}
-      <div className="hidden overflow-x-auto rounded-lg border md:block">
-        <Table className="min-w-[800px]">
+    <div className="space-y-4">
+      <div className="rounded-lg border overflow-hidden">
+        <Table>
           <TableHeader>
             <TableRow>
               <SortableHeader
@@ -317,7 +223,7 @@ export function MaterialsDisbursementTable({
                 currentSortOrder={sortOrder}
                 onSortChange={onSortChange}
               />
-              <TableHead className="whitespace-nowrap">ประเภท</TableHead>
+              <TableHead>ประเภท</TableHead>
               <SortableHeader
                 label="วันที่จ่ายออก"
                 field="disbursementDate"
@@ -325,8 +231,8 @@ export function MaterialsDisbursementTable({
                 currentSortOrder={sortOrder}
                 onSortChange={onSortChange}
               />
-              <TableHead className="whitespace-nowrap">สถานะ</TableHead>
-              <TableHead className="whitespace-nowrap">เหตุผล</TableHead>
+              <TableHead>สถานะ</TableHead>
+              <TableHead>เหตุผล</TableHead>
               <SortableHeader
                 label="สร้างเมื่อ"
                 field="createdAt"
@@ -338,123 +244,110 @@ export function MaterialsDisbursementTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              <TableSkeleton />
-            ) : disbursements.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                  ไม่พบรายการ
-                </TableCell>
-              </TableRow>
-            ) : (
-              disbursements.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell className="font-mono text-sm font-medium whitespace-nowrap">
-                    {d.disbursementNo}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Badge variant="outline">{TYPE_LABELS[d.disbursementType] ?? d.disbursementType}</Badge>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                    {formatDate(d.disbursementDate)}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <Badge variant={STATUS_VARIANTS[d.status]}>
-                      {STATUS_LABELS[d.status] ?? d.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                    {d.reason ?? "—"}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-sm text-muted-foreground">
-                    {formatDate(d.createdAt)}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <DisbursementActions
-                      disbursement={d}
-                      onView={onView}
-                      onEdit={onEdit}
-                      onDelete={onDelete}
-                      onConfirm={onConfirm}
-                      onCancel={onCancel}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
+            {isLoading
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                  </TableRow>
+                ))
+              : disbursements.map((d) => (
+                  <TableRow key={d.id}>
+                    <TableCell className="font-mono text-sm font-medium">
+                      {d.disbursementNo}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{TYPE_LABELS[d.disbursementType] ?? d.disbursementType}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDate(d.disbursementDate)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={STATUS_VARIANTS[d.status]}>
+                        {STATUS_LABELS[d.status] ?? d.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                      {d.reason ?? "—"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {formatDate(d.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <ActionMenu items={actionItems} row={d} />
+                    </TableCell>
+                  </TableRow>
+                ))}
           </TableBody>
         </Table>
       </div>
 
       {/* Pagination */}
-      {!isLoading && totalPages > 1 && (
-        <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between rounded-lg border bg-card">
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      {totalPages > 1 && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>แสดง</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className="rounded-md border bg-background px-2 py-1"
+            <Select
+              value={String(pageSize)}
+              onValueChange={(v) => onPageSizeChange(Number(v))}
             >
-              {[10, 20, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
-            <span>รายการต่อหน้า</span>
-            <span className="hidden sm:inline">·</span>
-            <span>{totalItems.toLocaleString()} รายการ</span>
+              <SelectTrigger className="h-8 w-[80px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span>รายการ จาก {totalItems.toLocaleString()} รายการ</span>
           </div>
 
-          <div className="flex items-center justify-between gap-2 sm:justify-end">
-            <span className="text-muted-foreground text-sm">
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(1)}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4 -ml-2" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(page - 1)}
+              disabled={page <= 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="px-3 text-sm">
               หน้า {page} / {totalPages}
             </span>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 sm:h-8 sm:w-8"
-                onClick={() => onPageChange(1)}
-                disabled={page <= 1}
-                aria-label="หน้าแรก"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                <ChevronLeft className="h-4 w-4 -ml-2" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 sm:h-8 sm:w-8"
-                onClick={() => onPageChange(page - 1)}
-                disabled={page <= 1}
-                aria-label="หน้าก่อนหน้า"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 sm:h-8 sm:w-8"
-                onClick={() => onPageChange(page + 1)}
-                disabled={page >= totalPages}
-                aria-label="หน้าถัดไป"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-10 w-10 sm:h-8 sm:w-8"
-                onClick={() => onPageChange(totalPages)}
-                disabled={page >= totalPages}
-                aria-label="หน้าสุดท้าย"
-              >
-                <ChevronRight className="h-4 w-4" />
-                <ChevronRight className="h-4 w-4 -ml-2" />
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(page + 1)}
+              disabled={page >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(totalPages)}
+              disabled={page >= totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-4 w-4 -ml-2" />
+            </Button>
           </div>
         </div>
       )}

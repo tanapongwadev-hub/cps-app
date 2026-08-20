@@ -149,7 +149,7 @@ export default function ActivityLogsPage() {
             items={[
               {
                 label: "ดูรายละเอียด",
-                icon: Eye,
+                icon: <Eye className="h-3.5 w-3.5" />,
                 onClick: () => setViewingLogId(row.original.id),
               },
             ]}
