@@ -632,7 +632,7 @@ export function Sidebar() {
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />
-        <aside className="fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] animate-in slide-in-from-left duration-200">
+        <aside className="fixed inset-y-0 left-0 z-50 w-80 animate-in slide-in-from-left duration-200">
           {content({ onNavigate: () => setMobileOpen(false) })}
         </aside>
       </>
