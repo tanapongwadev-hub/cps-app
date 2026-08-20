@@ -19,6 +19,7 @@ import {
   Settings2,
   TrendingUp,
   Warehouse,
+  ArrowUpRight,
 } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -128,6 +129,10 @@ export default function MaterialsPCPage() {
     router.push("/materials/materials-receiving");
   }, [router]);
 
+  const handleGoToDisbursement = React.useCallback(() => {
+    router.push("/materials/materials-disbursement");
+  }, [router]);
+
   const handleFormOpenChange = React.useCallback((open: boolean) => {
     setFormOpen(open);
     if (!open) setEditingMaterial(null);
@@ -207,6 +212,17 @@ export default function MaterialsPCPage() {
                 >
                   <Warehouse className="size-4" />
                   <span className="hidden sm:inline">รับเข้าวัตถุดิบ</span>
+                </Button>
+              </PermissionGuard>
+              <PermissionGuard permission={PERMISSIONS.MATERIALS_DISBURSEMENT_VIEW}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGoToDisbursement}
+                  className="gap-2"
+                >
+                  <ArrowUpRight className="size-4" />
+                  <span className="hidden sm:inline">จ่ายออก</span>
                 </Button>
               </PermissionGuard>
               <Button

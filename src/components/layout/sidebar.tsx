@@ -623,6 +623,7 @@ export function Sidebar() {
 
   // Mobile (< 768px): sidebar is a full overlay drawer that slides in from
   // the left. Default closed — the user opens it with the hamburger button.
+  // Always shows full menu (not collapsed) on mobile.
   if (isMobile) {
     if (!mobileOpen) return null;
     return (
@@ -632,8 +633,8 @@ export function Sidebar() {
           onClick={() => setMobileOpen(false)}
           aria-hidden
         />
-        <aside className="fixed inset-y-0 left-0 z-50 w-80 animate-in slide-in-from-left duration-200">
-          {content({ onNavigate: () => setMobileOpen(false) })}
+        <aside className="fixed inset-y-0 left-0 z-50 w-[280px] animate-in slide-in-from-left duration-200">
+          {content({ forceExpanded: true, onNavigate: () => setMobileOpen(false) })}
         </aside>
       </>
     );
@@ -655,9 +656,7 @@ export function Sidebar() {
             />
             <aside
               className={cn(
-                "fixed inset-y-0 left-0 z-50 w-[var(--sidebar-width)] animate-in slide-in-from-left duration-200",
-                // Push the overlay to the right of the icon rail
-                "left-[var(--sidebar-width-collapsed)]",
+                "fixed inset-y-0 left-0 z-50 w-[280px] animate-in slide-in-from-left duration-200",
               )}
             >
               {content({ forceExpanded: true, onNavigate: () => setMobileOpen(false) })}
