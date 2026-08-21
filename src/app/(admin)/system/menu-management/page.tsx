@@ -1,19 +1,16 @@
 /**
- * Menu management page
+ * Menu management page — redesigned for simpler UX
  *
- * Features:
- *   - Tree view (from GET /menus/tree)
- *   - Drag-drop reorder (HTML5 DnD, posts to /menus/reorder or PATCHes each)
- *   - Create new menu (modal form)
- *   - Edit menu (modal form)
- *   - Delete with confirm
- *   - Inline toggle: isVisible, isActive
+ * Design:
+ *   - Flat list (not recursive tree) with indent showing level
+ *   - All actions via buttons — NO drag & drop
+ *   - Buttons: ↑↓ reorder, →→ indent (become child), ← outdent, + child, ✏ edit, 🗑 delete
+ *   - Always visible sort order badge
  */
 "use client";
 
 import * as React from "react";
 import {
-  ChevronRight,
   Plus,
   Pencil,
   Trash2,
@@ -21,12 +18,16 @@ import {
   ExternalLink,
   EyeOff,
   Eye,
-  GripVertical,
-  Folder,
-  FolderOpen,
   Power,
   PowerOff,
   Save,
+  ArrowUp,
+  ArrowDown,
+  ArrowRight,
+  ArrowLeft,
+  Hash,
+  CornerDownRight,
+  GripVertical,
 } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -79,10 +80,15 @@ const EMPTY_FORM: MenuFormData = {
   description: "",
 };
 
+/** Flat row item with computed level & path */
+interface MenuRow {
+  menu: MenuItem;
+  level: number;
+  hasChildren: boolean;
+  childCount: number;
+}
+
 export default function MenuManagementPage() {
-  // Use the LIST endpoint (not /tree) so we can see menus that have been
-  // hidden or deactivated — the real /menus/tree endpoint filters out
-  // isVisible=false, which would make them impossible to unhide.
   const { data: listData, isLoading, isError, error } = useMenusList();
   const createMenu = useCreateMenu();
   const updateMenu = useUpdateMenu();
@@ -94,72 +100,226 @@ export default function MenuManagementPage() {
     [listData],
   );
 
-  // Build a tree from the flat list so the UI still shows parent/child
-  // hierarchy. The /menus (list) endpoint returns `parentId` as undefined
-  // for children — fall back to `parent.id` in that case. Items whose
-  // parent isn't in the list (e.g. deleted parent) are treated as roots.
-  // Sort each level by sortOrder so the tree matches the backend tree.
-  const tree = React.useMemo<MenuItem[]>(() => {
-    const sorted = [...flatMenus].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    const map = new Map<string, MenuItem>();
-    for (const m of sorted) map.set(m.id, { ...m, children: [] });
-    const roots: MenuItem[] = [];
-    for (const m of sorted) {
-      const node = map.get(m.id);
-      if (!node) continue;
-      const parentId = m.parentId ?? m.parent?.id ?? null;
-      if (parentId && map.has(parentId)) {
-        map.get(parentId)!.children!.push(node);
-      } else {
-        roots.push(node);
+  // Build a child map for O(1) lookup
+  const childrenMap = React.useMemo(() => {
+    const map = new Map<string, MenuItem[]>();
+    for (const m of flatMenus) {
+      const parentId = (m.parentId ?? m.parent?.id ?? null) as string | null;
+      if (parentId) {
+        const list = map.get(parentId) ?? [];
+        list.push(m);
+        map.set(parentId, list);
       }
     }
-    return roots;
+    for (const list of map.values()) {
+      list.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    }
+    return map;
   }, [flatMenus]);
+
+  // Build hierarchical flat list (DFS) for rendering
+  // Always show all menus; show parent before children; indent shows level
+  const rows = React.useMemo<MenuRow[]>(() => {
+    const sortedRoots = [...flatMenus]
+      .filter((m) => !(m.parentId ?? m.parent?.id ?? null))
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+    const result: MenuRow[] = [];
+    const walk = (menu: MenuItem, level: number) => {
+      const children = childrenMap.get(menu.id) ?? [];
+      const hasChildren = children.length > 0;
+      result.push({ menu, level, hasChildren, childCount: children.length });
+      for (const child of children) {
+        walk(child, level + 1);
+      }
+    };
+    for (const root of sortedRoots) {
+      walk(root, 0);
+    }
+    return result;
+  }, [flatMenus, childrenMap]);
 
   const [editing, setEditing] = React.useState<MenuItem | null>(null);
   const [creating, setCreating] = React.useState(false);
+  const [creatingChildOf, setCreatingChildOf] = React.useState<MenuItem | null>(null);
   const [pendingDelete, setPendingDelete] = React.useState<MenuItem | null>(null);
-  const [expanded, setExpanded] = React.useState<Set<string>>(() => new Set());
 
-  // Auto-expand top-level on first load
-  React.useEffect(() => {
-    if (tree && tree.length > 0 && expanded.size === 0) {
-      setExpanded(new Set(tree.map((m) => m.id)));
-    }
-  }, [tree, expanded.size]);
+  // Drag-drop state
+  const [draggedId, setDraggedId] = React.useState<string | null>(null);
+  const [overRowId, setOverRowId] = React.useState<string | null>(null);
+  const [overPosition, setOverPosition] = React.useState<"before" | "after" | "inside" | null>(null);
 
-  const toggleExpand = (id: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  // ============================================================
+  // Reorder operations
+  // ============================================================
+
+  /** Swap a menu with its previous sibling (same parent) */
+  const moveUp = (menuId: string) => {
+    const target = flatMenus.find((m) => m.id === menuId);
+    if (!target) return;
+    const parentId = (target.parentId ?? target.parent?.id ?? null) as string | null;
+    const siblings = [
+      ...flatMenus
+        .filter((m) => (m.parentId ?? m.parent?.id ?? null) === parentId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+    ];
+    const idx = siblings.findIndex((s) => s.id === menuId);
+    if (idx <= 0) return; // already first
+    const prev = siblings[idx - 1];
+    const cur = siblings[idx];
+    if (!prev || !cur) return;
+    reorderMenus.mutate([
+      { id: cur.id, sortOrder: prev.sortOrder, parentId: parentId ?? null },
+      { id: prev.id, sortOrder: cur.sortOrder, parentId: parentId ?? null },
+    ]);
   };
 
-  // Flatten the tree for drag-drop tracking
-  // (flatMenus is declared above from useMenusList — same data, no need to re-flatten)
-
-  const handleReorder = async (draggedId: string, targetId: string, position: "before" | "after" | "inside") => {
-    if (!tree) return;
-    const target = findInTree(tree, targetId);
+  /** Swap a menu with its next sibling (same parent) */
+  const moveDown = (menuId: string) => {
+    const target = flatMenus.find((m) => m.id === menuId);
     if (!target) return;
-    let newSort = target.sortOrder;
-    let newParent: string | null = target.parentId ?? null;
-    if (position === "inside") {
-      newSort = 0; // first child
-      newParent = target.id;
-    } else if (position === "before") {
-      newSort = target.sortOrder - 1;
-    } else {
-      newSort = target.sortOrder + 1;
+    const parentId = (target.parentId ?? target.parent?.id ?? null) as string | null;
+    const siblings = [
+      ...flatMenus
+        .filter((m) => (m.parentId ?? m.parent?.id ?? null) === parentId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+    ];
+    const idx = siblings.findIndex((s) => s.id === menuId);
+    if (idx < 0 || idx >= siblings.length - 1) return; // already last
+    const next = siblings[idx + 1];
+    const cur = siblings[idx];
+    if (!next || !cur) return;
+    reorderMenus.mutate([
+      { id: cur.id, sortOrder: next.sortOrder, parentId: parentId ?? null },
+      { id: next.id, sortOrder: cur.sortOrder, parentId: parentId ?? null },
+    ]);
+  };
+
+  /**
+   * Indent a menu — make it a child of its previous sibling.
+   * (Row index: must have a previous sibling at the same indent level.)
+   * To keep it simple, we look at the rows list to find the previous row
+   * that is at level === target.level - 1.
+   */
+  const indent = (menuId: string) => {
+    const rowIndex = rows.findIndex((r) => r.menu.id === menuId);
+    if (rowIndex < 0) return;
+    const target = rows[rowIndex];
+    if (!target) return;
+    // Find the previous row whose level < target.level
+    for (let i = rowIndex - 1; i >= 0; i--) {
+      const r = rows[i];
+      if (!r) continue;
+      if (r.level < target.level) {
+        // Make this menu a child of r.menu
+        const newParent = r.menu;
+        const newParentChildren = childrenMap.get(newParent.id) ?? [];
+        const lastSort = newParentChildren[newParentChildren.length - 1]?.sortOrder ?? 0;
+        reorderMenus.mutate([
+          { id: menuId, sortOrder: lastSort + 1, parentId: newParent.id },
+        ]);
+        return;
+      }
     }
-    reorderMenus.mutate([{ id: draggedId, sortOrder: newSort, parentId: newParent }]);
+  };
+
+  /**
+   * Outdent a menu — move it up one level (to its parent's parent).
+   * Place it just after its parent in the new parent's children list.
+   */
+  const outdent = (menuId: string) => {
+    const target = flatMenus.find((m) => m.id === menuId);
+    if (!target) return;
+    const currentParentId = (target.parentId ?? target.parent?.id ?? null) as string | null;
+    if (!currentParentId) return; // already at root
+    const currentParent = flatMenus.find((m) => m.id === currentParentId);
+    if (!currentParent) return;
+    const newParentId = (currentParent.parentId ?? currentParent.parent?.id ?? null) as string | null;
+    // Find sortOrder — place after current parent in new parent's children
+    const newSiblings = [
+      ...flatMenus
+        .filter((m) => (m.parentId ?? m.parent?.id ?? null) === newParentId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+    ];
+    const parentSort = currentParent.sortOrder ?? 0;
+    // Find first sibling with sortOrder > parentSort, use that - 1
+    const nextSibling = newSiblings.find((s) => (s.sortOrder ?? 0) > parentSort);
+    const newSort = nextSibling
+      ? (nextSibling.sortOrder ?? 0) - 1
+      : parentSort + 1;
+    reorderMenus.mutate([
+      { id: menuId, sortOrder: newSort, parentId: newParentId },
+    ]);
   };
 
   const handleInlineUpdate = (id: string, patch: Partial<MenuItem>) => {
     updateMenu.mutate({ id, data: patch });
+  };
+
+  // ============================================================
+  // Drag-and-drop reorder
+  // ============================================================
+
+  const handleDragStart = (e: React.DragEvent, menuId: string) => {
+    setDraggedId(menuId);
+    e.dataTransfer.setData("text/menu-id", menuId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setOverRowId(null);
+    setOverPosition(null);
+  };
+
+  const handleRowDragOver = (e: React.DragEvent, row: MenuRow, index: number) => {
+    if (!draggedId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    const h = rect.height;
+    let position: "before" | "after" | "inside";
+    if (y < h * 0.25) position = "before";
+    else if (y > h * 0.75) position = "after";
+    else position = "inside";
+    setOverRowId(row.menu.id);
+    setOverPosition(position);
+  };
+
+  const handleRowDrop = (e: React.DragEvent, row: MenuRow) => {
+    e.preventDefault();
+    const droppedId = e.dataTransfer.getData("text/menu-id") || draggedId;
+    if (!droppedId || !overPosition) {
+      handleDragEnd();
+      return;
+    }
+    if (droppedId === row.menu.id) {
+      handleDragEnd();
+      return;
+    }
+    const targetMenu = row.menu;
+    let newParentId: string | null;
+    let newSortOrder: number;
+
+    if (overPosition === "inside") {
+      // Make this menu a child of target
+      newParentId = targetMenu.id;
+      const targetChildren = childrenMap.get(targetMenu.id) ?? [];
+      const lastSort = targetChildren[targetChildren.length - 1]?.sortOrder ?? 0;
+      newSortOrder = lastSort + 1;
+    } else if (overPosition === "before") {
+      // Place before target (sibling of target)
+      newParentId = (targetMenu.parentId ?? targetMenu.parent?.id ?? null) as string | null;
+      newSortOrder = (targetMenu.sortOrder ?? 0) - 1;
+    } else {
+      // Place after target (sibling of target)
+      newParentId = (targetMenu.parentId ?? targetMenu.parent?.id ?? null) as string | null;
+      newSortOrder = (targetMenu.sortOrder ?? 0) + 1;
+    }
+
+    reorderMenus.mutate([{ id: droppedId, sortOrder: newSortOrder, parentId: newParentId }]);
+    handleDragEnd();
   };
 
   return (
@@ -167,7 +327,7 @@ export default function MenuManagementPage() {
       <PageContainer>
         <PageHeader
           title="จัดการเมนู"
-          description="จัดการโครงสร้างเมนูในระบบ — ลากเพื่อเรียงลำดับ, คลิกเพื่อแก้ไข"
+          description="จัดการเมนู — ลากเพื่อเรียง, ↑↓ สลับ, → ซ้อน, ← ถอด"
           breadcrumbs={[
             { label: "หน้าหลัก", href: "/dashboard" },
             { label: "ระบบ" },
@@ -181,11 +341,39 @@ export default function MenuManagementPage() {
           }
         />
 
+        {/* Action legend — responsive: hidden on mobile, fewer items on tablet */}
+        <Card className="mb-2 p-2 hidden md:block">
+          <div className="flex items-center gap-4 flex-wrap px-2 py-1 text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">สัญลักษณ์:</span>
+            <span className="flex items-center gap-1">
+              <GripVertical className="h-3.5 w-3.5" /> ลากเพื่อเรียงลำดับ
+            </span>
+            <span className="flex items-center gap-1">
+              <ArrowUp className="h-3.5 w-3.5" />/<ArrowDown className="h-3.5 w-3.5" /> สลับลำดับ
+            </span>
+            <span className="hidden lg:flex items-center gap-1">
+              <ArrowRight className="h-3.5 w-3.5" /> ซ้อน
+            </span>
+            <span className="hidden lg:flex items-center gap-1">
+              <ArrowLeft className="h-3.5 w-3.5" /> ถอด
+            </span>
+            <span className="hidden lg:flex items-center gap-1">
+              <Plus className="h-3.5 w-3.5" /> เพิ่มเมนูย่อย
+            </span>
+            <span className="flex items-center gap-1">
+              <Pencil className="h-3.5 w-3.5" /> แก้ไข
+            </span>
+            <span className="flex items-center gap-1 text-danger">
+              <Trash2 className="h-3.5 w-3.5" /> ลบ
+            </span>
+          </div>
+        </Card>
+
         <Card className="p-2">
           {isLoading ? (
             <div className="space-y-2 p-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12" />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-10" />
               ))}
             </div>
           ) : isError ? (
@@ -195,33 +383,300 @@ export default function MenuManagementPage() {
                 {error instanceof Error ? error.message : "Unknown error"}
               </p>
             </div>
-          ) : !tree || tree.length === 0 ? (
+          ) : rows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              ยังไม่มีเมนูในระบบ
+              ยังไม่มีเมนูในระบบ — คลิก "เพิ่มเมนู" เพื่อเริ่มต้น
             </div>
           ) : (
-            <ul className="space-y-1">
-              {tree.map((menu) => (
-                <MenuNode
-                  key={menu.id}
-                  menu={menu}
-                  level={0}
-                  expanded={expanded}
-                  onToggle={toggleExpand}
-                  onEdit={setEditing}
-                  onDelete={setPendingDelete}
-                  onReorder={handleReorder}
-                  onInlineUpdate={handleInlineUpdate}
-                  allMenus={flatMenus}
-                />
-              ))}
+            <ul className="divide-y divide-border/40">
+              {rows.map((row, index) => {
+                const m = row.menu;
+                const parentId = (m.parentId ?? m.parent?.id ?? null) as string | null;
+                const hasParent = parentId !== null;
+                // First / last within siblings?
+                const siblings = flatMenus
+                  .filter((x) => (x.parentId ?? x.parent?.id ?? null) === parentId)
+                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+                const isFirst = siblings[0]?.id === m.id;
+                const isLast = siblings[siblings.length - 1]?.id === m.id;
+                // Can indent? (there must be a previous row at a smaller level)
+                const canIndent = row.level > 0 && index > 0 && (() => {
+                  for (let i = index - 1; i >= 0; i--) {
+                    const r = rows[i];
+                    if (!r) continue;
+                    if (r.level < row.level) return true;
+                    if (r.level === row.level) return false;
+                  }
+                  return false;
+                })();
+                const canOutdent = hasParent;
+                return (
+                  <li
+                    key={m.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, m.id)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleRowDragOver(e, row, index)}
+                    onDrop={(e) => handleRowDrop(e, row)}
+                    className={cn(
+                      "group relative flex items-center gap-1 px-2 py-1.5 hover:bg-accent/20 transition-colors",
+                      !m.isActive && "opacity-50",
+                      !m.isVisible && "opacity-60",
+                      row.level === 0 && "bg-muted/30 font-medium",
+                      draggedId === m.id && "opacity-30",
+                    )}
+                    style={{ paddingLeft: 8 + row.level * 16 }}
+                  >
+                    {/* Drop indicator — before */}
+                    {overRowId === m.id && overPosition === "before" && (
+                      <div className="absolute inset-x-2 top-0 h-0.5 bg-primary rounded-full ring-2 ring-primary/40 z-10" />
+                    )}
+                    {/* Drop indicator — inside (full row) */}
+                    {overRowId === m.id && overPosition === "inside" && (
+                      <div className="absolute inset-1 rounded-md bg-primary/20 ring-2 ring-primary z-10 pointer-events-none" />
+                    )}
+                    {/* Drop indicator — after */}
+                    {overRowId === m.id && overPosition === "after" && (
+                      <div className="absolute inset-x-2 bottom-0 h-0.5 bg-primary rounded-full ring-2 ring-primary/40 z-10" />
+                    )}
+
+                    {/* Drag handle */}
+                    <GripVertical
+                      className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/50 hover:text-muted-foreground"
+                    />
+
+                    {/* Indent guide — desktop only */}
+                    {row.level > 0 && (
+                      <CornerDownRight
+                        className="hidden md:block h-3.5 w-3.5 shrink-0 text-muted-foreground/50"
+                      />
+                    )}
+
+                    <MenuIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+
+                    {/* Sort order badge — hidden on small mobile */}
+                    <Badge variant="muted" className="hidden sm:flex gap-1 text-[10px] shrink-0" title={`ลำดับที่ ${m.sortOrder}`}>
+                      <Hash className="h-2.5 w-2.5" />
+                      {m.sortOrder}
+                    </Badge>
+
+                    {/* Name & meta */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="truncate text-sm">{m.nameTh}</p>
+                        <code className="hidden md:inline text-[10px] text-muted-foreground">{m.code}</code>
+                        {m.menuType === "BUTTON" && (
+                          <Badge variant="warning" className="hidden sm:inline-flex text-[10px]">
+                            Action
+                          </Badge>
+                        )}
+                        {!m.isVisible && (
+                          <Badge variant="muted" className="hidden sm:inline-flex text-[10px]">
+                            ซ่อน
+                          </Badge>
+                        )}
+                        {!m.isActive && (
+                          <Badge variant="muted" className="hidden sm:inline-flex text-[10px]">
+                            ระงับ
+                          </Badge>
+                        )}
+                        {m.openInNewTab && <ExternalLink className="hidden sm:inline h-3 w-3 text-muted-foreground" />}
+                        {row.hasChildren && (
+                          <Badge variant="info" className="text-[10px]">
+                            {row.childCount}
+                          </Badge>
+                        )}
+                      </div>
+                      {m.path && (
+                        <p className="hidden sm:block truncate text-xs text-muted-foreground">{m.path}</p>
+                      )}
+                    </div>
+
+                    {/* Action buttons — desktop */}
+                    <div className="hidden lg:flex shrink-0 items-center gap-0.5">
+                      {/* Toggle visibility */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title={m.isVisible ? "ซ่อน" : "แสดง"}
+                        onClick={() => handleInlineUpdate(m.id, { isVisible: !m.isVisible })}
+                      >
+                        {m.isVisible ? (
+                          <Eye className="h-3.5 w-3.5" />
+                        ) : (
+                          <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </Button>
+                      {/* Toggle active */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title={m.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
+                        onClick={() => handleInlineUpdate(m.id, { isActive: !m.isActive })}
+                      >
+                        {m.isActive ? (
+                          <Power className="h-3.5 w-3.5 text-emerald-600" />
+                        ) : (
+                          <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                      </Button>
+
+                      {/* Reorder: up */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={isFirst}
+                        title="เลื่อนขึ้น"
+                        onClick={() => moveUp(m.id)}
+                      >
+                        <ArrowUp className={cn("h-3.5 w-3.5", isFirst && "opacity-30")} />
+                      </Button>
+                      {/* Reorder: down */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={isLast}
+                        title="เลื่อนลง"
+                        onClick={() => moveDown(m.id)}
+                      >
+                        <ArrowDown className={cn("h-3.5 w-3.5", isLast && "opacity-30")} />
+                      </Button>
+
+                      {/* Indent (→): make child of previous row */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-blue-600 hover:bg-blue-50"
+                        disabled={!canIndent}
+                        title="ซ้อน (เป็นเมนูย่อยของเมนูก่อนหน้า)"
+                        onClick={() => indent(m.id)}
+                      >
+                        <ArrowRight className={cn("h-3.5 w-3.5", !canIndent && "opacity-30")} />
+                      </Button>
+
+                      {/* Outdent (←): move up one level */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-amber-600 hover:bg-amber-50"
+                        disabled={!canOutdent}
+                        title="ถอด (ออกจากเมนูแม่)"
+                        onClick={() => outdent(m.id)}
+                      >
+                        <ArrowLeft className={cn("h-3.5 w-3.5", !canOutdent && "opacity-30")} />
+                      </Button>
+
+                      {/* Add child */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
+                        title="เพิ่มเมนูย่อย"
+                        onClick={() => setCreatingChildOf(m)}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </Button>
+
+                      {/* Edit */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="แก้ไข"
+                        onClick={() => setEditing(m)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+
+                      {/* Delete */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-danger hover:bg-danger/10"
+                        title="ลบ"
+                        onClick={() => setPendingDelete(m)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    {/* Action buttons — tablet (md-lg): only show key actions */}
+                    <div className="hidden md:flex lg:hidden shrink-0 items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={isFirst}
+                        title="เลื่อนขึ้น"
+                        onClick={() => moveUp(m.id)}
+                      >
+                        <ArrowUp className={cn("h-3.5 w-3.5", isFirst && "opacity-30")} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        disabled={isLast}
+                        title="เลื่อนลง"
+                        onClick={() => moveDown(m.id)}
+                      >
+                        <ArrowDown className={cn("h-3.5 w-3.5", isLast && "opacity-30")} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="แก้ไข"
+                        onClick={() => setEditing(m)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-danger hover:bg-danger/10"
+                        title="ลบ"
+                        onClick={() => setPendingDelete(m)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+
+                    {/* Action buttons — mobile: only show key actions */}
+                    <div className="flex md:hidden shrink-0 items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="แก้ไข"
+                        onClick={() => setEditing(m)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-danger hover:bg-danger/10"
+                        title="ลบ"
+                        onClick={() => setPendingDelete(m)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
       </PageContainer>
       <PageFooter />
 
-      {/* Create dialog */}
+      {/* Create dialog (root) */}
       <MenuFormDialog
         open={creating}
         onOpenChange={(o) => !o && setCreating(false)}
@@ -231,6 +686,23 @@ export default function MenuManagementPage() {
         onSubmit={(data) => {
           createMenu.mutate(data, {
             onSuccess: () => setCreating(false),
+          });
+        }}
+        isPending={createMenu.isPending}
+        allMenus={flatMenus}
+      />
+
+      {/* Create child dialog */}
+      <MenuFormDialog
+        open={!!creatingChildOf}
+        onOpenChange={(o) => !o && setCreatingChildOf(null)}
+        title={`เพิ่มเมนูย่อยของ "${creatingChildOf?.nameTh ?? ""}"`}
+        submitLabel="สร้างเมนูย่อย"
+        mode="create"
+        initial={creatingChildOf ? { ...EMPTY_FORM, parentId: creatingChildOf.id, menuType: "MENU" } : null}
+        onSubmit={(data) => {
+          createMenu.mutate(data, {
+            onSuccess: () => setCreatingChildOf(null),
           });
         }}
         isPending={createMenu.isPending}
@@ -266,9 +738,9 @@ export default function MenuManagementPage() {
           pendingDelete ? (
             <>
               จะลบ <strong>{pendingDelete.nameTh}</strong> ({pendingDelete.code}) และไม่สามารถกู้คืนได้
-              {pendingDelete.children && pendingDelete.children.length > 0 && (
+              {(childrenMap.get(pendingDelete.id)?.length ?? 0) > 0 && (
                 <span className="mt-2 block text-danger">
-                  ⚠️ เมนูนี้มีเมนูย่อย {pendingDelete.children.length} รายการ — ต้องลบเมนูย่อยก่อน
+                  ⚠️ เมนูนี้มีเมนูย่อย {childrenMap.get(pendingDelete.id)?.length} รายการ — ต้องลบเมนูย่อยก่อน
                 </span>
               )}
             </>
@@ -284,208 +756,6 @@ export default function MenuManagementPage() {
           }
         }}
       />
-    </>
-  );
-}
-
-// ---------- Tree node (recursive) ----------
-
-function MenuNode({
-  menu,
-  level,
-  expanded,
-  onToggle,
-  onEdit,
-  onDelete,
-  onReorder,
-  onInlineUpdate,
-  allMenus,
-}: {
-  menu: MenuItem;
-  level: number;
-  expanded: Set<string>;
-  onToggle: (id: string) => void;
-  onEdit: (m: MenuItem) => void;
-  onDelete: (m: MenuItem) => void;
-  onReorder: (draggedId: string, targetId: string, position: "before" | "after" | "inside") => void;
-  onInlineUpdate: (id: string, patch: Partial<MenuItem>) => void;
-  allMenus: MenuItem[];
-}) {
-  const children = menu.children ?? [];
-  const hasChildren = children.length > 0;
-  const isOpen = expanded.has(menu.id);
-
-  // Drag-drop handlers
-  const [dragOver, setDragOver] = React.useState<"before" | "after" | "inside" | null>(null);
-
-  const onDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData("text/menu-id", menu.id);
-    e.dataTransfer.effectAllowed = "move";
-  };
-  const onDragEnd = () => setDragOver(null);
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const offsetY = e.clientY - rect.top;
-    if (offsetY < rect.height * 0.25) setDragOver("before");
-    else if (offsetY > rect.height * 0.75) setDragOver("after");
-    else setDragOver("inside");
-  };
-  const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const draggedId = e.dataTransfer.getData("text/menu-id");
-    if (!draggedId || draggedId === menu.id || !dragOver) return;
-    onReorder(draggedId, menu.id, dragOver);
-    setDragOver(null);
-  };
-
-  return (
-    <>
-      <li
-        draggable
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        onDragOver={onDragOver}
-        onDrop={onDrop}
-        className={cn(
-          "group flex items-center gap-2 rounded-md px-2 py-2 transition-colors",
-          "hover:bg-accent/30",
-          !menu.isActive && "opacity-50",
-          !menu.isVisible && "opacity-60",
-          dragOver === "inside" && "bg-accent/60 ring-2 ring-primary/50",
-          dragOver === "before" && "border-t-2 border-primary",
-          dragOver === "after" && "border-b-2 border-primary",
-        )}
-        style={{ marginLeft: level * 24 }}
-      >
-        <GripVertical className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/40" />
-        {hasChildren ? (
-          <button
-            type="button"
-            onClick={() => onToggle(menu.id)}
-            className="text-muted-foreground"
-          >
-            <ChevronRight
-              className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-90")}
-            />
-          </button>
-        ) : (
-          <span className="w-3.5" />
-        )}
-
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
-          {hasChildren ? (
-            isOpen ? <FolderOpen className="h-3.5 w-3.5" /> : <Folder className="h-3.5 w-3.5" />
-          ) : (
-            <MenuIcon className="h-3.5 w-3.5" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <p className="truncate text-sm font-medium">{menu.nameTh}</p>
-            <code className="text-[10px] text-muted-foreground">{menu.code}</code>
-            {menu.nameEn && (
-              <span className="text-[10px] text-muted-foreground">· {menu.nameEn}</span>
-            )}
-            {menu.menuType === "MENU" && (
-              <Badge variant="info" className="text-[10px]">
-                Sub
-              </Badge>
-            )}
-            {menu.menuType === "BUTTON" && (
-              <Badge variant="warning" className="text-[10px]">
-                Action
-              </Badge>
-            )}
-            {!menu.isVisible && (
-              <Badge variant="muted" className="gap-1 text-[10px]">
-                <EyeOff className="h-2.5 w-2.5" />
-                ซ่อน
-              </Badge>
-            )}
-            {!menu.isActive && (
-              <Badge variant="muted" className="gap-1 text-[10px]">
-                <PowerOff className="h-2.5 w-2.5" />
-                ระงับ
-              </Badge>
-            )}
-            {menu.openInNewTab && <ExternalLink className="h-3 w-3 text-muted-foreground" />}
-          </div>
-          {menu.path && (
-            <p className="truncate text-xs text-muted-foreground">{menu.path}</p>
-          )}
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title={menu.isVisible ? "ซ่อนจาก Sidebar" : "แสดงใน Sidebar"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onInlineUpdate(menu.id, { isVisible: !menu.isVisible });
-            }}
-          >
-            {menu.isVisible ? (
-              <Eye className="h-3.5 w-3.5" />
-            ) : (
-              <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title={menu.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onInlineUpdate(menu.id, { isActive: !menu.isActive });
-            }}
-          >
-            {menu.isActive ? (
-              <Power className="h-3.5 w-3.5 text-emerald-600" />
-            ) : (
-              <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onEdit(menu)}
-            title="แก้ไข"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-danger hover:bg-danger/10"
-            onClick={() => onDelete(menu)}
-            title="ลบ"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </li>
-      {isOpen &&
-        children.map((c) => (
-          <MenuNode
-            key={c.id}
-            menu={c}
-            level={level + 1}
-            expanded={expanded}
-            onToggle={onToggle}
-            onEdit={onEdit}
-            onDelete={onDelete}
-            onReorder={onReorder}
-            onInlineUpdate={onInlineUpdate}
-            allMenus={allMenus}
-          />
-        ))}
     </>
   );
 }
@@ -525,35 +795,30 @@ function MenuFormDialog({
     e.preventDefault();
     if (!form.code || !form.nameTh || !form.nameEn) return;
 
+    // Map frontend menuType → backend menuType (MENU → SUB).
+    // The backend's enum is MAIN | SUB; the frontend exposes MAIN | MENU | BUTTON
+    // so admins can pick a non-routing "action" type in the UI.
+    const backendMenuType =
+      form.menuType === "MENU" ? "SUB" : form.menuType;
+
     // Strip fields the backend rejects for the current mode.
-    //   POST /menus   — rejects: isVisible, isActive, openInNewTab, externalUrl,
-    //                            description, name
-    //   PATCH /menus/:id — rejects: openInNewTab, externalUrl, description, name
-    // The form's `openInNewTab / externalUrl / description` are still rendered
-    // (so the user can see/edit them) but we never send them — the backend
-    // doesn't support these fields yet.
     const payload: Partial<MenuItem> = {
       code: form.code,
       nameTh: form.nameTh,
       nameEn: form.nameEn,
       parentId: form.parentId,
-      menuType: form.menuType,
+      menuType: backendMenuType as unknown as MenuItem["menuType"],
       path: form.path || null,
       icon: form.icon || null,
       sortOrder: form.sortOrder,
     };
     if (mode === "update") {
-      // PATCH /menus/:id also accepts the toggle fields
       payload.isVisible = form.isVisible;
       payload.isActive = form.isActive;
     }
-    // Note: `openInNewTab`, `externalUrl`, `description` are intentionally
-    // omitted — the real NestJS backend returns 400 if we send them.
     onSubmit(payload);
   };
 
-  // Stable IDs for the form fields. Used by the <Label htmlFor> association so
-  // tests can `getByLabel("Code *")` and screen readers announce the label.
   const codeId = React.useId();
   const sortOrderId = React.useId();
   const nameThId = React.useId();
@@ -729,12 +994,20 @@ function Field({
 // ---------- helpers ----------
 
 function menuToForm(m: MenuItem): MenuFormData {
+  // Normalize menuType: backend uses "SUB", frontend uses "MENU"
+  const rawType = m.menuType as unknown as string;
+  const menuType: MenuFormData["menuType"] =
+    rawType === "SUB" ? "MENU" : (rawType as MenuFormData["menuType"]);
+
+  // parentId: backend may use parent.id (list) or parentId (detail) — fallback
+  const parentId = m.parentId ?? m.parent?.id ?? null;
+
   return {
     code: m.code,
     nameTh: m.nameTh,
     nameEn: m.nameEn,
-    parentId: m.parentId ?? null,
-    menuType: m.menuType,
+    parentId,
+    menuType,
     path: m.path ?? "",
     icon: m.icon ?? "",
     sortOrder: m.sortOrder,
@@ -744,27 +1017,4 @@ function menuToForm(m: MenuItem): MenuFormData {
     externalUrl: m.externalUrl ?? "",
     description: m.description ?? "",
   };
-}
-
-function flattenTree(tree: MenuItem[]): MenuItem[] {
-  const out: MenuItem[] = [];
-  const walk = (items: MenuItem[]) => {
-    for (const item of items) {
-      out.push(item);
-      if (item.children?.length) walk(item.children);
-    }
-  };
-  walk(tree);
-  return out;
-}
-
-function findInTree(tree: MenuItem[], id: string): MenuItem | null {
-  for (const item of tree) {
-    if (item.id === id) return item;
-    if (item.children?.length) {
-      const found = findInTree(item.children, id);
-      if (found) return found;
-    }
-  }
-  return null;
 }

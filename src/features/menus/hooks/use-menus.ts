@@ -90,8 +90,12 @@ export function useReorderMenus() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (items: MenuReorderItem[]) => menusApi.reorder(items),
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: [MENUS_QUERY_KEY] });
+      const count = variables.length;
+      showToast.success(
+        count > 1 ? `จัดลำดับเมนูเรียบร้อย (${count} รายการ)` : "จัดลำดับเมนูเรียบร้อย"
+      );
     },
     onError: (err: Error) => {
       showToast.error("ไม่สามารถจัดลำดับเมนูได้", err.message);
