@@ -32,7 +32,7 @@ import {
   readActionCode,
   selectedPermissionIdsFromActionCodes,
 } from "@/utils/permission-utils";
-import type { Role } from "@/types/auth";
+import type { Role } from "@/features/auth/types";
 
 const schema = z.object({
   code: z

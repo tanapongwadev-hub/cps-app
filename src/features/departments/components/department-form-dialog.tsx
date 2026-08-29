@@ -24,8 +24,8 @@ import {
 import {
   useCreateDepartment,
   useUpdateDepartment,
-} from "@/features/users/hooks/use-departments";
-import type { Department } from "@/types/department";
+} from "@/features/departments/hooks/use-departments";
+import type { Department } from "@/features/departments/types";
 
 interface DepartmentFormDialogProps {
   open: boolean;

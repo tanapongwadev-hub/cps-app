@@ -3,8 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { describe, expect, it } from "vitest";
-import type { Department } from "@/types/department";
-import type { Role } from "@/types/role";
+import type { Department } from "@/features/departments/types";
+import type { Role } from "@/features/roles/types";
 import {
   updateUserSchema,
   type EditUserAssignmentValues,

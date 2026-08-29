@@ -184,7 +184,7 @@ export default function TicketsPage() {
         cell: ({ row }) => {
           const t = row.original;
           return (
-            <ActionMenu
+            <ActionMenu row={ticket}
               label={`เมนู ${t.ticketNumber}`}
               items={[
                 {

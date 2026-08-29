@@ -61,7 +61,7 @@ import {
   useDeleteMenu,
   useReorderMenus,
 } from "@/features/menus/hooks/use-menus";
-import type { MenuItem, MenuFormData } from "@/types/menu";
+import type { MenuItem, MenuFormData } from "@/features/menus/types";
 import { cn } from "@/utils/cn";
 
 const EMPTY_FORM: MenuFormData = {

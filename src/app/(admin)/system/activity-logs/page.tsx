@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/tables/data-table";
 import { ActionMenu } from "@/components/tables/action-menu";
 import type { ColumnDef } from "@tanstack/react-table";
-import type { ActivityAction, ActivityLog } from "@/types/activity-log";
+import type { ActivityAction, ActivityLog } from "@/features/activity-logs/types";
 import { formatDateTime, formatRelative } from "@/utils/date";
 import { useDebounce } from "@/hooks/use-debounce";
 import { showToast } from "@/lib/toast";
@@ -144,7 +144,7 @@ export default function ActivityLogsPage() {
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
-          <ActionMenu
+          <ActionMenu row={log}
             label={`เมนูบันทึกกิจกรรม ${row.original.id}`}
             items={[
               {

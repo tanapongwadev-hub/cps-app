@@ -52,7 +52,7 @@ import { resolveMenuPath, isComingSoonPath } from "@/config/menu-overrides";
 import { cn } from "@/utils/cn";
 import { resolveLucideIcon } from "@/utils/icon";
 import { SESSION_STORAGE_KEYS } from "@/constants/app";
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@/features/menus/types";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

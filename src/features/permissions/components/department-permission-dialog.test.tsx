@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { Permission } from "@/types/permission";
+import type { Permission } from "@/features/permissions/types";
 import { DepartmentPermissionDialog } from "./department-permission-dialog";
 
 const mocks = vi.hoisted(() => ({

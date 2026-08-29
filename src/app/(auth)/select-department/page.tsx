@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { showToast } from "@/lib/toast";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/utils/cn";
-import type { DepartmentRoleOption, UserAssignment } from "@/types/auth";
+import type { DepartmentRoleOption, UserAssignment } from "@/features/auth/types";
 
 /**
  * Two flows land on this page:

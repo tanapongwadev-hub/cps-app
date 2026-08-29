@@ -135,6 +135,21 @@ export const PERMISSIONS = {
   MATERIALS_DISBURSEMENT_DELETE: "MATERIALS_DISBURSEMENT_DELETE",
   MATERIALS_DISBURSEMENT_CONFIRM: "MATERIALS_DISBURSEMENT_CONFIRM",
   MATERIALS_DISBURSEMENT_CANCEL: "MATERIALS_DISBURSEMENT_CANCEL",
+
+  // Products (ชิ้นส่วนยานยนต์)
+  PRODUCTS_VIEW: "PRODUCTS_VIEW",
+  PRODUCTS_CREATE: "PRODUCTS_CREATE",
+  PRODUCTS_UPDATE: "PRODUCTS_UPDATE",
+  PRODUCTS_DELETE: "PRODUCTS_DELETE",
+  PRODUCTS_RESTORE: "PRODUCTS_RESTORE",
+
+  // BOMs (Bill of Materials)
+  BOMS_VIEW: "BOMS_VIEW",
+  BOMS_CREATE: "BOMS_CREATE",
+  BOMS_UPDATE: "BOMS_UPDATE",
+  BOMS_DELETE: "BOMS_DELETE",
+  BOMS_ACTIVATE: "BOMS_ACTIVATE",
+  BOMS_DEACTIVATE: "BOMS_DEACTIVATE",
 } as const;
 
 export type PermissionKey = keyof typeof PERMISSIONS;
@@ -329,6 +344,29 @@ export const PERMISSION_GROUPS = [
       { key: "delete", code: PERMISSIONS.MATERIALS_DISBURSEMENT_DELETE, label: "ลบ" },
       { key: "confirm", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CONFIRM, label: "ยืนยันจ่าย" },
       { key: "cancel", code: PERMISSIONS.MATERIALS_DISBURSEMENT_CANCEL, label: "ยกเลิก" },
+    ],
+  },
+  {
+    module: "products",
+    label: "ชิ้นส่วนยานยนต์ (Products)",
+    permissions: [
+      { key: "view", code: PERMISSIONS.PRODUCTS_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.PRODUCTS_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.PRODUCTS_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.PRODUCTS_DELETE, label: "ลบ" },
+      { key: "restore", code: PERMISSIONS.PRODUCTS_RESTORE, label: "กู้คืน" },
+    ],
+  },
+  {
+    module: "boms",
+    label: "Bill of Materials (BOM)",
+    permissions: [
+      { key: "view", code: PERMISSIONS.BOMS_VIEW, label: "ดู" },
+      { key: "create", code: PERMISSIONS.BOMS_CREATE, label: "สร้าง" },
+      { key: "update", code: PERMISSIONS.BOMS_UPDATE, label: "แก้ไข" },
+      { key: "delete", code: PERMISSIONS.BOMS_DELETE, label: "ลบ" },
+      { key: "activate", code: PERMISSIONS.BOMS_ACTIVATE, label: "เปิดใช้งาน" },
+      { key: "deactivate", code: PERMISSIONS.BOMS_DEACTIVATE, label: "ปิดใช้งาน" },
     ],
   },
 ] as const;

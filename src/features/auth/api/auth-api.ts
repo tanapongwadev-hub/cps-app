@@ -13,8 +13,8 @@ import type {
   ResetPasswordRequest,
   ChangePasswordRequest,
   LoginRequest,
-} from "@/types/auth";
-import type { MenuItem } from "@/types/menu";
+} from "@/features/auth/types";
+import type { MenuItem } from "@/features/menus/types";
 
 export const authApi = {
   /** Step 1: Login - อาจได้ authenticated ทันที หรือต้องเลือก department ก่อน */

@@ -29,8 +29,10 @@ export const SESSION_STORAGE_KEYS = {
 
 export const QUERY_KEYS = {
   AUTH: {
+    ALL: ["auth"] as const,
     ME: ["auth", "me"] as const,
     SESSION: ["auth", "session"] as const,
+    INIT: ["auth", "init"] as const,
   },
   USERS: {
     ALL: ["users"] as const,
@@ -88,6 +90,22 @@ export const QUERY_KEYS = {
     ALL: ["roles"] as const,
     LIST: (params: unknown) => ["roles", "list", params] as const,
     DETAIL: (id: string) => ["roles", "detail", id] as const,
+  },
+  SESSIONS: {
+    ALL: ["sessions"] as const,
+    LIST: (params: unknown) => ["sessions", "list", params] as const,
+    DETAIL: (id: string) => ["sessions", "detail", id] as const,
+  },
+  PRODUCTS: {
+    ALL: ["products"] as const,
+    LIST: (params: unknown) => ["products", "list", params] as const,
+    DETAIL: (id: string) => ["products", "detail", id] as const,
+    LOOKUPS: ["products", "lookups"] as const,
+  },
+  BOMS: {
+    ALL: ["boms"] as const,
+    LIST_BY_PRODUCT: (productId: string) => ["boms", "product", productId] as const,
+    DETAIL: (id: string) => ["boms", "detail", id] as const,
   },
   DEPARTMENTS: {
     ALL: ["departments"] as const,

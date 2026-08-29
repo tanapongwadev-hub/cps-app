@@ -8,7 +8,7 @@ import {
   readActionCode,
   selectedPermissionIdsFromActionCodes,
 } from "./permission-utils";
-import type { Permission } from "@/types/permission";
+import type { Permission } from "@/features/permissions/types";
 
 describe("readActionCode", () => {
   it("returns string when given a string", () => {

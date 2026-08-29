@@ -28,7 +28,7 @@ import { resolveMenuPath } from "@/config/menu-overrides";
 import { resolveLucideIcon } from "@/utils/icon";
 import { cn } from "@/utils/cn";
 import { showToast } from "@/lib/toast";
-import type { MenuItem } from "@/types/menu";
+import type { MenuItem } from "@/features/menus/types";
 
 /* ---------------------------------------------------------------- types */
 

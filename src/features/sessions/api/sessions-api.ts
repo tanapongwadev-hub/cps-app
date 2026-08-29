@@ -2,7 +2,7 @@
  * Sessions API
  */
 import { apiClient } from "@/services/api-client";
-import type { UserSession } from "@/types/session";
+import type { UserSession } from "@/features/sessions/types";
 import type { PaginatedList, PageQuery } from "@/types/paginated";
 
 export const sessionsApi = {

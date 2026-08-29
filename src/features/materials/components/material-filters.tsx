@@ -162,6 +162,7 @@ export function MaterialFilters({
           <Input
             id="material-search"
             type="search"
+            aria-label="ค้นหาวัสดุ"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="ค้นหารหัสหรือชื่อวัสดุ..."

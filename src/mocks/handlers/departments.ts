@@ -11,7 +11,7 @@
  */
 import { mockDb } from "../db";
 import { ok, fail, getBody, generateId, simulateLatency, type ListQuery } from "./helpers";
-import type { Department } from "@/types/department";
+import type { Department } from "@/features/departments/types";
 
 export async function setupDepartmentMocks(
   path: string,

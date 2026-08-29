@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import { SelectField } from "@/components/forms/form-field";
-import type { Department } from "@/types/department";
-import type { Role } from "@/types/role";
+import type { Department } from "@/features/departments/types";
+import type { Role } from "@/features/roles/types";
 import type { UpdateUserFormValues } from "../schemas/user-schema";
 
 interface EditUserAssignmentsProps {

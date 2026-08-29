@@ -18,7 +18,7 @@ import { AlertTriangle } from "lucide-react";
 import { useActivityLog } from "../hooks/use-activity-logs";
 import { formatDateTime } from "@/utils/date";
 import { cn } from "@/utils/cn";
-import type { ActivityAction } from "@/types/activity-log";
+import type { ActivityAction } from "@/features/activity-logs/types";
 
 const actionLabel: Record<ActivityAction, string> = {
   create: "สร้าง",

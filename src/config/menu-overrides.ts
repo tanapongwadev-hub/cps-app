@@ -28,6 +28,9 @@ export const MENU_PATH_OVERRIDES: Record<string, string | null> = {
   // Materials Management
   MATERIALS_PC: "/materials/pc",
   MATERIALS_RECEIVING: "/materials/materials-receiving",
+  // Products Management
+  PRODUCTS_LIST: "/products",
+  BOMS: "/products",
 };
 
 /**

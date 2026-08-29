@@ -83,28 +83,28 @@ export function RejectReasonTable({
             id: "actions",
             header: "",
             cell: ({ row }: { row: { original: RejectReason } }) => {
-              const items: ActionItem[] = [
+              const items: ActionItem<RejectReason>[] = [
                 {
                   label: "แก้ไข",
                   icon: <Pencil className="h-3 w-3" />,
-                  onClick: () => onEdit(row.original),
+                  onClick: (row) => onEdit(row),
                 },
               ];
               if (row.original.isActive)
                 items.push({
                   label: "ปิดใช้งาน",
                   icon: <Power className="h-3 w-3" />,
-                  onClick: () => onStatusChange(row.original),
+                  onClick: (row) => onStatusChange(row),
                   variant: "danger" as const,
                 });
               else
                 items.push({
                   label: "เปิดใช้งาน",
                   icon: <RotateCcw className="h-3 w-3" />,
-                  onClick: () => onStatusChange(row.original),
+                  onClick: (row) => onStatusChange(row),
                 });
               return (
-                <ActionMenu label={`จัดการเหตุผลการปฏิเสธ ${row.original.code}`} items={items} />
+                <ActionMenu row={row.original} label={`จัดการเหตุผลการปฏิเสธ ${row.original.code}`} items={items} />
               );
             },
           },

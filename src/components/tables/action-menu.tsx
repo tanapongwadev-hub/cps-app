@@ -14,8 +14,7 @@ import { cn } from "@/utils/cn";
 
 export interface ActionItem<T = unknown> {
   label: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon?: React.ReactElement<any>;
+  icon?: React.ReactElement | React.ReactNode;
   onClick: (row: T) => void;
   variant?: "default" | "danger";
   disabled?: ((row: T) => boolean) | boolean;
@@ -24,11 +23,15 @@ export interface ActionItem<T = unknown> {
 
 interface ActionMenuProps<T = unknown> {
   items: ActionItem<T>[];
+  /**
+   * The row each `ActionItem.onClick` is invoked with. Required — every
+   * table cell has a specific row, pass it explicitly. The pre-existing
+   * "closure-capture" pattern (used in some tables) is being migrated to
+   * this strict form.
+   */
   row: T;
   label?: string;
 }
-
-export type { ActionItem };
 
 export function ActionMenu<T = unknown>({ items, row, label = "เมนู" }: ActionMenuProps<T>) {
   const visible = items.filter((i) => !i.hidden);
@@ -60,7 +63,7 @@ export function ActionMenu<T = unknown>({ items, row, label = "เมนู" }: 
                   e.stopPropagation();
                   item.onClick(row);
                 }}
-                disabled={isDisabled}
+                disabled={!!isDisabled}
                 className={cn(
                   "min-h-10",
                   item.variant === "danger" && "text-danger focus:text-danger",

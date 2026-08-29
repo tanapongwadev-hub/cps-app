@@ -3,7 +3,7 @@
  */
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { menusApi } from "../api/menus-api";
-import type { MenuItem, MenuReorderItem } from "@/types/menu";
+import type { MenuItem, MenuReorderItem } from "@/features/menus/types";
 import { showToast } from "@/lib/toast";
 
 export const MENUS_QUERY_KEY = "menus";

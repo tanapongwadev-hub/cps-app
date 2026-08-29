@@ -5,12 +5,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { sessionsApi } from "../api/sessions-api";
 import type { PageQuery } from "@/types/paginated";
 import { showToast } from "@/lib/toast";
-
-export const SESSIONS_QUERY_KEY = "sessions";
+import { QUERY_KEYS } from "@/constants/app";
 
 export function useSessions(query: PageQuery = { page: 1, pageSize: 20 }) {
   return useQuery({
-    queryKey: [SESSIONS_QUERY_KEY, query],
+    queryKey: QUERY_KEYS.SESSIONS.LIST(query),
     queryFn: () => sessionsApi.list(query),
     staleTime: 30 * 1000,
     refetchOnWindowFocus: true,
@@ -24,7 +23,7 @@ export function useRevokeSession() {
       sessionsApi.revoke(id, reason),
     onSuccess: () => {
       showToast.success("Revoke session สำเร็จ");
-      qc.invalidateQueries({ queryKey: [SESSIONS_QUERY_KEY] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.SESSIONS.ALL });
     },
     onError: (err: Error) => {
       showToast.error("ไม่สามารถ revoke session ได้", err.message);
@@ -48,9 +47,9 @@ export function useRevokeAllSessionsForUser() {
           ? `บังคับออกจากระบบเรียบร้อย (${revoked} เซสชัน)`
           : "บังคับออกจากระบบเรียบร้อย",
       );
-      qc.invalidateQueries({ queryKey: [SESSIONS_QUERY_KEY] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.SESSIONS.ALL });
       // Invalidate users list to refresh any "is online" indicator
-      qc.invalidateQueries({ queryKey: ["users"] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.USERS.ALL });
       // Side-effect: this could be the current user
       void userId;
     },

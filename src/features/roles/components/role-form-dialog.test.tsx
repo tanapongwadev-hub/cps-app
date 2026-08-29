@@ -12,8 +12,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RoleFormDialog } from "./role-form-dialog";
-import type { Permission } from "@/types/permission";
-import type { Role } from "@/types/auth";
+import type { Permission } from "@/features/permissions/types";
+import type { Role } from "@/features/auth/types";
 
 const { createMutateAsync, updateMutateAsync, permsDataRef } = vi.hoisted(() => ({
   createMutateAsync: vi.fn(),

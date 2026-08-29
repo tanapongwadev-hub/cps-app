@@ -18,7 +18,7 @@
  *  DELETE /users/:id              — delete user
  */
 import { apiClient } from "@/services/api-client";
-import type { User, UserAssignment } from "@/types/auth";
+import type { User, UserAssignment } from "@/features/auth/types";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 

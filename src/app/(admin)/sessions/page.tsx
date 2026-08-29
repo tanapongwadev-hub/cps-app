@@ -16,7 +16,7 @@ import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import { useSessions, useRevokeSession } from "@/features/sessions/hooks/use-sessions";
 import { useAuthStore } from "@/stores/auth-store";
 import { cn } from "@/utils/cn";
-import type { UserSession } from "@/types/session";
+import type { UserSession } from "@/features/sessions/types";
 
 export default function SessionsPage() {
   const currentAccessToken = useAuthStore((s) => s.accessToken);

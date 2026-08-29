@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { Permission, PermissionDepartmentRef } from "@/types/permission";
+import type { Permission, PermissionDepartmentRef } from "@/features/permissions/types";
 import {
   usePermissionDepartments,
   useUpdatePermissionDepartments,

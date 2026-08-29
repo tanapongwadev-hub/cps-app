@@ -5,7 +5,7 @@
  */
 import { mockDb } from "../db";
 import { ok, fail, getBody, paginate, generateId, simulateLatency, type ListQuery } from "./helpers";
-import type { Permission } from "@/types/permission";
+import type { Permission } from "@/features/permissions/types";
 
 const MOCK_ACTIONS = [
   { id: "action-create", code: "CREATE", nameTh: "สร้าง", nameEn: "Create" },

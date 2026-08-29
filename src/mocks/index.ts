@@ -16,6 +16,7 @@ import { setupPermissionMocks } from "./handlers/permissions";
 import { setupSessionMocks } from "./handlers/sessions";
 import { setupAuditLogMocks } from "./handlers/audit-logs";
 import { setupMaterialsReceivingMocks } from "./handlers/materials-receiving";
+import { setupProductsMocks, setupBomsMocks } from "./handlers/products";
 import { ApiClient } from "@/services/api-client";
 
 /**
@@ -38,6 +39,8 @@ const handlerChain: Array<{
   { name: "activity-logs", setup: setupActivityLogMocks },
   { name: "materials-receiving", setup: setupMaterialsReceivingMocks },
   { name: "master-data", setup: setupMasterDataMocks },
+  { name: "products", setup: setupProductsMocks },
+  { name: "boms", setup: setupBomsMocks },
 ];
 
 export function setupMockHandler(client: ApiClient) {

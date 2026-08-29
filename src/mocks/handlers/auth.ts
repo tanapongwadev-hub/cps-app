@@ -16,7 +16,7 @@ import type {
   LoginResponse,
   User,
   UserDepartmentRole,
-} from "@/types/auth";
+} from "@/features/auth/types";
 
 const PASSWORD_MAP: Record<string, string> = {
   admin: "admin",

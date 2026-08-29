@@ -12,7 +12,7 @@
  *   - selected **permission IDs** (UI state)
  *   - a set of **action codes** (what /roles PATCH accepts)
  */
-import type { Permission, PermissionMenuRef } from "@/types/permission";
+import type { Permission, PermissionMenuRef } from "@/features/permissions/types";
 
 /** Safely read the action code from a value that may be a string OR a ref object. */
 export function readActionCode(value: unknown): string | null {

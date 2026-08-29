@@ -442,7 +442,7 @@ export function MaterialFormDialog({
               </div>
               <div className="flex-1">
                 <SheetTitle className="text-lg font-bold text-gray-900">
-                  {isEdit ? "แก้ไขวัสดุ" : "เพิ่มอะไหล่ PC"}
+                  {isEdit ? "แก้ไขวัสดุ" : "เพิ่มวัสดุใหม่"}
                 </SheetTitle>
                 <SheetDescription className="text-sm text-gray-500 mt-0.5">
                   {isEdit ? `รหัส: ${material.code}` : "กรอกข้อมูลวัสดุสำหรับ Material Master"}

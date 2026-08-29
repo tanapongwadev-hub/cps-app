@@ -21,7 +21,7 @@ import {
   type LoginResponse,
   type AuthMeResponse,
   type AccessControl,
-} from "@/types/auth";
+} from "@/features/auth/types";
 import { apiClient } from "@/services/api-client";
 
 /**
@@ -30,7 +30,7 @@ import { apiClient } from "@/services/api-client";
  */
 export function useAuthMe(enabled = true) {
   return useQuery({
-    queryKey: ["auth", "me"],
+    queryKey: QUERY_KEYS.AUTH.ME,
     queryFn: () => authApi.me(),
     enabled,
     retry: false,
@@ -44,7 +44,7 @@ export function useAuthMe(enabled = true) {
  */
 export function useAuthMeUnsafe() {
   return useQuery({
-    queryKey: ["auth", "me"],
+    queryKey: QUERY_KEYS.AUTH.ME,
     queryFn: () => authApi.me(),
     retry: false,
     staleTime: 5 * 60 * 1000,
@@ -184,7 +184,7 @@ export function useSwitchDepartment() {
       authApi.switchDepartment(data),
     onSuccess: (response) => {
       setSession(buildAuthSessionFromDepartmentSelection(response));
-      qc.invalidateQueries({ queryKey: ["auth"] });
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.AUTH.ALL });
       showToast.success(
         "เปลี่ยนแผนกเรียบร้อย",
         `ตอนนี้คุณอยู่ในฐานะ ${response.currentDepartmentRole.roleName}`,
@@ -239,7 +239,7 @@ export function useInitAuth() {
   const setSession = useAuthStore((s) => s.setSession);
 
   return useQuery({
-    queryKey: ["auth", "init"],
+    queryKey: QUERY_KEYS.AUTH.INIT,
     queryFn: async () => {
       if (!accessToken) throw new Error("No token");
       const me = await authApi.me();

@@ -2,7 +2,7 @@
  * Permissions API
  */
 import { apiClient } from "@/services/api-client";
-import type { Permission, PermissionDepartmentRef } from "@/types/permission";
+import type { Permission, PermissionDepartmentRef } from "@/features/permissions/types";
 import type { PaginatedList, PageQuery } from "@/types/paginated";
 
 export interface UpdatePermissionDepartmentsPayload {

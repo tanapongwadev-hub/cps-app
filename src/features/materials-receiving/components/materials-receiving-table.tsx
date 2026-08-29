@@ -152,42 +152,42 @@ function ReceivingActions({
   const canConfirm = onConfirm && receiving.status === "draft";
   const canCancel = onCancel && receiving.status !== "cancelled";
   const canDelete = onDelete && receiving.status === "draft";
-  const items: ActionItem[] = [
+  const items: ActionItem<MaterialsReceiving>[] = [
     {
       label: "ดูรายละเอียด",
       icon: <Eye className="h-4 w-4" />,
       hidden: !onView,
-      onClick: () => onView?.(receiving),
+      onClick: (row) => onView?.(row),
     },
     {
       label: "แก้ไข",
       icon: <Pencil className="h-4 w-4" />,
       hidden: !canEdit,
-      onClick: () => onEdit?.(receiving),
+      onClick: (row) => onEdit?.(row),
     },
     {
       label: "ยืนยันรับเข้า",
       icon: <Check className="h-4 w-4" />,
       hidden: !canConfirm,
-      onClick: () => onConfirm?.(receiving),
+      onClick: (row) => onConfirm?.(row),
     },
     {
       label: "ยกเลิก",
       icon: <XCircle className="h-4 w-4" />,
       variant: "danger",
       hidden: !canCancel,
-      onClick: () => onCancel?.(receiving),
+      onClick: (row) => onCancel?.(row),
     },
     {
       label: "ลบ",
       icon: <Trash2 className="h-4 w-4" />,
       variant: "danger",
       hidden: !canDelete,
-      onClick: () => onDelete?.(receiving),
+      onClick: (row) => onDelete?.(row),
     },
   ];
 
-  return <ActionMenu label={`จัดการรายการรับเข้า ${receiving.internalLotNo}`} items={items} />;
+  return <ActionMenu row={receiving} label={`จัดการรายการรับเข้า ${receiving.internalLotNo}`} items={items} />;
 }
 
 function TableSkeleton() {

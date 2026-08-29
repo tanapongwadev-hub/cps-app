@@ -140,8 +140,8 @@ export function MaterialsDisbursementTable({
       ? [
           {
             label: "ดูรายละเอียด",
-            icon: Eye,
-            onClick: (row) => onView(row),
+            icon: <Eye className="size-4" />,
+            onClick: (row: MaterialsDisbursement) => onView(row),
           },
         ]
       : []),
@@ -149,9 +149,9 @@ export function MaterialsDisbursementTable({
       ? [
           {
             label: "แก้ไข",
-            icon: Pencil,
-            onClick: (row) => onEdit(row),
-            disabled: (row) => row.status !== "draft",
+            icon: <Pencil className="size-4" />,
+            onClick: (row: MaterialsDisbursement) => onEdit(row),
+            disabled: (row: MaterialsDisbursement) => row.status !== "draft",
           },
         ]
       : []),
@@ -159,9 +159,9 @@ export function MaterialsDisbursementTable({
       ? [
           {
             label: "ยืนยันจ่ายออก",
-            icon: Scissors,
-            onClick: (row) => onConfirm(row),
-            disabled: (row) => row.status !== "draft",
+            icon: <Scissors className="size-4" />,
+            onClick: (row: MaterialsDisbursement) => onConfirm(row),
+            disabled: (row: MaterialsDisbursement) => row.status !== "draft",
             variant: "default" as const,
           },
         ]
@@ -170,9 +170,9 @@ export function MaterialsDisbursementTable({
       ? [
           {
             label: "ยกเลิก",
-            icon: XCircle,
-            onClick: (row) => onCancel(row),
-            disabled: (row) => row.status !== "draft",
+            icon: <XCircle className="size-4" />,
+            onClick: (row: MaterialsDisbursement) => onCancel(row),
+            disabled: (row: MaterialsDisbursement) => row.status !== "draft",
             variant: "danger" as const,
           },
         ]
@@ -181,9 +181,9 @@ export function MaterialsDisbursementTable({
       ? [
           {
             label: "ลบ",
-            icon: Trash2,
-            onClick: (row) => onDelete(row),
-            disabled: (row) => row.status !== "draft",
+            icon: <Trash2 className="size-4" />,
+            onClick: (row: MaterialsDisbursement) => onDelete(row),
+            disabled: (row: MaterialsDisbursement) => row.status !== "draft",
             variant: "danger" as const,
           },
         ]

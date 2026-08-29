@@ -94,19 +94,19 @@ export function UnitTable({
             id: "actions",
             header: "",
             cell: ({ row }: { row: { original: Unit } }) => {
-              const actions: ActionItem[] = [];
+              const actions: ActionItem<Unit>[] = [];
               if (canEdit) {
                 actions.push({
                   label: "แก้ไข",
                   icon: <Pencil className="h-3 w-3" />,
-                  onClick: () => onEdit(row.original),
+                  onClick: (row) => onEdit(row),
                 });
               }
               if (row.original.isActive && canDelete) {
                 actions.push({
                   label: "ปิดใช้งาน",
                   icon: <Power className="h-3 w-3" />,
-                  onClick: () => onStatusChange(row.original),
+                  onClick: (row) => onStatusChange(row),
                   variant: "danger" as const,
                 });
               }
@@ -114,11 +114,11 @@ export function UnitTable({
                 actions.push({
                   label: "เปิดใช้งาน",
                   icon: <RotateCcw className="h-3 w-3" />,
-                  onClick: () => onStatusChange(row.original),
+                  onClick: (row) => onStatusChange(row),
                 });
               }
               return actions.length > 0 ? (
-                <ActionMenu label={`จัดการหน่วย ${row.original.code}`} items={actions} />
+                <ActionMenu row={row.original} label={`จัดการหน่วย ${row.original.code}`} items={actions} />
               ) : null;
             },
           },

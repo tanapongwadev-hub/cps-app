@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAuthStore } from "@/stores/auth-store";
-import type { User } from "@/types/auth";
+import type { User } from "@/features/auth/types";
 import { UserFormDialog } from "./user-form-dialog";
 
 const { replace, updateMutateAsync, assignmentData } = vi.hoisted(() => ({
@@ -54,7 +54,7 @@ vi.mock("../hooks/use-users", () => ({
   }),
 }));
 
-vi.mock("@/features/users/hooks/use-departments", () => ({
+vi.mock("@/features/departments/hooks/use-departments", () => ({
   useDepartments: () => ({
     data: {
       items: [

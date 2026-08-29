@@ -6,7 +6,7 @@ import {
   isSuperAdmin,
 } from "./use-permission";
 import { isSuperAdminUser } from "@/stores/auth-store";
-import type { User } from "@/types/auth";
+import type { User } from "@/features/auth/types";
 import { PERMISSIONS } from "@/constants/permissions";
 
 describe("hasPermission", () => {

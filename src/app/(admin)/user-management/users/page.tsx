@@ -38,13 +38,13 @@ import {
   useUserAssignments,
 } from "@/features/users/hooks/use-users";
 import { useRevokeAllSessionsForUser } from "@/features/sessions/hooks/use-sessions";
-import { useDepartments } from "@/features/users/hooks/use-departments";
+import { useDepartments } from "@/features/departments/hooks/use-departments";
 import { useRoles } from "@/features/roles/hooks/use-roles";
 import { UserFormDialog } from "@/features/users/components/user-form-dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PERMISSIONS } from "@/constants/permissions";
-import type { User } from "@/types/auth";
+import type { User } from "@/features/auth/types";
 import { formatRelative } from "@/utils/date";
 import { getInitials } from "@/utils/format";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
@@ -192,7 +192,7 @@ export default function UsersPage() {
           const u = row.original;
           const uiStatus = toUiStatus(u);
           return (
-            <ActionMenu
+            <ActionMenu row={user}
               label={`เมนู ${u.firstName} ${u.lastName}`}
               items={[
                 {

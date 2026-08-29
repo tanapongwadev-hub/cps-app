@@ -20,7 +20,7 @@ import {
   useUpdatePermission,
   usePermissionOptions,
 } from "../hooks/use-permissions";
-import type { Permission } from "@/types/permission";
+import type { Permission } from "@/features/permissions/types";
 
 const schema = z.object({
   menuId: z.string().min(1, "กรุณาเลือกเมนู"),

@@ -12,7 +12,7 @@ import type {
   LoginResponse,
   LoginRequiresDepartmentSelectionResponse,
   SelectDepartmentResponse,
-} from "@/types/auth";
+} from "@/features/auth/types";
 import { SESSION_STORAGE_KEYS } from "@/constants/app";
 
 /**

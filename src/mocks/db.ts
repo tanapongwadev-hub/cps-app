@@ -2,13 +2,13 @@
  * In-memory mock database
  * Holds collections for all entities. Re-seeds on app reload.
  */
-import type { User, Role, Department, UserDepartmentRole } from "@/types/auth";
-import type { MenuItem } from "@/types/menu";
+import type { User, Role, Department, UserDepartmentRole } from "@/features/auth/types";
+import type { MenuItem } from "@/features/menus/types";
 import type { Ticket, TicketComment } from "@/types/ticket";
-import type { ActivityLog } from "@/types/activity-log";
+import type { ActivityLog } from "@/features/activity-logs/types";
 import type { Category, Organization, StatusItem } from "@/types/master-data";
-import type { UserSession } from "@/types/session";
-import type { Permission } from "@/types/permission";
+import type { UserSession } from "@/features/sessions/types";
+import type { Permission } from "@/features/permissions/types";
 import type { AuditLog } from "@/types/audit-log";
 import { PERMISSIONS } from "@/constants/permissions";
 
@@ -771,6 +771,64 @@ export const seedMenus: MenuItem[] = [
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   },
+  // --- Products Management ---
+  {
+    id: "menu-products",
+    code: "PRODUCTS",
+    nameTh: "ชิ้นส่วนยานยนต์", nameEn: "Automotive Parts",
+    icon: "Car",
+    menuType: "MAIN",
+    path: null,
+    parentId: null,
+    sortOrder: 3,
+    status: "active",
+    requiredPermissions: [],
+    isVisible: true,
+    isActive: true,
+    openInNewTab: false,
+    isHidden: false,
+    isGroup: true,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "menu-products-list",
+    code: "PRODUCTS_LIST",
+    nameTh: "รายการชิ้นส่วนยานยนต์", nameEn: "Products List",
+    icon: "CarFront",
+    menuType: "MAIN",
+    path: "/products",
+    parentId: "menu-products",
+    sortOrder: 1,
+    status: "active",
+    requiredPermissions: [PERMISSIONS.PRODUCTS_VIEW],
+    isVisible: true,
+    isActive: true,
+    openInNewTab: false,
+    isHidden: false,
+    isGroup: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "menu-boms",
+    code: "BOMS",
+    nameTh: "สูตรการประกอบ (BOM)", nameEn: "Bill of Materials",
+    icon: "GitBranch",
+    menuType: "MAIN",
+    path: "/products",
+    parentId: "menu-products",
+    sortOrder: 2,
+    status: "active",
+    requiredPermissions: [PERMISSIONS.BOMS_VIEW],
+    isVisible: true,
+    isActive: true,
+    openInNewTab: false,
+    isHidden: false,
+    isGroup: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  },
   {
     id: "menu-operations",
     code: "OPERATIONS",
@@ -779,7 +837,7 @@ export const seedMenus: MenuItem[] = [
     menuType: "MAIN",
     path: null,
     parentId: null,
-    sortOrder: 3,
+    sortOrder: 4,
     status: "active",
     requiredPermissions: [],
     isVisible: true,
@@ -1517,6 +1575,293 @@ const seedMaterialsReceivingLotCounters = [
   { id: "lrc-001", lotDate: TODAY, lastNumber: 2, createdAt: NOW_ISO, updatedAt: NOW_ISO },
 ];
 
+// --- Products ---
+interface MockProduct {
+  id: string;
+  code: string;
+  nameTh: string;
+  nameEn: string | null;
+  description: string | null;
+  specification: string | null;
+  categoryId: string;
+  productType: "FG" | "SFG" | null;
+  brand: string | null;
+  model: string | null;
+  oemPartNumber: string | null;
+  unitId: string;
+  processLineName: string | null;
+  productionProcess: string | null;
+  cycleTimeMinutes: number | null;
+  weight: number | null;
+  hsCode: string | null;
+  minStock: number | null;
+  maxStock: number | null;
+  unitPrice: number | null;
+  currency: string;
+  imagePath: string | null;
+  isActive: boolean;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  category?: { id: string; code: string; nameTh: string; nameEn: string | null };
+  unit?: { id: string; code: string; nameTh: string };
+}
+
+interface MockBomItem {
+  id: string;
+  bomId: string;
+  materialId: string;
+  materialCode: string;
+  materialName: string;
+  sortOrder: number;
+  quantity: number;
+  unitId: string;
+  unitNameTh: string;
+  isScrap: boolean;
+  wastagePercent: number | null;
+  remark: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface MockBom {
+  id: string;
+  productId: string;
+  version: string;
+  status: "DRAFT" | "ACTIVE" | "INACTIVE";
+  specification: string | null;
+  remark: string | null;
+  effectiveFrom: string | null;
+  effectiveTo: string | null;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product: { id: string; code: string; nameTh: string };
+  items: MockBomItem[];
+}
+
+const seedProducts: MockProduct[] = [
+  {
+    id: "prod-001",
+    code: "PROD-001",
+    nameTh: "เพลาขับหลัง",
+    nameEn: "Rear Drive Shaft",
+    description: "เพลาขับเคลื่อนสำหรับรถกระบะขนาด 1 ตัน",
+    specification: "Dia. 50mm x L 800mm, Steel S45C",
+    categoryId: "cat-001",
+    productType: "FG",
+    brand: "ThaiHonda",
+    model: "HR-V, BR-V",
+    oemPartNumber: "TH-25011-KPH-900",
+    unitId: "unit-pcs",
+    processLineName: "Assembly Line 1",
+    productionProcess: "Forge + Machine",
+    cycleTimeMinutes: 25,
+    weight: 4.5,
+    hsCode: "8708.99.50",
+    minStock: 50,
+    maxStock: 500,
+    unitPrice: 850,
+    currency: "THB",
+    imagePath: null,
+    isActive: true,
+    createdBy: null,
+    updatedBy: null,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+    category: { id: "cat-001", code: "DRIVE", nameTh: "ระบบขับเคลื่อน", nameEn: null },
+    unit: { id: "unit-pcs", code: "PCS", nameTh: "ชิ้น" },
+  },
+  {
+    id: "prod-002",
+    code: "PROD-002",
+    nameTh: "ครอบเพลากำลัง",
+    nameEn: "Power Shaft Cover",
+    description: "ครอบเพลากำลังสำหรับรถเก๋ง",
+    specification: "Die-cast Aluminum, Anodized",
+    categoryId: "cat-002",
+    productType: "FG",
+    brand: "Toyota",
+    model: "Camry, Altis",
+    oemPartNumber: "TY-41115-0R020",
+    unitId: "unit-pcs",
+    processLineName: "Die-cast Line",
+    productionProcess: "Die-cast + CNC",
+    cycleTimeMinutes: 18,
+    weight: 1.2,
+    hsCode: "8708.99.40",
+    minStock: 100,
+    maxStock: 1000,
+    unitPrice: 420,
+    currency: "THB",
+    imagePath: null,
+    isActive: true,
+    createdBy: null,
+    updatedBy: null,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+    category: { id: "cat-002", code: "ENGINE", nameTh: "เครื่องยนต์", nameEn: null },
+    unit: { id: "unit-pcs", code: "PCS", nameTh: "ชิ้น" },
+  },
+  {
+    id: "prod-003",
+    code: "PROD-003",
+    nameTh: "สก็อตเตอร์ระบบเบรก",
+    nameEn: "Brake Drum Assembly",
+    description: "สก็อตเตอร์เบรกสำหรับรถกระบะ",
+    specification: "Cast Iron FC250, ø280mm",
+    categoryId: "cat-003",
+    productType: "FG",
+    brand: "Isuzu",
+    model: "D-Max",
+    oemPartNumber: "IS-42311-65UA0",
+    unitId: "unit-pcs",
+    processLineName: "Casting Line 2",
+    productionProcess: "Cast + Machine",
+    cycleTimeMinutes: 35,
+    weight: 8.5,
+    hsCode: "8708.39.20",
+    minStock: 30,
+    maxStock: 300,
+    unitPrice: 1200,
+    currency: "THB",
+    imagePath: null,
+    isActive: true,
+    createdBy: null,
+    updatedBy: null,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+    category: { id: "cat-003", code: "BRAKE", nameTh: "ระบบเบรก", nameEn: null },
+    unit: { id: "unit-pcs", code: "PCS", nameTh: "ชิ้น" },
+  },
+  {
+    id: "prod-004",
+    code: "PROD-004",
+    nameTh: "เพลาหน้า",
+    nameEn: "Front Axle Shaft",
+    description: "เพลาหน้าสำหรับรถ SUV",
+    specification: "SCM415H, Induction Hardened",
+    categoryId: "cat-001",
+    productType: "FG",
+    brand: "Mitsubishi",
+    model: "Pajero Sport",
+    oemPartNumber: "MM-41110-T100",
+    unitId: "unit-pcs",
+    processLineName: "Assembly Line 1",
+    productionProcess: "Forge + Heat Treat + Machine",
+    cycleTimeMinutes: 40,
+    weight: 6.2,
+    hsCode: "8708.50.10",
+    minStock: 20,
+    maxStock: 200,
+    unitPrice: 1850,
+    currency: "THB",
+    imagePath: null,
+    isActive: false,
+    createdBy: null,
+    updatedBy: null,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+    category: { id: "cat-001", code: "DRIVE", nameTh: "ระบบขับเคลื่อน", nameEn: null },
+    unit: { id: "unit-pcs", code: "PCS", nameTh: "ชิ้น" },
+  },
+];
+
+const seedBoms: MockBom[] = [
+  {
+    id: "bom-001",
+    productId: "prod-001",
+    version: "v1",
+    status: "ACTIVE",
+    specification: "BOM สำหรับเพลาขับหลัง รุ่น 2024",
+    remark: "Approved for mass production",
+    effectiveFrom: "2024-01-01",
+    effectiveTo: null,
+    createdBy: null,
+    updatedBy: null,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+    product: { id: "prod-001", code: "PROD-001", nameTh: "เพลาขับหลัง" },
+    items: [
+      {
+        id: "bom-item-001",
+        bomId: "bom-001",
+        materialId: "mat-001",
+        materialCode: "MAT-001",
+        materialName: "เหล็กกลม S45C",
+        sortOrder: 1,
+        quantity: 2.5,
+        unitId: "unit-kg",
+        unitNameTh: "กิโลกรัม",
+        isScrap: false,
+        wastagePercent: 5,
+        remark: null,
+        createdBy: null,
+        updatedBy: null,
+        createdAt: NOW_ISO,
+        updatedAt: NOW_ISO,
+      },
+      {
+        id: "bom-item-002",
+        bomId: "bom-001",
+        materialId: "mat-002",
+        materialCode: "MAT-002",
+        materialName: "จาระบีหล่อลื่น",
+        sortOrder: 2,
+        quantity: 0.05,
+        unitId: "unit-kg",
+        unitNameTh: "กิโลกรัม",
+        isScrap: false,
+        wastagePercent: 2,
+        remark: null,
+        createdBy: null,
+        updatedBy: null,
+        createdAt: NOW_ISO,
+        updatedAt: NOW_ISO,
+      },
+    ],
+  },
+  {
+    id: "bom-002",
+    productId: "prod-002",
+    version: "v1",
+    status: "DRAFT",
+    specification: "BOM สำหรับครอบเพลากำลัง",
+    remark: "Draft — pending material approval",
+    effectiveFrom: null,
+    effectiveTo: null,
+    createdBy: null,
+    updatedBy: null,
+    createdAt: NOW_ISO,
+    updatedAt: NOW_ISO,
+    product: { id: "prod-002", code: "PROD-002", nameTh: "ครอบเพลากำลัง" },
+    items: [
+      {
+        id: "bom-item-003",
+        bomId: "bom-002",
+        materialId: "mat-003",
+        materialCode: "MAT-003",
+        materialName: "อลูมิเนียมหล่อ DC12",
+        sortOrder: 1,
+        quantity: 1.5,
+        unitId: "unit-kg",
+        unitNameTh: "กิโลกรัม",
+        isScrap: false,
+        wastagePercent: 8,
+        remark: null,
+        createdBy: null,
+        updatedBy: null,
+        createdAt: NOW_ISO,
+        updatedAt: NOW_ISO,
+      },
+    ],
+  },
+];
+
 // --- Mock DB object ---
 export const mockDb = {
   users: [...seedUsers],
@@ -1545,4 +1890,6 @@ export const mockDb = {
   materialsReceivingIndex: seedMaterialsReceivings.length + 1,
   accessToken: "mock-access-token-xxx",
   refreshToken: "mock-refresh-token-xxx",
+  products: [...seedProducts] as MockProduct[],
+  productBoms: [...seedBoms] as MockBom[],
 };

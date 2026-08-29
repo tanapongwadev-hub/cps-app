@@ -40,13 +40,13 @@ import { useAuthStore } from "@/stores/auth-store";
 import { PERMISSIONS } from "@/constants/permissions";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
 import { cn } from "@/utils/cn";
-import type { Department } from "@/types/department";
+import type { Department } from "@/features/departments/types";
 import {
   useDepartments,
   useCreateDepartment,
   useUpdateDepartment,
   useDeleteDepartment,
-} from "@/features/users/hooks/use-departments";
+} from "@/features/departments/hooks/use-departments";
 import { DepartmentFormDialog } from "./department-form-dialog";
 
 /**
@@ -222,7 +222,7 @@ export function DepartmentListContainer({ className }: DepartmentListContainerPr
         cell: ({ row }) => {
           const d = row.original;
           return (
-            <ActionMenu
+            <ActionMenu row={department}
               label={`เมนู ${d.nameTh}`}
               items={[
                 {

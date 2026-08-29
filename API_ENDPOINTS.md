@@ -200,6 +200,122 @@ Frontend render: `<img src={receiving.qrCode} alt="..." />` (Data URL)
 - ถ้าเคย confirm → revert stock + บันทึก stock transaction (ADJUST)
 - ถ้าเป็น draft → เปลี่ยนสถานะอย่างเดียว
 
+## Products (ชิ้นส่วนยานยนต์ / สินค้าสำเร็จรูป)
+
+> สินค้าสำเร็จรูป (FG) / กึ่งสำเร็จรูป (SFG) ที่ประกอบจากหลาย materials
+> สิทธิ์: `PRODUCTS_VIEW`, `PRODUCTS_CREATE`, `PRODUCTS_UPDATE`, `PRODUCTS_DELETE`, `PRODUCTS_RESTORE`
+
+| Method | Endpoint | Permission | Description |
+|---|---|---|---|
+| GET | `/products` | `PRODUCTS_VIEW` | รายการสินค้า (รองรับ `search`, `isActive`, `productType`, `categoryId`, `sortBy`, `sortOrder`) |
+| GET | `/products/lookups` | `PRODUCTS_VIEW` | ดึง categories + units (active) |
+| GET | `/products/:id` | `PRODUCTS_VIEW` | รายละเอียดสินค้า + `category` + `unit` |
+| POST | `/products` | `PRODUCTS_CREATE` | สร้างสินค้า |
+| PATCH | `/products/:id` | `PRODUCTS_UPDATE` | แก้ไข (ต้องส่ง `updatedAt`) |
+| DELETE | `/products/:id` | `PRODUCTS_DELETE` | soft delete (`isActive = false`) |
+| PATCH | `/products/:id/restore` | `PRODUCTS_RESTORE` | กู้คืน |
+
+### Product Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `code` | string(50) | ✅ | รหัส unique |
+| `nameTh` | string(255) | ✅ | ชื่อไทย |
+| `nameEn` | string(255) | — | ชื่อ EN |
+| `description`, `specification` | text | — | คำอธิบาย/สเปค |
+| `categoryId` | FK | ✅ | → `categories` |
+| `productType` | enum | — | `FG` \| `SFG` (default `FG`) |
+| `brand`, `model`, `oemPartNumber` | string | — | ยี่ห้อ/รุ่น/OEM |
+| `unitId` | FK | ✅ | → `units` (หน่วยสินค้า) |
+| `processLineName`, `productionProcess` | string | — | สาย/กระบวนการผลิต |
+| `cycleTimeMinutes`, `weight` | number | — | เวลา/น้ำหนัก |
+| `hsCode` | string(20) | — | HS Code |
+| `minStock`, `maxStock`, `unitPrice` | number | — | Stock & ราคา |
+| `currency` | string(3) | — | default `THB` |
+| `imagePath` | string | — | path รูป |
+| `isActive` | bool | — | default `true` |
+
+### `GET /products` Query
+
+| Param | Default | หมายเหตุ |
+|---|---|---|
+| `search` | — | ค้นหา `code`, `nameTh`, `nameEn` (ILIKE) |
+| `isActive` | — | กรองสถานะ |
+| `productType` | — | `FG` \| `SFG` |
+| `categoryId` | — | กรองหมวดหมู่ |
+| `sortBy` | `code` | `code` \| `nameTh` \| `isActive` \| `createdAt` \| `updatedAt` |
+| `sortOrder` | `asc` | `asc` \| `desc` |
+
+### `POST /products` (ตัวอย่าง)
+
+```json
+{
+  "code": "PRD-001",
+  "nameTh": "เครื่องยนต์ 4 สูบ",
+  "nameEn": "4-Cylinder Engine",
+  "categoryId": "1",
+  "productType": "FG",
+  "brand": "ThaiPower",
+  "model": "TP-2000",
+  "unitId": "1",
+  "unitPrice": "150000"
+}
+```
+
+## BOMs (Bill of Materials)
+
+> สูตรการประกอบสินค้า — version auto-increment (v1, v2, v3) / 1 product มี **ACTIVE ได้แค่ 1**
+> สิทธิ์: `BOMS_VIEW`, `BOMS_CREATE`, `BOMS_UPDATE`, `BOMS_DELETE`, `BOMS_ACTIVATE`, `BOMS_DEACTIVATE`
+
+| Method | Endpoint | Permission | Description |
+|---|---|---|---|
+| GET | `/boms/product/:productId` | `BOMS_VIEW` | BOM ทั้งหมดของ product |
+| GET | `/boms/:id` | `BOMS_VIEW` | รายละเอียด + `items[]` |
+| POST | `/boms` | `BOMS_CREATE` | สร้าง BOM + items (auto version) |
+| PATCH | `/boms/:id` | `BOMS_UPDATE` | แก้ `specification` / `remark` / dates (ต้องส่ง `updatedAt`) |
+| POST | `/boms/:id/items` | `BOMS_UPDATE` | เพิ่ม material (DRAFT เท่านั้น) |
+| DELETE | `/boms/:id/items/:itemId` | `BOMS_UPDATE` | ลบ material (DRAFT เท่านั้น) |
+| PATCH | `/boms/:id/activate` | `BOMS_ACTIVATE` | activate (auto-deactivate BOM อื่น) |
+| PATCH | `/boms/:id/deactivate` | `BOMS_DEACTIVATE` | ปิดใช้งาน |
+| DELETE | `/boms/:id` | `BOMS_DELETE` | ลบ (DRAFT เท่านั้น) |
+
+### Lifecycle
+
+```
+DRAFT ──activate──> ACTIVE
+  │                  ├──deactivate──> INACTIVE
+  └────delete────> (DRAFT only)
+```
+
+### BOM Fields
+
+`productId` (FK), `version` (auto: v1, v2, v3), `status` (DRAFT/ACTIVE/INACTIVE), `specification`, `remark`, `effectiveFrom`, `effectiveTo`
+
+### BOM Item Fields
+
+`materialId` (FK), `quantity` (>0, decimal 14,4), `unitId` (FK), `sortOrder` (auto), `isScrap` (bool), `wastagePercent` (0–100), `remark`
+
+### `POST /boms` (ตัวอย่าง)
+
+```json
+{
+  "productId": "1",
+  "specification": "BOM สำหรับเครื่องยนต์ 4 สูบ",
+  "effectiveFrom": "2026-01-01",
+  "items": [
+    { "materialId": "1", "quantity": 250, "unitId": "3", "wastagePercent": 5 },
+    { "materialId": "4", "quantity": 5, "unitId": "4" }
+  ]
+}
+```
+
+### กฎสำคัญ
+
+- 1 product = 1 ACTIVE BOM เท่านั้น (activate BOM ใหม่ → auto-deactivate BOM เก่า)
+- Version auto-increment จาก BOM versions ของ product นั้น
+- แก้ไข/เพิ่ม/ลบ items ได้เฉพาะ DRAFT เท่านั้น
+- ลบได้เฉพาะ DRAFT (ACTIVE → ต้อง deactivate ก่อน)
+
 ## Root
 
 | Method | Endpoint | Auth | Description |

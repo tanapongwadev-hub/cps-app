@@ -4,7 +4,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { permissionsApi } from "../api/permissions-api";
 import type { PageQuery } from "@/types/paginated";
-import type { Permission } from "@/types/permission";
+import type { Permission } from "@/features/permissions/types";
 import { showToast } from "@/lib/toast";
 
 export const PERMISSIONS_QUERY_KEY = "permissions";

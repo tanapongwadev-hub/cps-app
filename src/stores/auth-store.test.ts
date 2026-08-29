@@ -8,7 +8,7 @@ import type {
   SelectDepartmentResponse,
   User,
   UserDepartmentRole,
-} from "@/types/auth";
+} from "@/features/auth/types";
 
 const makeUser = (overrides: Partial<User> = {}): User => ({
   id: "u1",

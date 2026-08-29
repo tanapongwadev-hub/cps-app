@@ -23,7 +23,7 @@ import { RoleFormDialog } from "@/features/roles/components/role-form-dialog";
 import { RoleDetailDialog } from "@/features/roles/components/role-detail-dialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { showToast } from "@/lib/toast";
-import type { Role } from "@/types/auth";
+import type { Role } from "@/features/auth/types";
 import { formatDate } from "@/utils/date";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
 
@@ -138,7 +138,7 @@ export default function RolesPage() {
         cell: ({ row }) => {
           const r = row.original;
           return (
-            <ActionMenu
+            <ActionMenu row={role}
               label={`เมนู ${r.name}`}
               items={[
                 {

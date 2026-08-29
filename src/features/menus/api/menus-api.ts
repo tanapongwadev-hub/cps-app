@@ -3,7 +3,7 @@
  * Aligned with the real NestJS backend.
  */
 import { apiClient } from "@/services/api-client";
-import type { MenuItem, MenuReorderItem, MenuTree } from "@/types/menu";
+import type { MenuItem, MenuReorderItem, MenuTree } from "@/features/menus/types";
 import type { PaginatedList, PageQuery } from "@/types/paginated";
 
 export const menusApi = {

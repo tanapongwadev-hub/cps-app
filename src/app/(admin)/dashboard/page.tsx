@@ -51,7 +51,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/stores/auth-store";
 import { useUsers } from "@/features/users/hooks/use-users";
-import { useDepartments } from "@/features/users/hooks/use-departments";
+import { useDepartments } from "@/features/departments/hooks/use-departments";
 import { useRoles } from "@/features/roles/hooks/use-roles";
 import { useSessions } from "@/features/sessions/hooks/use-sessions";
 import { getInitials } from "@/utils/format";

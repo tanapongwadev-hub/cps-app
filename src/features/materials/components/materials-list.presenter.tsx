@@ -151,14 +151,14 @@ export function MaterialsListPresenter({
           description="คลังอะไหล่และวัสดุสิ้นเปลือง — Material Master"
           breadcrumbs={[
             { label: "หน้าหลัก", href: "/dashboard" },
-            { label: "จัดการอะไหล่" },
+            { label: "วัสดุและอะไหล่" },
           ]}
           primaryAction={
             canCreate && (
               <Button
                 onClick={onCreate}
                 disabled={!canSave}
-                aria-label="เพิ่มวัสดุใหม่"
+                aria-label="เพิ่มอะไหล่"
               >
                 <Plus className="h-4 w-4" />
                 เพิ่มอะไหล่

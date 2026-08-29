@@ -1,6 +1,6 @@
 import { mockDb } from "../db";
 import { ok, fail, getBody, paginate, generateId, simulateLatency, type ListQuery } from "./helpers";
-import type { User, UserAssignment, UserDepartmentRole } from "@/types/auth";
+import type { User, UserAssignment, UserDepartmentRole } from "@/features/auth/types";
 
 export async function setupUserMocks(
   path: string,

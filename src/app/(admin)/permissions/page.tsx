@@ -36,7 +36,7 @@ import { DepartmentPermissionDialog } from "@/features/permissions/components/de
 import { PermissionDepartmentSummary } from "./permission-department-summary";
 import { cn } from "@/utils/cn";
 import { readActionCode } from "@/utils/permission-utils";
-import type { Permission } from "@/types/permission";
+import type { Permission } from "@/features/permissions/types";
 
 export default function PermissionsPage() {
   const user = useAuthStore((s) => s.user);
@@ -419,7 +419,7 @@ function PermissionRow({
         )}
       </td>
       <td className="px-3 py-2 text-right">
-        <ActionMenu
+        <ActionMenu row={permission}
           label={`เมนู ${permission.code}`}
           items={[
             {

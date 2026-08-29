@@ -59,16 +59,41 @@ function renderTable(overrides: Partial<React.ComponentProps<typeof MaterialTabl
 }
 
 describe("MaterialTable row actions", () => {
+  it("fits the mobile viewport without a fixed table minimum and keeps status with the material", () => {
+    renderTable();
+
+    expect(screen.getByTestId("material-table-root")).toHaveClass("min-w-0", "max-w-full");
+    expect(screen.getByRole("table")).toHaveClass(
+      "table-fixed",
+      "sm:table-auto",
+      "sm:min-w-[640px]",
+    );
+    expect(screen.getByRole("table")).not.toHaveClass("min-w-[640px]");
+    expect(screen.getByRole("columnheader", { name: "สถานะ" })).toHaveClass(
+      "hidden",
+      "sm:table-cell",
+    );
+
+    const materialCell = screen.getByText("MAT-001").closest("td");
+    expect(materialCell).not.toBeNull();
+    expect(materialCell).toHaveClass("min-w-0");
+    expect(materialCell?.querySelector('[data-testid="material-mobile-status"]')).toHaveClass(
+      "sm:hidden",
+    );
+  });
+
   it("uses a compact right-aligned action column", () => {
     renderTable();
 
-    expect(screen.getByRole("columnheader", { name: "การทำงาน" })).toHaveClass(
-      "w-14",
+    expect(screen.getByRole("columnheader", { name: "จัดการ" })).toHaveClass(
+      "w-12",
       "text-right",
+      "sm:w-10",
     );
     expect(screen.getByRole("button", { name: "จัดการวัสดุ MAT-001" }).closest("td")).toHaveClass(
-      "w-14",
+      "w-12",
       "text-right",
+      "sm:w-10",
     );
   });
 

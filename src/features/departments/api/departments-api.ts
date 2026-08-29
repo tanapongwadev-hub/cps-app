@@ -19,7 +19,7 @@
  *     `{ items, meta: { page, limit, totalItems, totalPages } }` envelope
  */
 import { apiClient } from "@/services/api-client";
-import type { Department } from "@/types/department";
+import type { Department } from "@/features/departments/types";
 import type { PaginatedList } from "@/types/paginated";
 import { toLimit } from "@/types/paginated";
 

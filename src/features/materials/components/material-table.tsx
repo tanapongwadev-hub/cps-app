@@ -193,14 +193,12 @@ export function MaterialTable({
   }, [materials.map((m) => m.id).join(",")]);
 
   return (
-    <div className="space-y-3">
-      {/* Horizontal scroll wrapper for mobile */}
-      <div className="bg-card overflow-hidden rounded-lg border shadow-xs">
-        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:rounded-full [&::-webkit-scrollbar]:bg-muted">
-        <Table className="min-w-[640px]">
+    <div data-testid="material-table-root" className="max-w-full min-w-0 space-y-3">
+      <div className="bg-card max-w-full min-w-0 overflow-hidden rounded-lg border shadow-xs">
+        <Table className="table-fixed sm:min-w-[640px] sm:table-auto">
           <TableHeader>
             <TableRow className="bg-muted/60 hover:bg-muted/60">
-              <TableHead className="w-[180px] min-w-[180px] py-2.5">
+              <TableHead className="w-auto min-w-0 px-2 py-2.5 sm:w-[180px] sm:min-w-[180px] sm:px-3">
                 <SortableHeader
                   label="วัสดุ"
                   field="code"
@@ -212,9 +210,9 @@ export function MaterialTable({
               </TableHead>
               <TableHead className="hidden sm:table-cell w-[80px]">ประเภท</TableHead>
               <TableHead className="hidden md:table-cell w-[100px]">ลักษณะ</TableHead>
-              <TableHead className="w-[70px] text-center">คงเหลือ</TableHead>
+              <TableHead className="w-16 px-1 text-center sm:w-[70px] sm:px-3">คงเหลือ</TableHead>
               <TableHead className="hidden lg:table-cell">ผู้ขาย</TableHead>
-              <TableHead className="w-[70px]">
+              <TableHead className="hidden w-[70px] sm:table-cell">
                 <SortableHeader
                   label="สถานะ"
                   field="isActive"
@@ -234,7 +232,7 @@ export function MaterialTable({
                   ariaLabel="เรียงตามวันที่อัปเดต"
                 />
               </TableHead>
-              <TableHead className="w-10 text-right">จัดการ</TableHead>
+              <TableHead className="w-12 px-1 text-right sm:w-10 sm:px-3">จัดการ</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -287,24 +285,27 @@ export function MaterialTable({
                 const href = detailHref?.(material);
                 const suppliers = supplierSummary(material);
                 const imageUrl = resolveMaterialImage(material.imagePath);
-                const actions: ActionItem[] = [
+                const actions: ActionItem<Material>[] = [
                   {
                     label: "ดูรายละเอียด",
                     icon: <Eye className="size-4" />,
                     hidden: !href,
-                    onClick: () => href && router.push(href),
+                    onClick: (item) => {
+                      const itemHref = detailHref?.(item);
+                      if (itemHref) router.push(itemHref);
+                    },
                   },
                   {
                     label: "แก้ไข",
                     icon: <Pencil className="size-4" />,
                     hidden: !onEdit,
-                    onClick: () => onEdit?.(material),
+                    onClick: (item) => onEdit?.(item),
                   },
                   {
                     label: "ดูสต็อก",
                     icon: <Scale className="size-4" />,
                     hidden: !onViewStockBalance,
-                    onClick: () => onViewStockBalance?.(material),
+                    onClick: (item) => onViewStockBalance?.(item),
                   },
                   {
                     label: material.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน",
@@ -315,7 +316,7 @@ export function MaterialTable({
                     ),
                     hidden: !onStatusChange,
                     variant: material.isActive ? "danger" : "default",
-                    onClick: () => onStatusChange?.(material),
+                    onClick: (item) => onStatusChange?.(item),
                   },
                 ];
                 return (
@@ -338,7 +339,7 @@ export function MaterialTable({
                         : undefined
                     }
                   >
-                    <TableCell className="py-2.5">
+                    <TableCell className="w-auto min-w-0 px-2 py-2.5 sm:w-[180px] sm:min-w-[180px] sm:px-3">
                       <div className="flex items-center gap-2">
                         {/* Thumbnail — 32px compact on mobile */}
                         <div className="bg-muted relative size-8 sm:size-10 shrink-0 overflow-hidden rounded">
@@ -410,6 +411,21 @@ export function MaterialTable({
                               )}
                             </div>
                           )}
+                          <Badge
+                            data-testid="material-mobile-status"
+                            variant={material.isActive ? "success" : "muted"}
+                            className="mt-1 w-fit gap-1 px-1.5 text-[10px] sm:hidden"
+                          >
+                            <span
+                              className={cn(
+                                "size-1.5 rounded-full",
+                                material.isActive
+                                  ? "bg-success-foreground/80"
+                                  : "bg-muted-foreground/60",
+                              )}
+                            />
+                            {material.isActive ? "ใช้งาน" : "ปิด"}
+                          </Badge>
                         </div>
                       </div>
                     </TableCell>
@@ -452,7 +468,7 @@ export function MaterialTable({
                       )}
                     </TableCell>
                     {/* Stock Balance */}
-                    <TableCell className="py-2 text-center">
+                    <TableCell className="w-16 px-1 py-2 text-center sm:w-[70px] sm:px-3">
                       {stockLoaded && stockBalances[material.id] ? (() => {
                         const bal = stockBalances[material.id]!;
                         const qty = Number(bal.qty);
@@ -503,7 +519,7 @@ export function MaterialTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-2">
+                    <TableCell className="hidden py-2 sm:table-cell">
                       <Badge variant={material.isActive ? "success" : "muted"} className="gap-1 text-[10px] sm:text-xs px-1.5">
                         <span
                           className={cn(
@@ -521,8 +537,12 @@ export function MaterialTable({
                         {formatDate(material.updatedAt)}
                       </span>
                     </TableCell>
-                    <TableCell className="w-10 py-2 text-right">
-                      <ActionMenu label={`จัดการวัสดุ ${material.code}`} items={actions} />
+                    <TableCell className="w-12 px-1 py-2 text-right sm:w-10 sm:px-3">
+                      <ActionMenu
+                        row={material}
+                        label={`จัดการวัสดุ ${material.code}`}
+                        items={actions}
+                      />
                     </TableCell>
                   </TableRow>
                 );
@@ -530,7 +550,6 @@ export function MaterialTable({
             )}
           </TableBody>
         </Table>
-        </div>
       </div>
 
       <div className="text-muted-foreground flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">

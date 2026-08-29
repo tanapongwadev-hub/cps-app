@@ -34,12 +34,12 @@ import {
   useCreateDepartment,
   useUpdateDepartment,
   useDeleteDepartment,
-} from "@/features/users/hooks/use-departments";
+} from "@/features/departments/hooks/use-departments";
 import { DepartmentFormDialog } from "@/features/departments/components/department-form-dialog";
 import { PERMISSIONS } from "@/constants/permissions";
 import { DEFAULT_PAGE_SIZE } from "@/constants/app";
 import { cn } from "@/utils/cn";
-import type { Department } from "@/types/department";
+import type { Department } from "@/features/departments/types";
 
 /**
  * Real backend notes:
@@ -193,7 +193,7 @@ export default function DepartmentsPage() {
         cell: ({ row }) => {
           const d = row.original;
           return (
-            <ActionMenu
+            <ActionMenu row={department}
               label={`เมนู ${d.nameTh}`}
               items={[
                 {

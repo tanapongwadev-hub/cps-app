@@ -35,14 +35,14 @@ import {
   type UpdateUserFormValues,
 } from "../schemas/user-schema";
 import { useRoles } from "@/features/roles/hooks/use-roles";
-import { useDepartments } from "@/features/users/hooks/use-departments";
+import { useDepartments } from "@/features/departments/hooks/use-departments";
 import {
   useCreateUser,
   useUpdateUser,
   useUserAssignments,
 } from "../hooks/use-users";
 import { useAuthStore } from "@/stores/auth-store";
-import type { User } from "@/types/auth";
+import type { User } from "@/features/auth/types";
 import { EditUserAssignments } from "./edit-user-assignments";
 import { UserMenuAccess } from "./user-menu-access";
 

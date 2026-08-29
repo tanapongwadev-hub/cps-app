@@ -12,7 +12,7 @@ import type {
   SelectDepartmentResponse,
   User,
   UserDepartmentRole,
-} from "@/types/auth";
+} from "@/features/auth/types";
 import { useSelectDepartment, useSwitchDepartment } from "./use-auth";
 
 const { routerPush } = vi.hoisted(() => ({ routerPush: vi.fn() }));

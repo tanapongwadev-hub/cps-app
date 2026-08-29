@@ -6,7 +6,7 @@
  *  GET    /audit-logs/:id    — detail
  */
 import { apiClient } from "@/services/api-client";
-import type { ActivityLog } from "@/types/activity-log";
+import type { ActivityLog } from "@/features/activity-logs/types";
 import type { PaginatedResponse } from "@/types/common";
 
 export interface ListActivityLogsParams {
