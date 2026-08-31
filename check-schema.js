@@ -1,10 +1,16 @@
 const { Client } = require('pg');
+
+if (!process.env.PGPASSWORD) {
+  console.error('Set PGPASSWORD (and optionally PGHOST/PGPORT/PGUSER/PGDATABASE) before running this script.');
+  process.exit(1);
+}
+
 const c = new Client({
-  host: 'localhost',
-  port: 5432,
-  user: 'postgres',
-  password: '9203106',
-  database: 'cps_database',
+  host: process.env.PGHOST || 'localhost',
+  port: Number(process.env.PGPORT) || 5432,
+  user: process.env.PGUSER || 'postgres',
+  password: process.env.PGPASSWORD,
+  database: process.env.PGDATABASE || 'cps_database',
 });
 c.connect()
   .then(async () => {
