@@ -144,10 +144,10 @@ be aware when touching these areas:
   adding new permission codes.
 - **Permission-check logic is duplicated** across `hooks/use-permission.ts`, `utils/permission-utils.ts`,
   and `stores/auth-store.ts` selectors, with slightly different super-admin handling in each.
-- **Stray file:** `src/features/materials-receiving/components/materials-receiving-form-dialog-old.tsx`
-  (953 lines, `-old` suffix) — leftover from a refactor; verify no imports before touching/removing.
-- **`src/features/users/hooks/use-departments.ts`** duplicates department-fetching logic that arguably
-  belongs in `features/departments/` — most callers use the `users/hooks` copy.
+- ~~Stray file: `materials-receiving-form-dialog-old.tsx`~~ — **resolved**, deleted (had 0 imports).
+- ~~`src/features/users/hooks/use-departments.ts` duplicates department-fetching logic~~ — **resolved**,
+  that file no longer exists; every caller (`dashboard`, `user-management/*`, `users/components/user-form-dialog.tsx`)
+  imports `useDepartments` from `features/departments/hooks/use-departments.ts`.
 - Page-level test coverage is uneven (~22% of pages at last review); don't assume a feature has tests
   just because sibling features do.
 - Earlier review flagged dead re-export layers (`src/infra/`, `src/lib/utils/`, `src/lib/server/`,
