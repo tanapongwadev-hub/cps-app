@@ -11,8 +11,11 @@ import { useAuthStore, isSuperAdminUser } from "@/stores/auth-store";
 import { PERMISSIONS } from "@/constants/permissions";
 
 export const hasPermission = (permissions: string[], required: string | string[]): boolean => {
-  // We can't see the user here without coupling, so just fall back to "*"
-  if (permissions.includes("*") || permissions.includes("SUPER_ADMIN")) return true;
+  // No `user` object available at this call site — isSuperAdminUser(null, permissions)
+  // still catches the "*"/"SUPER_ADMIN" permission-string cases, just not the real
+  // backend's `user.isSuperAdmin` flag. Callers that have a user (usePermission,
+  // useHasPermission below) check that separately before falling back to this.
+  if (isSuperAdminUser(null, permissions)) return true;
   if (Array.isArray(required)) {
     return required.some((p) => permissions.includes(p));
   }
@@ -20,17 +23,17 @@ export const hasPermission = (permissions: string[], required: string | string[]
 };
 
 export const hasAnyPermission = (permissions: string[], required: string[]): boolean => {
-  if (permissions.includes("*") || permissions.includes("SUPER_ADMIN")) return true;
+  if (isSuperAdminUser(null, permissions)) return true;
   return required.some((p) => permissions.includes(p));
 };
 
 export const hasAllPermissions = (permissions: string[], required: string[]): boolean => {
-  if (permissions.includes("*") || permissions.includes("SUPER_ADMIN")) return true;
+  if (isSuperAdminUser(null, permissions)) return true;
   return required.every((p) => permissions.includes(p));
 };
 
 export const isSuperAdmin = (permissions: string[]): boolean => {
-  return permissions.includes("*") || permissions.includes("SUPER_ADMIN");
+  return isSuperAdminUser(null, permissions);
 };
 
 export function usePermission(): {

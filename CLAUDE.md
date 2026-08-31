@@ -140,10 +140,24 @@ be aware when touching these areas:
   reintroduce a container layer for a single list page — extract plain sub-components (row, filter bar,
   dialog) instead if a page file gets too long.
 - **`src/constants/permissions.ts` mixes two naming schemes**: legacy `"user.view"` (lowercase.dot) and
-  newer `"UNIT_VIEW"` (UPPER_SNAKE). Check which style a given feature/backend integration expects before
-  adding new permission codes.
-- **Permission-check logic is duplicated** across `hooks/use-permission.ts`, `utils/permission-utils.ts`,
-  and `stores/auth-store.ts` selectors, with slightly different super-admin handling in each.
+  newer `"UNIT_VIEW"` (UPPER_SNAKE). **This is intentional, not a frontend bug** — the string *values* are
+  live backend permission codes (e.g. `MATERIALS_RECEIVING_VIEW` is literally what the real NestJS backend
+  expects, per the comment above that block), so the two schemes reflect real heterogeneity in the
+  backend's own permission registry across features built at different times. Do not "normalize" these
+  values to one convention — that would silently break real permission checks against a live backend for
+  every module still on the UPPER_SNAKE scheme. Check which style a given feature/backend integration
+  expects before adding new permission codes.
+- ~~Permission-check logic is duplicated across `hooks/use-permission.ts`, `utils/permission-utils.ts`,
+  and `stores/auth-store.ts` selectors~~ — **partially stale, now resolved.** `permission-utils.ts` never
+  actually contained permission-check logic (it's the menu×action matrix UI helpers for the role/permission
+  admin screens — unrelated). The real duplication was in `hooks/use-permission.ts`'s standalone
+  `hasPermission`/`hasAnyPermission`/`hasAllPermissions`/`isSuperAdmin` exports, which inlined their own
+  `permissions.includes("*")` check instead of the canonical `isSuperAdminUser` from `stores/auth-store.ts`
+  (missing the real backend's `user.isSuperAdmin` flag). Fixed by having them call
+  `isSuperAdminUser(null, permissions)` — same behavior for array-only callers, single source of truth.
+  (In practice every real caller already went through the `usePermission()`/`useHasPermission()` hooks,
+  which always did check `isSuperAdminUser` correctly — the standalone exports were only reachable from
+  their own unit tests.)
 - ~~Stray file: `materials-receiving-form-dialog-old.tsx`~~ — **resolved**, deleted (had 0 imports).
 - ~~`src/features/users/hooks/use-departments.ts` duplicates department-fetching logic~~ — **resolved**,
   that file no longer exists; every caller (`dashboard`, `user-management/*`, `users/components/user-form-dialog.tsx`)

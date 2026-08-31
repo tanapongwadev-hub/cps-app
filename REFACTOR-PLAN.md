@@ -113,16 +113,28 @@ Acceptance: `pnpm build` แล้วดู `.next/analyze` (หรือ build 
 
 ---
 
-## Phase 4 — Consistency & Polish (ทำแทรกได้ระหว่าง phase อื่น เพราะเป็นงานเล็ก อิสระต่อกัน)
+## Phase 4 — Consistency & Polish — ✅ เสร็จ (เท่าที่ปลอดภัยจะทำ)
 
-| งาน | ไฟล์ |
-|---|---|
-| ย้าย `operations/tickets/[id]/page.tsx` จาก manual `useState`+`useEffect`+`apiClient` → `useQuery`/`useMutation` ผ่าน feature hook ใหม่ `features/tickets/hooks/use-tickets.ts` | `src/app/(admin)/operations/tickets/[id]/page.tsx` |
-| Standardize permission naming เป็น `module.action` (lowercase.dot) ทั้งหมด, เก็บ alias เก่าไว้ deprecated ชั่วคราว | `src/constants/permissions.ts` |
-| รวม permission-check logic ให้เหลือจุดเดียว (`usePermission()` เป็น public API, ให้ `auth-store.ts` เรียกใช้ helper เดียวกันแทนที่จะ implement เอง) | `src/hooks/use-permission.ts`, `src/utils/permission-utils.ts`, `src/stores/auth-store.ts` |
-| ลบ duplicate `features/users/hooks/use-departments.ts` → ให้ทุก caller ใช้ `features/departments/hooks/use-departments.ts` | `src/features/users/hooks/use-departments.ts` + caller ทั้งหมด |
-| ย้าย raw `<img>` ที่เป็น remote URL (7 ไฟล์ตาม REVIEW.md P4) ไปใช้ `next/image` — **ยกเว้น** QR code (data URL) กับ blob preview ที่เก็บ `<img>` ไว้ตามเดิม | `material-card-grid.tsx`, `material-detail-card.tsx`, `material-form-dialog.tsx`, `material-form-modal.tsx`, `material-table.tsx`, `product-card-grid.tsx`, `product-form-modal.tsx`, `product-table.tsx` |
-| เพิ่ม `loading.tsx` ให้ critical routes ที่ยังไม่มี (materials-*, user-management) | `src/app/(admin)/materials/**/loading.tsx`, `src/app/(admin)/user-management/**/loading.tsx` |
+| งาน | ผลลัพธ์ | Commit |
+|---|---|---|
+| ลบ duplicate `features/users/hooks/use-departments.ts` | **พบว่าทำไปแล้วก่อนหน้านี้** (ไม่ใช่โดย session นี้) — ไฟล์นั้นไม่มีอยู่แล้ว ทุก caller ใช้ `features/departments/hooks/use-departments.ts` อยู่แล้ว แค่อัปเดต `CLAUDE.md` ให้ตรงสภาพจริง | `60bcdf7` |
+| เพิ่ม `loading.tsx` ให้ critical routes ที่ยังไม่มี | เพิ่ม 10 ไฟล์ (materials-receiving, -disbursement, -report ต่างๆ, pc, user-management/{departments,roles,users}) — ข้าม `materials/pc/[id]` เพราะเป็น modal-detail ไม่ใช่ list | `3bb284b` |
+| ย้าย `operations/tickets/[id]/page.tsx` → `useQuery`/`useMutation` | สร้าง `features/tickets/hooks/use-tickets.ts` (`useTicketDetail`, `useAddTicketComment`) — ระหว่างทางเจอบั๊กจริง (fetch fail แล้วค้างที่ loading spinner ตลอดไป เพราะเช็ค `!data` ผิด) แก้เป็น `ErrorState` + retry ที่ใช้งานได้จริง | `96c857a` |
+| ย้าย raw `<img>` remote-URL → `next/image` | จาก 8 ไฟล์ที่ระบุไว้ พบว่า 3 ไฟล์ (`material-form-dialog.tsx`, `material-form-modal.tsx`, `product-form-modal.tsx`) จริงๆ แล้วเป็น **blob preview** (`URL.createObjectURL()`) ไม่ใช่ remote URL — next/image ใช้กับ blob: ไม่ได้เลย เข้าเงื่อนไขข้อยกเว้นที่แผนเองก็ระบุไว้ จึงย้ายจริงแค่ 5 ไฟล์ (`material-card-grid`, `material-detail-card`, `material-table`, `product-card-grid`, `product-table`) พร้อมแก้ 2 test ที่ assert `src` แบบ exact-match (next/image เปลี่ยนเป็น `/_next/image?url=...`) — **ไม่ได้ตรวจด้วยตาในเบราว์เซอร์จริง** เพราะไม่มี browser automation ในเซสชันนี้ | `2bad072` |
+| รวม permission-check logic ให้เหลือจุดเดียว | พบว่า `permission-utils.ts` ไม่เคยมี permission-check logic เลย (เป็นแค่ menu×action matrix helper คนละเรื่อง) — จุดซ้ำจริงคือ standalone exports ใน `use-permission.ts` ที่ inline เช็ค super-admin เอง แทนที่จะเรียก `isSuperAdminUser` — แก้แล้ว, เทสต์เดิม 22 ตัวผ่านหมดไม่ต้องแก้ | `pending` |
+| Standardize permission naming เป็น `module.action` ทั้งหมด | ⛔ **ไม่ทำ — เป็นความเสี่ยงจริง ไม่ใช่ scope ที่ปลอดภัย** ดูคำอธิบายด้านล่าง | — |
+
+### ทำไมไม่ standardize permission naming
+
+อ่านโค้ดจริงใน `src/constants/permissions.ts` แล้วพบว่า string values อย่าง `"UNIT_VIEW"`, `"MATERIALS_RECEIVING_VIEW"`
+**ไม่ใช่แค่ชื่อตัวแปรฝั่ง frontend** — มันคือ permission code จริงที่ backend (NestJS) คาดหวัง ตามที่ระบุในคอมเมนต์ในไฟล์เอง
+("ใช้ permission code เดียวกับ backend MATERIALS_RECEIVING_*") ถ้า "normalize" ค่าพวกนี้เป็น `module.action` หมด
+จะทำให้ permission check พังจริงเมื่อรันกับ backend จริง (ไม่ใช่ mock) สำหรับทุก module ที่ backend ยังใช้ UPPER_SNAKE
+อยู่ (unit, supplier, material-model, delivery-type, loading-point, category, status-item, organization,
+materials-receiving, reject-reason, materials-disbursement, products, boms — เกือบทุก module ยกเว้น user/role/
+department/menu/ticket/task/approval/master-data/report/activity-log/system-settings ที่ backend ใช้ lowercase.dot
+อยู่แล้ว) การผสมกันสองแบบนี้เป็นความจริงของ backend ไม่ใช่ความไม่สม่ำเสมอฝั่ง frontend ที่แก้ได้เอง — อัปเดต
+`CLAUDE.md` ให้อธิบายเหตุผลนี้ไว้แทนที่จะปล่อยให้ดูเหมือนเป็นบั๊กที่ยังไม่ได้แก้
 
 ---
 
