@@ -14,6 +14,7 @@ import type {
   SelectDepartmentResponse,
 } from "@/features/auth/types";
 import { SESSION_STORAGE_KEYS } from "@/constants/app";
+import { setSessionCookie, clearSessionCookie } from "@/utils/session-cookie";
 
 /**
  * Determine whether a user is a super admin.
@@ -74,8 +75,8 @@ export interface PendingDepartmentSelection {
   departmentSelectionToken?: string;
   /**
    * User object — optional because the real 2-step login response may
-   * not include it. When missing, the page falls back to the username
-   * stashed in `window.__lastLoginUsername` (set by the login form).
+   * not include it. When missing, the login page falls back to the
+   * username it stashed locally (a ref) when the form was submitted.
    */
   user?: User;
   /** Pre-computed options for the "select" flow (2-step spec) */
@@ -142,7 +143,8 @@ export const useAuthStore = create<AuthState>()(
       needsDepartmentSelection: false,
       pendingSelection: null,
 
-      setSession: (session) =>
+      setSession: (session) => {
+        setSessionCookie();
         set({
           user: session.user,
           currentDepartmentRole: session.currentDepartmentRole,
@@ -163,7 +165,8 @@ export const useAuthStore = create<AuthState>()(
               ? userNeedsDepartmentSelection(session.user)
               : false,
           pendingSelection: null,
-        }),
+        });
+      },
 
       /**
        * Update tokens after a refresh (keeps user, permissions, menu as-is).
@@ -180,13 +183,15 @@ export const useAuthStore = create<AuthState>()(
        * Mark the session as expired (used by interceptor when refresh fails).
        * Keeps the user state so we can show a friendly "session expired" page.
        */
-      expireSession: () =>
+      expireSession: () => {
+        clearSessionCookie();
         set({
           isAuthenticated: false,
           accessToken: null,
           refreshToken: null,
           expiresAt: null,
-        }),
+        });
+      },
 
       setLoading: (loading) => set({ isLoading: loading }),
 
@@ -203,7 +208,8 @@ export const useAuthStore = create<AuthState>()(
           needsDepartmentSelection: false,
         }),
 
-      logout: () =>
+      logout: () => {
+        clearSessionCookie();
         set({
           user: null,
           currentDepartmentRole: null,
@@ -218,7 +224,8 @@ export const useAuthStore = create<AuthState>()(
           isLoading: false,
           needsDepartmentSelection: false,
           pendingSelection: null,
-        }),
+        });
+      },
 
       hasPermission: (permission) => {
         const state = get();
@@ -265,6 +272,15 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: state.isAuthenticated,
         needsDepartmentSelection: state.needsDepartmentSelection,
       }),
+      // Restore the middleware's session-presence cookie after a hard reload
+      // (localStorage survives it, but the cookie above does not since it
+      // carries no Max-Age). Without this, a refresh would bounce an
+      // already-logged-in user to /login via middleware.
+      onRehydrateStorage: () => (state) => {
+        if (state?.isAuthenticated) {
+          setSessionCookie();
+        }
+      },
     },
   ),
 );

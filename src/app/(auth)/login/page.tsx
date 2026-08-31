@@ -32,6 +32,11 @@ function LoginContent() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const pendingSelection = useAuthStore((s) => s.pendingSelection);
   const login = useLogin();
+  // Stashes the submitted username so /select-department can show a
+  // "logged in as @username" hint when the 2-step response doesn't include
+  // the full User object. Component-local (not `window`) since both the
+  // write and the read happen within this component's lifecycle.
+  const lastUsernameRef = React.useRef<string>("");
 
   const {
     register,
@@ -64,12 +69,7 @@ function LoginContent() {
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      // Stash the username on `window` so the /select-department page can
-      // show a "logged in as @username" hint when the 2-step response
-      // doesn't include the full User object.
-      if (typeof window !== "undefined") {
-        (window as { __lastLoginUsername?: string }).__lastLoginUsername = values.username;
-      }
+      lastUsernameRef.current = values.username;
       // `remember` is a UI-only concern (mock flows). The real NestJS backend
       // does not accept it in /auth/login (returns 400 VALIDATION_ERROR), so we
       // strip it before sending.
@@ -87,8 +87,8 @@ function LoginContent() {
   // "logged in as @username" hint (the 2-step response itself doesn't
   // include the full User object on the real backend).
   React.useEffect(() => {
-    if (pendingSelection && !pendingSelection.user && typeof window !== "undefined") {
-      const lastUsername = (window as { __lastLoginUsername?: string }).__lastLoginUsername;
+    if (pendingSelection && !pendingSelection.user) {
+      const lastUsername = lastUsernameRef.current;
       if (lastUsername) {
         const synthetic = {
           id: "",
@@ -154,7 +154,7 @@ function LoginContent() {
           </div>
         </div>
 
-        <div className="relative z-10 text-[10px] font-medium tracking-[0.2em] text-slate-400">
+        <div className="relative z-10 text-[10px] font-medium tracking-[0.2em] text-slate-500">
           AUTHENTICATED ACCESS / CPS
         </div>
       </div>
@@ -227,7 +227,7 @@ function LoginContent() {
               Sign in
             </Button>
 
-            <p className="text-center text-[11px] text-slate-400">
+            <p className="text-center text-[11px] text-slate-500">
               Your session is protected with secure, httpOnly cookies.
             </p>
           </form>
@@ -256,7 +256,7 @@ function LoginContent() {
             </Alert>
           )}
 
-          <p className="text-center text-xs text-slate-400">
+          <p className="text-center text-xs text-slate-500">
             © 2024 CPS ·{" "}
             <Link href="/maintenance" className="hover:underline">
               สถานะระบบ

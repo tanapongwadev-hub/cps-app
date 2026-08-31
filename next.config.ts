@@ -12,6 +12,18 @@ const API_TARGET = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:300
 const API_ORIGIN = API_TARGET.startsWith("http")
   ? API_TARGET.replace(/\/api\/v\d+\/?$/, "")
   : "http://localhost:3001";
+const API_ORIGIN_URL = new URL(API_ORIGIN);
+
+/**
+ * Hosts `next/image` is allowed to optimize images from, beyond the backend
+ * origin above. Comma-separated via NEXT_IMAGE_ALLOWED_HOSTS (e.g. a CDN in
+ * production). Never use a wildcard here — it lets the image optimizer be
+ * used as an open proxy/SSRF vector.
+ */
+const EXTRA_IMAGE_HOSTS =
+  process.env.NEXT_IMAGE_ALLOWED_HOSTS?.split(",")
+    .map((host) => host.trim())
+    .filter(Boolean) ?? [];
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -39,9 +51,14 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "https",
-        hostname: "**",
+        protocol: API_ORIGIN_URL.protocol.replace(":", "") as "http" | "https",
+        hostname: API_ORIGIN_URL.hostname,
+        port: API_ORIGIN_URL.port || undefined,
       },
+      ...EXTRA_IMAGE_HOSTS.map((hostname) => ({
+        protocol: "https" as const,
+        hostname,
+      })),
     ],
   },
   // Proxy /api/* → <backend>/api/v1/*. Same-origin in the browser, no CORS.
