@@ -2,7 +2,8 @@
 
 > **สถานะ:** Phase 0 ✅ เสร็จ (commit `eda8972`) · Phase 1 ✅ เสร็จ (commit `4a0aa41`, `1b95920`) ·
 > Phase 2 ✅ เสร็จ (commit `da7d9e4`, `3196b07`, `81c452e`, `0c18126`, `62e7757`, `e30029f`) ·
-> Phase 3/4 ยังไม่เริ่ม
+> Phase 3 ⛔ ประเมินแล้ว ไม่คุ้มค่า (spike พิสูจน์ว่า bundle ไม่ลดเลย — ดูรายละเอียดในหัวข้อ Phase 3) ·
+> Phase 4 ยังไม่เริ่ม
 
 อ้างอิงจาก `REVIEW.md` (2026-08-31). แผนนี้แปลง Priority Matrix ในรีวิวให้เป็นงานที่ทำได้จริงเป็น phase ๆ
 แต่ละ phase ออกแบบให้ **merge ได้อิสระ** (ไม่ block กันเอง) ยกเว้นที่ระบุ dependency ไว้ชัดเจน
@@ -79,19 +80,36 @@ Acceptance: `pnpm build` แล้วดู `.next/analyze` (หรือ build 
 
 ---
 
-## Phase 3 — "use client" Audit (เป้าหมาย: ต่อเนื่อง, ทำทีละ feature ไม่ทำทีเดียวทั้งโปรเจค)
+## Phase 3 — "use client" Audit — ⛔ **ประเมินแล้ว: ไม่คุ้มค่าตามที่ scope ไว้เดิม**
 
-**เตือน:** นี่เป็นงานเสี่ยงสูงถ้าทำทีเดียวทั้งหมด (213 ไฟล์) เพราะแอปนี้พึ่ง Zustand + TanStack Query (client-only) เกือบทั้งระบบ
-แนะนำทำเป็น **spike เล็กๆ ก่อน** ไม่ commit เป็นแผน mass-refactor:
+### สิ่งที่ทำ (spike ตามแผนเดิม)
 
-1. เลือก 1 feature นำร่อง (แนะนำ `categories` เพราะเล็กและมี test อยู่แล้ว)
-2. แยก `category-table.tsx` เป็น:
-   - `category-table.tsx` (RSC — รับ `data` เป็น prop, render แถว, ไม่มี hook)
-   - `category-table-actions.tsx` (client — ปุ่ม edit/delete ที่ต้องใช้ `useState`/`onClick`)
-3. วัดผล bundle size ก่อน/หลังด้วย `pnpm build` (ดู First Load JS ของ route นั้น)
-4. ถ้าได้ผลชัดเจน (ลด bundle ได้จริง) ค่อยขยายไป feature อื่น ทีละ feature ไม่ทำพร้อมกันหลาย PR
+รัน spike บน `categories` feature ตามที่แผนเดิมระบุ:
 
-**อย่าเริ่ม Phase 3 ก่อน Phase 2 เสร็จ** — เพราะถ้ายังไม่ตัดสินใจเรื่อง container/presenter จะแยก client/server component ซ้อนกับความสับสนเดิมอีกชั้น
+1. ลบ `"use client"` ออกจาก `src/features/categories/components/category-table.tsx` ชั่วคราว
+2. `rm -rf .next && pnpm build` (clean build เพื่อไม่ให้ webpack cache หลอกผล) → build ผ่าน ไม่มี error/warning ใหม่
+3. หา route chunk จริงด้วย `grep -rl "ไม่พบหมวดหมู่" .next/static/chunks/` (ข้อความเฉพาะใน empty-state ของ `CategoryTable`) → เจอที่
+   `.next/static/chunks/app/(admin)/master-data/categories/page-0c47ccbf49c330ef.js`, ขนาด **26,814 bytes**
+4. คืนค่า `"use client"` กลับ, `rm -rf .next && pnpm build` ใหม่อีกรอบ (clean build เหมือนเดิม) → เจอ chunk **ชื่อเดียวกันทุกตัวอักษร** (`page-0c47ccbf49c330ef.js`) ขนาด **26,814 bytes เท่ากันเป๊ะ**
+
+### ผลลัพธ์: bundle เหมือนเดิมทุก byte — ไม่มี "use client" หรือไม่มี ไม่ต่างกันเลย
+
+**เหตุผลเชิงสถาปัตยกรรม (ทำไมถึงเป็นแบบนี้):**
+
+- `master-data/categories/page.tsx` (และแทบทุก page ใน `(admin)`) ประกาศ `"use client"` ที่ตัวเองอยู่แล้ว เพราะใช้ `useState`/TanStack Query hooks ตรงๆ (filter, pagination, dialog state)
+- เมื่อ page เป็น Client Component แล้ว **ทุกอย่างที่ import จาก page นั้น (ไม่ว่าไฟล์ลูกจะมี `"use client"` หรือไม่) ถูก bundle เป็น client code เหมือนกันหมด** — directive `"use client"` มีความหมายแค่ตอนที่ compiler เจอมันครั้งแรกตอนเดินจาก Server Component เข้ามา (สร้าง "boundary" ใหม่) ถ้าจุดเริ่มต้นเป็น client ไปแล้ว ไฟล์ลูกที่ไม่มี directive ก็แค่ถูกรวมเข้า client bundle ตามปกติ ไม่มีการ "แยกฝั่ง server" ให้อีก
+- นอกจากนี้ `CategoryTable` ส่ง `columns` (array ที่มี `cell` เป็นฟังก์ชัน render) และ callback props (`onEdit`, `onStatusChange`, `onPageChange`) เข้า `DataTable` (ซึ่งใช้ `useReactTable` — ต้องเป็น Client Component เสมอ) — ต่อให้ทำให้ `CategoryTable` เป็น Server Component ได้จริง ก็ส่ง function ข้าม Server→Client boundary แบบนี้ไม่ได้อยู่ดี (Next.js จะ throw error ตอน build)
+
+**สรุป:** Pattern นี้ (page ใช้ hook ตรงๆ + table ที่ใช้ TanStack columns-with-render-functions) ครอบคลุมแทบทุกหน้าในแอปนี้ การ "audit ลด use client" ที่ระดับ component แบบที่แผนเดิมเสนอ **ใช้ไม่ได้ผลจริงกับโค้ดเบสนี้** — ไม่ใช่เพราะทำไม่ถูกวิธี แต่เพราะ 213 ไฟล์ที่มี `"use client"` ส่วนใหญ่ไม่มีทางเลี่ยงได้เลยด้วยสถาปัตยกรรม "client-side data fetching ทั้งแอป" ที่เลือกไว้ตั้งแต่แรก (TanStack Query + Zustand)
+
+### ถ้าจะลด bundle size จริงๆ ต้องทำอะไรแทน (ไม่ใช่ scope ของ Phase 3 เดิม)
+
+การลดได้จริงต้องเปลี่ยนสถาปัตยกรรมที่ลึกกว่านี้มาก ไม่ใช่ audit ระดับไฟล์:
+
+- ย้าย **initial data fetch** ของแต่ละ list page ไปทำใน Server Component (fetch ตรงๆ หรือ `prefetchQuery` + hydration boundary) แล้วให้ page.tsx ที่เหลือ (filter/pagination state) เป็น client component เล็กๆ ที่รับ initial data มาต่อ — งานนี้ใหญ่พอที่จะเป็น initiative แยกต่างหาก (กระทบทุก feature, ต้องคุยกับ backend เรื่อง SSR data shape) ไม่ใช่ "phase" ย่อยในแผนนี้
+- ทางเลือกที่คุ้มกว่าและทำได้ตอนนี้เลยคือสิ่งที่ทำไปแล้วใน **Phase 1** (`next/dynamic` + lazy-mount สำหรับ dialog/modal หนักๆ) — นั่นคือ code-splitting ที่ได้ผลจริงในสถาปัตยกรรมนี้ เพราะมันแยก **เวลาโหลด** ของ component ที่ยังไม่ต้องใช้ทันที ไม่ใช่พยายามแยก **ฝั่ง server/client** ที่แยกไม่ได้อยู่แล้ว
+
+**การตัดสินใจ:** ปิด Phase 3 ไว้ตรงนี้ ไม่ขยายไป feature อื่นต่อ (ไม่มีประโยชน์ที่จะทำซ้ำในเมื่อพิสูจน์แล้วว่า bundle ไม่ลดเลย) — ย้ายความพยายามไป Phase 4 แทน
 
 ---
 
@@ -115,7 +133,7 @@ Acceptance: `pnpm build` แล้วดู `.next/analyze` (หรือ build 
 สัปดาห์ 2:  Phase 1.2 (code splitting) → เริ่ม Phase 2 (ทางเลือก B ยืนยันแล้ว)
 สัปดาห์ 3-4: Phase 2 (ลบ container ทางเลือก B + แตกไฟล์ใหญ่)
 ต่อเนื่อง:  Phase 4 (แทรกได้ตลอด, คนละไฟล์ ไม่ชนกัน)
-Backlog:    Phase 3 (spike ก่อน ยังไม่ commit เป็นแผนใหญ่)
+ปิดแล้ว:    Phase 3 (spike แล้วพบว่า bundle ไม่ลด — ดูเหตุผลในหัวข้อ Phase 3, ไม่ทำต่อ)
 ```
 
 ## Definition of Done ต่อ Phase
