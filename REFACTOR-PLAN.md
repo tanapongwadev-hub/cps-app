@@ -3,7 +3,8 @@
 > **สถานะ:** Phase 0 ✅ เสร็จ (commit `eda8972`) · Phase 1 ✅ เสร็จ (commit `4a0aa41`, `1b95920`) ·
 > Phase 2 ✅ เสร็จ (commit `da7d9e4`, `3196b07`, `81c452e`, `0c18126`, `62e7757`, `e30029f`) ·
 > Phase 3 ⛔ ประเมินแล้ว ไม่คุ้มค่า (spike พิสูจน์ว่า bundle ไม่ลดเลย — ดูรายละเอียดในหัวข้อ Phase 3) ·
-> Phase 4 ยังไม่เริ่ม
+> Phase 4 ✅ เสร็จเท่าที่ปลอดภัย (commit `60bcdf7`, `3bb284b`, `96c857a`, `2bad072`, `dd07845` — permission naming
+> standardization ไม่ทำเพราะเป็นความเสี่ยงจริงต่อ backend contract ดูรายละเอียดในหัวข้อ Phase 4)
 
 อ้างอิงจาก `REVIEW.md` (2026-08-31). แผนนี้แปลง Priority Matrix ในรีวิวให้เป็นงานที่ทำได้จริงเป็น phase ๆ
 แต่ละ phase ออกแบบให้ **merge ได้อิสระ** (ไม่ block กันเอง) ยกเว้นที่ระบุ dependency ไว้ชัดเจน
@@ -121,7 +122,7 @@ Acceptance: `pnpm build` แล้วดู `.next/analyze` (หรือ build 
 | เพิ่ม `loading.tsx` ให้ critical routes ที่ยังไม่มี | เพิ่ม 10 ไฟล์ (materials-receiving, -disbursement, -report ต่างๆ, pc, user-management/{departments,roles,users}) — ข้าม `materials/pc/[id]` เพราะเป็น modal-detail ไม่ใช่ list | `3bb284b` |
 | ย้าย `operations/tickets/[id]/page.tsx` → `useQuery`/`useMutation` | สร้าง `features/tickets/hooks/use-tickets.ts` (`useTicketDetail`, `useAddTicketComment`) — ระหว่างทางเจอบั๊กจริง (fetch fail แล้วค้างที่ loading spinner ตลอดไป เพราะเช็ค `!data` ผิด) แก้เป็น `ErrorState` + retry ที่ใช้งานได้จริง | `96c857a` |
 | ย้าย raw `<img>` remote-URL → `next/image` | จาก 8 ไฟล์ที่ระบุไว้ พบว่า 3 ไฟล์ (`material-form-dialog.tsx`, `material-form-modal.tsx`, `product-form-modal.tsx`) จริงๆ แล้วเป็น **blob preview** (`URL.createObjectURL()`) ไม่ใช่ remote URL — next/image ใช้กับ blob: ไม่ได้เลย เข้าเงื่อนไขข้อยกเว้นที่แผนเองก็ระบุไว้ จึงย้ายจริงแค่ 5 ไฟล์ (`material-card-grid`, `material-detail-card`, `material-table`, `product-card-grid`, `product-table`) พร้อมแก้ 2 test ที่ assert `src` แบบ exact-match (next/image เปลี่ยนเป็น `/_next/image?url=...`) — **ไม่ได้ตรวจด้วยตาในเบราว์เซอร์จริง** เพราะไม่มี browser automation ในเซสชันนี้ | `2bad072` |
-| รวม permission-check logic ให้เหลือจุดเดียว | พบว่า `permission-utils.ts` ไม่เคยมี permission-check logic เลย (เป็นแค่ menu×action matrix helper คนละเรื่อง) — จุดซ้ำจริงคือ standalone exports ใน `use-permission.ts` ที่ inline เช็ค super-admin เอง แทนที่จะเรียก `isSuperAdminUser` — แก้แล้ว, เทสต์เดิม 22 ตัวผ่านหมดไม่ต้องแก้ | `pending` |
+| รวม permission-check logic ให้เหลือจุดเดียว | พบว่า `permission-utils.ts` ไม่เคยมี permission-check logic เลย (เป็นแค่ menu×action matrix helper คนละเรื่อง) — จุดซ้ำจริงคือ standalone exports ใน `use-permission.ts` ที่ inline เช็ค super-admin เอง แทนที่จะเรียก `isSuperAdminUser` — แก้แล้ว, เทสต์เดิม 22 ตัวผ่านหมดไม่ต้องแก้ | `dd07845` |
 | Standardize permission naming เป็น `module.action` ทั้งหมด | ⛔ **ไม่ทำ — เป็นความเสี่ยงจริง ไม่ใช่ scope ที่ปลอดภัย** ดูคำอธิบายด้านล่าง | — |
 
 ### ทำไมไม่ standardize permission naming
