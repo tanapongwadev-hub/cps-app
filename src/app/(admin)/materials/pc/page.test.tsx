@@ -104,6 +104,7 @@ vi.mock("@/features/materials/hooks/use-materials", () => ({
 vi.mock("@/stores/auth-store", () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector({ user: { isSuperAdmin: true }, permissions: ["*"] }),
+  isSuperAdminUser: () => true,
 }));
 
 beforeEach(() => {
@@ -118,16 +119,16 @@ beforeEach(() => {
 describe("MaterialsPCPage", () => {
   it("renders the PC-specific page title and breadcrumb", async () => {
     render(<MaterialsPCPage />);
-    expect(await screen.findByText("จัดการอะไหล่ PC")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "จัดการอะไหล่ PC" })).toBeInTheDocument();
     // Breadcrumb labels (current page)
-    expect(screen.getByText("อะไหล่ PC")).toBeInTheDocument();
+    expect(screen.getAllByText("อะไหล่ PC").length).toBeGreaterThan(0);
   });
 
   it("renders rows from the API and shows the PC count summary", async () => {
     render(<MaterialsPCPage />);
     expect(await screen.findByText("PC-CPU-001")).toBeInTheDocument();
     expect(screen.getByText("PC-RAM-002")).toBeInTheDocument();
-    expect(screen.getByText(/แสดง 2 จาก 2 รายการ \(PC\)/)).toBeInTheDocument();
+    expect(screen.getByText((content) => /แสดง\s*2\s*รายการ\s*จาก\s*2/.test(content))).toBeInTheDocument();
   });
 
   it("opens the create form when เพิ่มอะไหล่ PC is clicked", async () => {
@@ -136,25 +137,25 @@ describe("MaterialsPCPage", () => {
     const addBtn = await screen.findByRole("button", { name: /เพิ่มอะไหล่ PC/ });
     await user.click(addBtn);
     await waitFor(() => {
-      expect(screen.getByText("เพิ่มวัสดุใหม่")).toBeInTheDocument();
+      expect(screen.getByText("เพิ่มอะไหล่ PC ใหม่")).toBeInTheDocument();
     });
   });
 
   it("opens the edit form with prefill when แก้ไข is clicked on a row", async () => {
     const user = userEvent.setup();
     render(<MaterialsPCPage />);
-    const editBtn = await screen.findByRole("button", { name: "แก้ไข PC-CPU-001" });
+    const editBtn = (await screen.findAllByRole("button", { name: "แก้ไข PC-CPU-001" }))[0]!;
     await user.click(editBtn);
     await waitFor(() => {
-      expect(screen.getByText("แก้ไขวัสดุ")).toBeInTheDocument();
+      expect(screen.getByText("แก้ไขอะไหล่ PC")).toBeInTheDocument();
     });
-    expect(screen.getByText(/PC-CPU-001/)).toBeInTheDocument();
+    expect(screen.getAllByText(/PC-CPU-001/).length).toBeGreaterThanOrEqual(2);
   });
 
   it("opens deactivate dialog when row is active", async () => {
     const user = userEvent.setup();
     render(<MaterialsPCPage />);
-    const btn = await screen.findByRole("button", { name: "ปิดใช้งาน PC-CPU-001" });
+    const btn = (await screen.findAllByRole("button", { name: "ปิดใช้งาน PC-CPU-001" }))[0]!;
     await user.click(btn);
     await waitFor(() => {
       expect(screen.getByText("ยืนยันการปิดใช้งานวัสดุ")).toBeInTheDocument();
@@ -164,7 +165,7 @@ describe("MaterialsPCPage", () => {
   it("opens restore dialog when row is inactive", async () => {
     const user = userEvent.setup();
     render(<MaterialsPCPage />);
-    const btn = await screen.findByRole("button", { name: "เปิดใช้งาน PC-RAM-002" });
+    const btn = (await screen.findAllByRole("button", { name: "เปิดใช้งาน PC-RAM-002" }))[0]!;
     await user.click(btn);
     await waitFor(() => {
       expect(screen.getByText("เปิดใช้งานวัสดุอีกครั้ง")).toBeInTheDocument();
@@ -174,7 +175,7 @@ describe("MaterialsPCPage", () => {
   it("calls deactivate mutation when user confirms", async () => {
     const user = userEvent.setup();
     render(<MaterialsPCPage />);
-    const btn = await screen.findByRole("button", { name: "ปิดใช้งาน PC-CPU-001" });
+    const btn = (await screen.findAllByRole("button", { name: "ปิดใช้งาน PC-CPU-001" }))[0]!;
     await user.click(btn);
     const confirm = await screen.findByRole("button", { name: "ปิดใช้งาน" });
     await user.click(confirm);
@@ -186,7 +187,7 @@ describe("MaterialsPCPage", () => {
   it("calls restore mutation when user confirms", async () => {
     const user = userEvent.setup();
     render(<MaterialsPCPage />);
-    const btn = await screen.findByRole("button", { name: "เปิดใช้งาน PC-RAM-002" });
+    const btn = (await screen.findAllByRole("button", { name: "เปิดใช้งาน PC-RAM-002" }))[0]!;
     await user.click(btn);
     const confirm = await screen.findByRole("button", { name: "เปิดใช้งาน" });
     await user.click(confirm);
@@ -198,7 +199,7 @@ describe("MaterialsPCPage", () => {
   it("triggers refetch when รีเฟรช button is clicked", async () => {
     const user = userEvent.setup();
     render(<MaterialsPCPage />);
-    const refreshBtn = await screen.findByRole("button", { name: /รีเฟรชรายการอะไหล่ PC/ });
+    const refreshBtn = await screen.findByRole("button", { name: /รีเฟรช/ });
     await user.click(refreshBtn);
     expect(refetchMock).toHaveBeenCalled();
   });

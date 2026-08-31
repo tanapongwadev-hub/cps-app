@@ -65,7 +65,7 @@ const detail: MaterialsReceivingDetail = {
 };
 
 describe("MaterialsReceivingDetailDialog", () => {
-  it("constrains QR wrappers within narrow card columns", () => {
+  it("constrains QR wrappers within narrow card columns", async () => {
     render(
       <MaterialsReceivingDetailDialog
         open
@@ -78,16 +78,14 @@ describe("MaterialsReceivingDetailDialog", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("img", {
-        name: "Pieces QR for CCI-20260809-001",
-      }).parentElement,
-    ).toHaveClass("max-w-full");
-    expect(
-      screen.getByRole("img", {
-        name: "QR code for CCI-20260809-001",
-      }).parentElement,
-    ).toHaveClass("max-w-full");
+    // Main QR wrapper should have max-w-full class
+    const mainQr = await screen.findByAltText("QR CCI-20260809-001");
+    expect(mainQr.parentElement).toHaveClass("max-w-full");
+    // Pieces QR wrappers (alt="QR for <id>") should also have max-w-full
+    const pieceQrs = await screen.findAllByAltText(/^QR for /);
+    for (const img of pieceQrs) {
+      expect(img.parentElement).toHaveClass("max-w-full");
+    }
   });
 
   it("uses a viewport-safe shell and sticky mobile actions", async () => {
