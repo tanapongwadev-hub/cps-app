@@ -65,26 +65,44 @@ const detail: MaterialsReceivingDetail = {
 };
 
 describe("MaterialsReceivingDetailDialog", () => {
-  it("constrains QR wrappers within narrow card columns", async () => {
+  it("constrains QR images within narrow card columns", async () => {
+    // The dialog has two independent QR surfaces: the per-piece grid (only
+    // shown for non-PCS material types with a piecesQrPayload, QR generated
+    // client-side via getQrCodeUrl — alt="QR <lotNo>") and the per-package
+    // breakdown (alt="QR for <lotDetailNo>", shown whenever a package has a
+    // qrCode). There is no single "main" QR image — receiving.qrCode /
+    // receiving.piecesQrCode aren't rendered anywhere in this component.
     render(
       <MaterialsReceivingDetailDialog
         open
         onOpenChange={vi.fn()}
         receiving={{
           ...detail,
-          qrCode: "data:image/png;base64,main",
-          piecesQrCode: "data:image/png;base64,pieces",
+          materialType: "COIL",
+          ratio: 10,
+          piecesQrPayload: {
+            version: "1",
+            internalLotNo: detail.internalLotNo,
+            runNo: null,
+            materialCode: "MAT-A",
+            piecesQuantity: "3",
+            materialType: "COIL",
+          },
+          packages: [{ ...detail.packages[0]!, qrCode: "data:image/png;base64,pkg" }],
         }}
       />,
     );
 
-    // Main QR wrapper should have max-w-full class
-    const mainQr = await screen.findByAltText("QR CCI-20260809-001");
-    expect(mainQr.parentElement).toHaveClass("max-w-full");
-    // Pieces QR wrappers (alt="QR for <id>") should also have max-w-full
-    const pieceQrs = await screen.findAllByAltText(/^QR for /);
+    const pieceQrs = await screen.findAllByAltText(/^QR CCI/);
+    expect(pieceQrs).toHaveLength(3);
     for (const img of pieceQrs) {
-      expect(img.parentElement).toHaveClass("max-w-full");
+      expect(img).toHaveClass("max-w-full");
+    }
+
+    const packageQrs = await screen.findAllByAltText(/^QR for /);
+    expect(packageQrs).toHaveLength(1);
+    for (const img of packageQrs) {
+      expect(img).toHaveClass("max-w-full");
     }
   });
 
