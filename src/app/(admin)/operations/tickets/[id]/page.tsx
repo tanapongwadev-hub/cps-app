@@ -9,56 +9,27 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Spinner } from "@/components/ui/spinner";
-import { apiClient } from "@/services/api-client";
-import type { Ticket, TicketComment } from "@/types/ticket";
+import { ErrorState } from "@/components/ui/empty-state";
+import { useTicketDetail, useAddTicketComment } from "@/features/tickets/hooks/use-tickets";
 import { formatDateTime, formatRelative } from "@/utils/date";
 import { getInitials } from "@/utils/format";
-import { showToast } from "@/lib/toast";
 import { TextAreaField } from "@/components/forms/form-field";
 
 export default function TicketDetailPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const [data, setData] = React.useState<{ ticket: Ticket; comments: TicketComment[] } | null>(null);
-  const [loading, setLoading] = React.useState(true);
   const [comment, setComment] = React.useState("");
-  const [submitting, setSubmitting] = React.useState(false);
 
-  const load = React.useCallback(async () => {
-    if (!params.id) return;
-    setLoading(true);
-    try {
-      const res = await apiClient.get<{ ticket: Ticket; comments: TicketComment[] }>(
-        `/tickets/${params.id}`,
-      );
-      setData(res);
-    } catch {
-      showToast.error("ไม่สามารถโหลดข้อมูลคำขอได้");
-    } finally {
-      setLoading(false);
-    }
-  }, [params.id]);
-
-  React.useEffect(() => {
-    load();
-  }, [load]);
+  const ticketQuery = useTicketDetail(params.id);
+  const addComment = useAddTicketComment(params.id);
 
   const submitComment = async () => {
-    if (!comment.trim() || !params.id) return;
-    setSubmitting(true);
-    try {
-      await apiClient.post(`/tickets/${params.id}/comments`, { content: comment });
-      setComment("");
-      showToast.success("เพิ่มความคิดเห็นเรียบร้อย");
-      load();
-    } catch {
-      showToast.error("ไม่สามารถเพิ่มความคิดเห็นได้");
-    } finally {
-      setSubmitting(false);
-    }
+    if (!comment.trim()) return;
+    await addComment.mutateAsync(comment);
+    setComment("");
   };
 
-  if (loading || !data) {
+  if (ticketQuery.isLoading) {
     return (
       <PageContainer>
         <div className="flex h-96 items-center justify-center">
@@ -68,7 +39,18 @@ export default function TicketDetailPage() {
     );
   }
 
-  const { ticket, comments } = data;
+  if (ticketQuery.isError || !ticketQuery.data) {
+    return (
+      <PageContainer>
+        <ErrorState
+          title="ไม่สามารถโหลดข้อมูลคำขอได้"
+          onRetry={() => ticketQuery.refetch()}
+        />
+      </PageContainer>
+    );
+  }
+
+  const { ticket, comments } = ticketQuery.data;
 
   return (
     <>
@@ -92,7 +74,7 @@ export default function TicketDetailPage() {
           {/* Main content */}
           <div className="lg:col-span-2 space-y-4">
             <Card className="p-5">
-              <h3 className="text-sm font-semibold mb-3">รายละเอียด</h3>
+              <h2 className="text-sm font-semibold mb-3">รายละเอียด</h2>
               <p className="text-sm text-foreground/90 whitespace-pre-line">{ticket.description}</p>
               {ticket.tags && ticket.tags.length > 0 && (
                 <div className="mt-4 flex items-center gap-2">
@@ -110,10 +92,10 @@ export default function TicketDetailPage() {
 
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
                   <MessageSquare className="h-4 w-4" />
                   ความคิดเห็น ({comments.length})
-                </h3>
+                </h2>
               </div>
 
               {comments.length === 0 ? (
@@ -146,7 +128,7 @@ export default function TicketDetailPage() {
                   rows={3}
                 />
                 <div className="flex justify-end">
-                  <Button onClick={submitComment} loading={submitting} disabled={!comment.trim()}>
+                  <Button onClick={submitComment} loading={addComment.isPending} disabled={!comment.trim()}>
                     ส่งความคิดเห็น
                   </Button>
                 </div>
@@ -157,7 +139,7 @@ export default function TicketDetailPage() {
           {/* Sidebar */}
           <div className="space-y-4">
             <Card className="p-5">
-              <h3 className="text-sm font-semibold mb-3">ข้อมูลคำขอ</h3>
+              <h2 className="text-sm font-semibold mb-3">ข้อมูลคำขอ</h2>
               <dl className="space-y-2 text-sm">
                 <DetailRow label="สถานะ" value={<Badge>{ticket.status}</Badge>} />
                 <DetailRow label="ความสำคัญ" value={<Badge>{ticket.priority}</Badge>} />
@@ -170,10 +152,10 @@ export default function TicketDetailPage() {
             </Card>
 
             <Card className="p-5">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <User className="h-4 w-4" />
                 ผู้เกี่ยวข้อง
-              </h3>
+              </h2>
               <div className="space-y-3">
                 <PersonRow label="ผู้แจ้ง" name={ticket.requesterName} />
                 {ticket.assigneeName && <PersonRow label="ผู้รับผิดชอบ" name={ticket.assigneeName} />}
@@ -181,10 +163,10 @@ export default function TicketDetailPage() {
             </Card>
 
             <Card className="p-5">
-              <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
                 <History className="h-4 w-4" />
                 กิจกรรม
-              </h3>
+              </h2>
               <ul className="space-y-2 text-sm">
                 <ActivityRow
                   icon={<Calendar className="h-3.5 w-3.5" />}
