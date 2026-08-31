@@ -6,6 +6,7 @@
  * Backend contract: see /cps-api/API_ENDPOINTS.md (Materials Receiving section)
  */
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { Plus, RefreshCw } from "lucide-react";
 import { PageContainer, PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
@@ -16,8 +17,18 @@ import { PERMISSIONS } from "@/constants/permissions";
 import { showToast } from "@/lib/toast";
 import { MaterialsReceivingDetailDialog } from "@/features/materials-receiving/components/materials-receiving-detail-dialog";
 import { MaterialsReceivingFilters } from "@/features/materials-receiving/components/materials-receiving-filters";
-import { MaterialsReceivingFormDialog } from "@/features/materials-receiving/components/materials-receiving-form-dialog";
 import { MaterialsReceivingTable } from "@/features/materials-receiving/components/materials-receiving-table";
+
+// Code-split: this form dialog is large (form schema + package-breakdown
+// preview + QR generation) and, combined with lazy-mounting below, is never
+// fetched until the user actually opens it.
+const MaterialsReceivingFormDialog = dynamic(
+  () =>
+    import("@/features/materials-receiving/components/materials-receiving-form-dialog").then(
+      (mod) => mod.MaterialsReceivingFormDialog,
+    ),
+  { ssr: false },
+);
 import {
   useConfirmMaterialsReceiving,
   useCreateMaterialsReceiving,
@@ -51,6 +62,12 @@ export default function MaterialsReceivingPage() {
   const [formOpen, setFormOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<MaterialsReceiving | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
+  // Only mount the (code-split) form dialog once the user actually opens it,
+  // so its chunk isn't fetched on initial page load.
+  const [hasOpenedForm, setHasOpenedForm] = React.useState(false);
+  React.useEffect(() => {
+    if (formOpen) setHasOpenedForm(true);
+  }, [formOpen]);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = React.useState<MaterialsReceiving | null>(
     null,
@@ -277,15 +294,17 @@ export default function MaterialsReceivingPage() {
           onPageSizeChange={handlePageSizeChange}
         />
 
-        {/* Form Dialog */}
-        <MaterialsReceivingFormDialog
-          open={formOpen}
-          onOpenChange={setFormOpen}
-          receiving={editing}
-          lookups={lookups}
-          onSave={handleSave}
-          savePending={isFormPending}
-        />
+        {/* Form Dialog — lazily mounted; see hasOpenedForm above */}
+        {hasOpenedForm && (
+          <MaterialsReceivingFormDialog
+            open={formOpen}
+            onOpenChange={setFormOpen}
+            receiving={editing}
+            lookups={lookups}
+            onSave={handleSave}
+            savePending={isFormPending}
+          />
+        )}
 
         {/* Detail Dialog */}
         <MaterialsReceivingDetailDialog

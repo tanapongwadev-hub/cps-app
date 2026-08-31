@@ -9,6 +9,7 @@
  */
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import {
   ArrowLeft,
   FileText,
@@ -37,8 +38,14 @@ import {
   useDeactivateBom,
   useDeleteBom,
 } from "@/features/products/hooks/use-products";
-import { BomFormModal } from "@/features/products/components/bom-form-modal";
 import { BomItemDialog } from "@/features/products/components/bom-item-dialog";
+
+// Code-split: only fetched once the user opens the create/edit modal.
+const BomFormModal = dynamic(
+  () => import("@/features/products/components/bom-form-modal").then((mod) => mod.BomFormModal),
+  { ssr: false },
+);
+import { ConfirmDialog } from "@/components/forms/confirm-dialog";
 import { showToast } from "@/lib/toast";
 import type {
   CreateBomItemPayload,
@@ -56,9 +63,15 @@ export default function BomPage() {
   const boms: ProductBom[] = (bomsQuery.data as ProductBom[]) ?? [];
 
   const [createOpen, setCreateOpen] = React.useState(false);
+  // Only mount the (code-split) create modal once the user opens it.
+  const [hasOpenedCreate, setHasOpenedCreate] = React.useState(false);
+  React.useEffect(() => {
+    if (createOpen) setHasOpenedCreate(true);
+  }, [createOpen]);
   const [selectedBom, setSelectedBom] = React.useState<ProductBom | null>(null);
   const [editBomOpen, setEditBomOpen] = React.useState(false);
   const [addItemBomId, setAddItemBomId] = React.useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const createMutation = useCreateBom();
   const updateMutation = useUpdateBom();
@@ -96,9 +109,14 @@ export default function BomPage() {
     await deactivateMutation.mutateAsync(id);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("ลบ BOM นี้ (เฉพาะ Draft/Inactive)?")) return;
-    await deleteMutation.mutateAsync(id);
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    await deleteMutation.mutateAsync(pendingDeleteId);
+    setPendingDeleteId(null);
   };
 
   const activeBom = boms.find((b) => b.status === "ACTIVE");
@@ -252,14 +270,16 @@ export default function BomPage() {
         )}
       </div>
 
-      {/* Create BOM Modal */}
-      <BomFormModal
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        productId={productId}
-        onSave={handleCreate}
-        savePending={createMutation.isPending}
-      />
+      {/* Create BOM Modal — lazily mounted; see hasOpenedCreate above */}
+      {hasOpenedCreate && (
+        <BomFormModal
+          open={createOpen}
+          onOpenChange={setCreateOpen}
+          productId={productId}
+          onSave={handleCreate}
+          savePending={createMutation.isPending}
+        />
+      )}
 
       {/* Edit BOM Modal */}
       {selectedBom && (
@@ -282,6 +302,18 @@ export default function BomPage() {
           pending={addItemMutation.isPending}
         />
       )}
+
+      {/* Delete BOM confirmation */}
+      <ConfirmDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(v) => { if (!v) setPendingDeleteId(null); }}
+        title="ลบ BOM"
+        description="ลบ BOM นี้ (เฉพาะ Draft/Inactive)? การกระทำนี้ไม่สามารถย้อนกลับได้"
+        confirmText="ลบ"
+        variant="danger"
+        loading={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }
@@ -388,6 +420,7 @@ function BomCard({
                 size="icon"
                 onClick={() => onDelete!(bom.id)}
                 disabled={isUpdating}
+                aria-label={`ลบ BOM ${bom.version}`}
                 className="text-destructive h-7 w-7"
               >
                 <Trash2 className="size-3.5" />
@@ -397,6 +430,8 @@ function BomCard({
               variant="ghost"
               size="sm"
               onClick={() => setExpanded((e) => !e)}
+              aria-expanded={expanded}
+              aria-controls={`bom-items-${bom.id}`}
               className="h-7 px-2 text-xs"
             >
               {expanded ? "ซ่อน" : "แสดง"}
@@ -415,7 +450,7 @@ function BomCard({
       </CardHeader>
 
       {expanded && (
-        <CardContent>
+        <CardContent id={`bom-items-${bom.id}`}>
           {bom.items.length === 0 ? (
             <p className="text-muted-foreground py-4 text-sm text-center">
               ยังไม่มีวัตถุดิบ — คลิก "เพิ่มวัตถุดิบ" เพื่อเพิ่มรายการ
@@ -456,6 +491,7 @@ function BomCard({
                             variant="ghost"
                             size="icon"
                             onClick={() => onRemoveItem!(bom.id, item.id)}
+                            aria-label={`ลบ ${item.materialCode}`}
                             className="text-destructive size-6"
                           >
                             <Trash2 className="size-3" />
