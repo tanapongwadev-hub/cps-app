@@ -62,9 +62,11 @@ describe("ProductCardGrid", () => {
     renderGrid();
 
     const card = screen.getByTestId("product-card-PRD-001");
+    // next/image rewrites src through the /_next/image optimizer — assert the
+    // original path is embedded in it rather than an exact match.
     expect(within(card).getByAltText("รูปสินค้า PRD-001")).toHaveAttribute(
       "src",
-      "/uploads/products/front-bumper.webp",
+      expect.stringContaining(encodeURIComponent("/uploads/products/front-bumper.webp")),
     );
 
     await user.click(within(card).getByRole("button", { name: "ขยายรูป PRD-001" }));

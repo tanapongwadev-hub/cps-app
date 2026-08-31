@@ -10,6 +10,7 @@
  */
 
 import { useState } from "react";
+import Image from "next/image";
 import {
   AlertCircle,
   Box,
@@ -142,11 +143,12 @@ export function MaterialDetailCard({
             }}
           >
             {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={imageUrl}
                 alt={`รูปอะไหล่ ${material.code}`}
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
+                fill
+                sizes="(max-width: 768px) 100vw, 420px"
+                className="object-cover transition-transform duration-300 group-hover/img:scale-105"
               />
             ) : (
               <div className="flex h-full flex-col items-center justify-center gap-3">
@@ -222,7 +224,7 @@ export function MaterialDetailCard({
                   </Badge>
                 )}
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight">{material.name}</h1>
+              <h2 className="text-2xl font-semibold tracking-tight">{material.name}</h2>
 
               {/* Material Shape + Ratio — Hero highlight */}
               {shapeLabel && (
@@ -528,11 +530,13 @@ export function MaterialDetailCard({
             onClick={(event) => event.stopPropagation()}
           >
             <div className="bg-muted relative flex max-h-[80vh] items-center justify-center overflow-hidden p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={imageUrl}
                 alt={`รูปอะไหล่ ${material.code}`}
+                width={1600}
+                height={1600}
                 className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain"
+                style={{ width: "auto", height: "auto" }}
               />
             </div>
             <div className="flex items-center justify-between border-t bg-card px-4 py-3">

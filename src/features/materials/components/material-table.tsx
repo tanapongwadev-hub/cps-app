@@ -13,6 +13,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ChevronDown,
   ChevronLeft,
@@ -344,18 +345,17 @@ export function MaterialTable({
                         {/* Thumbnail — 32px compact on mobile */}
                         <div className="bg-muted relative size-8 sm:size-10 shrink-0 overflow-hidden rounded">
                           {imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={imageUrl}
                               alt={`รูปวัสดุ ${material.code}`}
-                              className="size-full object-cover transition-transform duration-300 group-hover:scale-110"
-                              loading="lazy"
+                              fill
+                              sizes="(max-width: 640px) 32px, 40px"
+                              className="object-cover transition-transform duration-300 group-hover:scale-110"
                             />
                           ) : (
-                            <ImageOff
-                              className="text-muted-foreground/60 size-4"
-                              aria-hidden="true"
-                            />
+                            <span aria-label={`ไม่มีรูปวัสดุ ${material.code}`}>
+                              <ImageOff className="text-muted-foreground/60 size-4" />
+                            </span>
                           )}
                           {/* Active dot — bottom-right corner */}
                           <span
@@ -368,7 +368,7 @@ export function MaterialTable({
                         </div>
 
                         {/* Content — compact on mobile */}
-                        <div className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
+                        <div data-testid={`material-identity-${material.code}`} className="flex min-w-0 flex-1 flex-col gap-0.5 leading-tight">
                           {/* Line 1: code (mono) + unit + name */}
                           <div className="flex items-baseline gap-1 sm:gap-2">
                             <code className="text-primary shrink-0 font-mono text-[10px] sm:text-[11px] font-semibold tracking-tight">
@@ -377,7 +377,7 @@ export function MaterialTable({
                             {material.unit && (
                               <>
                                 <span className="bg-border/60 size-0.5 shrink-0 rounded-full" />
-                                <span className="text-muted-foreground shrink-0 font-mono text-[9px] sm:text-[10px]">
+                                <span className="text-muted-foreground shrink-0 font-mono text-[10px]">
                                   {unitLabel(material)}
                                 </span>
                               </>

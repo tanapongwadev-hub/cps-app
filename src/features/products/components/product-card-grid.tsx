@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   Car,
   ChevronLeft,
@@ -200,11 +201,13 @@ export function ProductCardGrid({
           </DialogTitle>
           <div className="bg-muted relative flex max-h-[85vh] items-center justify-center overflow-hidden p-4">
             {preview && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={preview.url}
                 alt={`รูปสินค้า ${preview.code}`}
+                width={1600}
+                height={1600}
                 className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
+                style={{ width: "auto", height: "auto" }}
               />
             )}
           </div>
@@ -252,12 +255,12 @@ function ProductCard({
     >
       <div className="group/image relative aspect-[4/3] w-full overflow-hidden bg-muted/30">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={imageUrl}
             alt={`รูปสินค้า ${product.code}`}
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover/image:scale-105"
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+            className="object-cover transition-transform duration-300 group-hover/image:scale-105"
           />
         ) : (
           <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2">
@@ -326,7 +329,7 @@ function ProductCard({
             <code className="text-primary font-mono text-xs font-semibold">{product.code}</code>
             <span className="text-muted-foreground text-[10px]">อัปเดต {formatDate(product.updatedAt)}</span>
           </div>
-          <h3 className="mt-0.5 truncate text-sm font-semibold" title={product.name}>{product.name}</h3>
+          <h2 className="mt-0.5 truncate text-sm font-semibold" title={product.name}>{product.name}</h2>
           <p className="text-muted-foreground mt-1 truncate text-xs">
             {product.model?.nameTh ?? "ไม่ระบุรุ่น"} · {product.customer?.nameTh ?? "ไม่ระบุลูกค้า"}
           </p>
@@ -343,7 +346,7 @@ function ProductCard({
             ["Min", product.minStock],
           ].map(([label, value]) => (
             <div key={label} className="bg-muted/50 min-w-0 rounded-md px-1 py-1.5">
-              <p className="text-muted-foreground truncate text-[9px] uppercase tracking-wide">{label}</p>
+              <p className="text-muted-foreground truncate text-[10px] uppercase tracking-wide">{label}</p>
               <p className="truncate font-mono text-xs font-semibold">{value}</p>
             </div>
           ))}

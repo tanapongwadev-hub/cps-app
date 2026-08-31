@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import {
   ArrowDown,
   ArrowUp,
@@ -300,10 +301,9 @@ function ProductRow({
     <TableRow data-testid={`product-row-${product.code}`} className={cn("group", !product.isActive && "opacity-65")}>
       <TableCell className="min-w-0 px-2 py-2 sm:px-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <div className="bg-muted/40 flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border">
+          <div className="bg-muted/40 relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-md border">
             {imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={imageUrl} alt={`รูปสินค้า ${product.code}`} className="h-full w-full object-cover" loading="lazy" />
+              <Image src={imageUrl} alt={`รูปสินค้า ${product.code}`} fill sizes="44px" className="object-cover" />
             ) : (
               <span aria-label={`ไม่มีรูปสินค้า ${product.code}`}>
                 <ImageOff className="text-muted-foreground/60 size-4" />
@@ -313,7 +313,7 @@ function ProductRow({
           <div className="min-w-0 flex-1 leading-tight">
             <div className="flex items-baseline gap-1.5">
               <code className="text-primary shrink-0 font-mono text-[10px] font-semibold sm:text-[11px]">{product.code}</code>
-              {product.unit && <span className="text-muted-foreground shrink-0 font-mono text-[9px] sm:text-[10px]">{product.unit.code}</span>}
+              {product.unit && <span className="text-muted-foreground shrink-0 font-mono text-[10px]">{product.unit.code}</span>}
               <span className="truncate text-xs font-medium sm:text-sm" title={product.name}>{product.name}</span>
             </div>
             <p className="text-muted-foreground mt-1 hidden truncate text-[11px] sm:block">

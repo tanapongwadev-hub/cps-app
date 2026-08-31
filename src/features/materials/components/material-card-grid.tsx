@@ -12,6 +12,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   ChevronLeft,
   ChevronRight,
@@ -190,12 +191,12 @@ export function MaterialCardGrid({
                 {/* Image Section - ลดขนาด */}
                 <div className="group/img relative aspect-[4/3] w-full overflow-hidden bg-muted/30">
                   {imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <Image
                       src={imageUrl}
                       alt={`รูปอะไหล่ ${material.code}`}
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover/img:scale-105"
-                      loading="lazy"
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                      className="object-cover transition-transform duration-300 group-hover/img:scale-105"
                     />
                   ) : (
                     <div className="text-muted-foreground flex h-full w-full flex-col items-center justify-center gap-2">
@@ -561,11 +562,13 @@ export function MaterialCardGrid({
           </DialogTitle>
           <div className="bg-muted relative flex max-h-[85vh] items-center justify-center overflow-hidden p-4">
             {preview && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={preview.url}
                 alt={`รูปอะไหล่ ${preview.code}`}
+                width={1600}
+                height={1600}
                 className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain"
+                style={{ width: "auto", height: "auto" }}
               />
             )}
           </div>

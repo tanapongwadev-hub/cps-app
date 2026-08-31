@@ -64,9 +64,11 @@ describe("ProductTable", () => {
     expect(screen.getByTestId("product-table-root")).toHaveClass("min-w-0", "max-w-full");
     expect(screen.getByRole("table")).toHaveClass("table-fixed", "sm:table-auto");
     const row = screen.getByTestId("product-row-PRD-001");
+    // next/image rewrites src through the /_next/image optimizer — assert the
+    // original path is embedded in it rather than an exact match.
     expect(within(row).getByAltText("รูปสินค้า PRD-001")).toHaveAttribute(
       "src",
-      "/uploads/products/front-bumper.webp",
+      expect.stringContaining(encodeURIComponent("/uploads/products/front-bumper.webp")),
     );
     expect(within(row).getByTestId("product-mobile-status")).toHaveClass("sm:hidden");
     expect(screen.getByRole("columnheader", { name: "สถานะ" })).toHaveClass("hidden", "sm:table-cell");
