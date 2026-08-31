@@ -10,50 +10,12 @@
 "use client";
 
 import * as React from "react";
-import {
-  Plus,
-  Pencil,
-  Trash2,
-  Menu as MenuIcon,
-  ExternalLink,
-  EyeOff,
-  Eye,
-  Power,
-  PowerOff,
-  Save,
-  ArrowUp,
-  ArrowDown,
-  ArrowRight,
-  ArrowLeft,
-  Hash,
-  CornerDownRight,
-  GripVertical,
-} from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, ArrowUp, ArrowDown, ArrowRight, ArrowLeft } from "lucide-react";
 import { PageHeader, PageContainer, PageFooter } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ConfirmDialog } from "@/components/forms/confirm-dialog";
-import { IconPicker } from "@/components/forms/icon-picker";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   useMenusList,
   useCreateMenu,
@@ -61,32 +23,9 @@ import {
   useDeleteMenu,
   useReorderMenus,
 } from "@/features/menus/hooks/use-menus";
-import type { MenuItem, MenuFormData } from "@/features/menus/types";
-import { cn } from "@/utils/cn";
-
-const EMPTY_FORM: MenuFormData = {
-  code: "",
-  nameTh: "",
-  nameEn: "",
-  parentId: null,
-  menuType: "MAIN",
-  path: "",
-  icon: "",
-  sortOrder: 100,
-  isVisible: true,
-  isActive: true,
-  openInNewTab: false,
-  externalUrl: "",
-  description: "",
-};
-
-/** Flat row item with computed level & path */
-interface MenuRow {
-  menu: MenuItem;
-  level: number;
-  hasChildren: boolean;
-  childCount: number;
-}
+import type { MenuItem } from "@/features/menus/types";
+import { MenuFormDialog, EMPTY_MENU_FORM, menuToForm } from "@/features/menus/components/menu-form-dialog";
+import { MenuTreeRow, type MenuRow, type DropPosition } from "@/features/menus/components/menu-tree-row";
 
 export default function MenuManagementPage() {
   const { data: listData, isLoading, isError, error } = useMenusList();
@@ -147,7 +86,7 @@ export default function MenuManagementPage() {
   // Drag-drop state
   const [draggedId, setDraggedId] = React.useState<string | null>(null);
   const [overRowId, setOverRowId] = React.useState<string | null>(null);
-  const [overPosition, setOverPosition] = React.useState<"before" | "after" | "inside" | null>(null);
+  const [overPosition, setOverPosition] = React.useState<DropPosition>(null);
 
   // ============================================================
   // Reorder operations
@@ -260,10 +199,8 @@ export default function MenuManagementPage() {
   // Drag-and-drop reorder
   // ============================================================
 
-  const handleDragStart = (e: React.DragEvent, menuId: string) => {
+  const handleDragStart = (menuId: string) => {
     setDraggedId(menuId);
-    e.dataTransfer.setData("text/menu-id", menuId);
-    e.dataTransfer.effectAllowed = "move";
   };
 
   const handleDragEnd = () => {
@@ -272,7 +209,7 @@ export default function MenuManagementPage() {
     setOverPosition(null);
   };
 
-  const handleRowDragOver = (e: React.DragEvent, row: MenuRow, index: number) => {
+  const handleRowDragOver = (e: React.DragEvent, row: MenuRow) => {
     if (!draggedId) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -385,7 +322,7 @@ export default function MenuManagementPage() {
             </div>
           ) : rows.length === 0 ? (
             <div className="py-12 text-center text-sm text-muted-foreground">
-              ยังไม่มีเมนูในระบบ — คลิก "เพิ่มเมนู" เพื่อเริ่มต้น
+              ยังไม่มีเมนูในระบบ — คลิก &quot;เพิ่มเมนู&quot; เพื่อเริ่มต้น
             </div>
           ) : (
             <ul className="divide-y divide-border/40">
@@ -411,263 +348,33 @@ export default function MenuManagementPage() {
                 })();
                 const canOutdent = hasParent;
                 return (
-                  <li
+                  <MenuTreeRow
                     key={m.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, m.id)}
+                    row={row}
+                    isFirst={isFirst}
+                    isLast={isLast}
+                    canIndent={canIndent}
+                    canOutdent={canOutdent}
+                    isDragged={draggedId === m.id}
+                    overPosition={overRowId === m.id ? overPosition : null}
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("text/menu-id", m.id);
+                      e.dataTransfer.effectAllowed = "move";
+                      handleDragStart(m.id);
+                    }}
                     onDragEnd={handleDragEnd}
-                    onDragOver={(e) => handleRowDragOver(e, row, index)}
+                    onDragOver={(e) => handleRowDragOver(e, row)}
                     onDrop={(e) => handleRowDrop(e, row)}
-                    className={cn(
-                      "group relative flex items-center gap-1 px-2 py-1.5 hover:bg-accent/20 transition-colors",
-                      !m.isActive && "opacity-50",
-                      !m.isVisible && "opacity-60",
-                      row.level === 0 && "bg-muted/30 font-medium",
-                      draggedId === m.id && "opacity-30",
-                    )}
-                    style={{ paddingLeft: 8 + row.level * 16 }}
-                  >
-                    {/* Drop indicator — before */}
-                    {overRowId === m.id && overPosition === "before" && (
-                      <div className="absolute inset-x-2 top-0 h-0.5 bg-primary rounded-full ring-2 ring-primary/40 z-10" />
-                    )}
-                    {/* Drop indicator — inside (full row) */}
-                    {overRowId === m.id && overPosition === "inside" && (
-                      <div className="absolute inset-1 rounded-md bg-primary/20 ring-2 ring-primary z-10 pointer-events-none" />
-                    )}
-                    {/* Drop indicator — after */}
-                    {overRowId === m.id && overPosition === "after" && (
-                      <div className="absolute inset-x-2 bottom-0 h-0.5 bg-primary rounded-full ring-2 ring-primary/40 z-10" />
-                    )}
-
-                    {/* Drag handle */}
-                    <GripVertical
-                      className="h-3.5 w-3.5 shrink-0 cursor-grab text-muted-foreground/50 hover:text-muted-foreground"
-                    />
-
-                    {/* Indent guide — desktop only */}
-                    {row.level > 0 && (
-                      <CornerDownRight
-                        className="hidden md:block h-3.5 w-3.5 shrink-0 text-muted-foreground/50"
-                      />
-                    )}
-
-                    <MenuIcon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-
-                    {/* Sort order badge — hidden on small mobile */}
-                    <Badge variant="muted" className="hidden sm:flex gap-1 text-[10px] shrink-0" title={`ลำดับที่ ${m.sortOrder}`}>
-                      <Hash className="h-2.5 w-2.5" />
-                      {m.sortOrder}
-                    </Badge>
-
-                    {/* Name & meta */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <p className="truncate text-sm">{m.nameTh}</p>
-                        <code className="hidden md:inline text-[10px] text-muted-foreground">{m.code}</code>
-                        {m.menuType === "BUTTON" && (
-                          <Badge variant="warning" className="hidden sm:inline-flex text-[10px]">
-                            Action
-                          </Badge>
-                        )}
-                        {!m.isVisible && (
-                          <Badge variant="muted" className="hidden sm:inline-flex text-[10px]">
-                            ซ่อน
-                          </Badge>
-                        )}
-                        {!m.isActive && (
-                          <Badge variant="muted" className="hidden sm:inline-flex text-[10px]">
-                            ระงับ
-                          </Badge>
-                        )}
-                        {m.openInNewTab && <ExternalLink className="hidden sm:inline h-3 w-3 text-muted-foreground" />}
-                        {row.hasChildren && (
-                          <Badge variant="info" className="text-[10px]">
-                            {row.childCount}
-                          </Badge>
-                        )}
-                      </div>
-                      {m.path && (
-                        <p className="hidden sm:block truncate text-xs text-muted-foreground">{m.path}</p>
-                      )}
-                    </div>
-
-                    {/* Action buttons — desktop */}
-                    <div className="hidden lg:flex shrink-0 items-center gap-0.5">
-                      {/* Toggle visibility */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title={m.isVisible ? "ซ่อน" : "แสดง"}
-                        onClick={() => handleInlineUpdate(m.id, { isVisible: !m.isVisible })}
-                      >
-                        {m.isVisible ? (
-                          <Eye className="h-3.5 w-3.5" />
-                        ) : (
-                          <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                      </Button>
-                      {/* Toggle active */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title={m.isActive ? "ปิดใช้งาน" : "เปิดใช้งาน"}
-                        onClick={() => handleInlineUpdate(m.id, { isActive: !m.isActive })}
-                      >
-                        {m.isActive ? (
-                          <Power className="h-3.5 w-3.5 text-emerald-600" />
-                        ) : (
-                          <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
-                        )}
-                      </Button>
-
-                      {/* Reorder: up */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        disabled={isFirst}
-                        title="เลื่อนขึ้น"
-                        onClick={() => moveUp(m.id)}
-                      >
-                        <ArrowUp className={cn("h-3.5 w-3.5", isFirst && "opacity-30")} />
-                      </Button>
-                      {/* Reorder: down */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        disabled={isLast}
-                        title="เลื่อนลง"
-                        onClick={() => moveDown(m.id)}
-                      >
-                        <ArrowDown className={cn("h-3.5 w-3.5", isLast && "opacity-30")} />
-                      </Button>
-
-                      {/* Indent (→): make child of previous row */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-blue-600 hover:bg-blue-50"
-                        disabled={!canIndent}
-                        title="ซ้อน (เป็นเมนูย่อยของเมนูก่อนหน้า)"
-                        onClick={() => indent(m.id)}
-                      >
-                        <ArrowRight className={cn("h-3.5 w-3.5", !canIndent && "opacity-30")} />
-                      </Button>
-
-                      {/* Outdent (←): move up one level */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-amber-600 hover:bg-amber-50"
-                        disabled={!canOutdent}
-                        title="ถอด (ออกจากเมนูแม่)"
-                        onClick={() => outdent(m.id)}
-                      >
-                        <ArrowLeft className={cn("h-3.5 w-3.5", !canOutdent && "opacity-30")} />
-                      </Button>
-
-                      {/* Add child */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-emerald-600 hover:bg-emerald-50"
-                        title="เพิ่มเมนูย่อย"
-                        onClick={() => setCreatingChildOf(m)}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </Button>
-
-                      {/* Edit */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title="แก้ไข"
-                        onClick={() => setEditing(m)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-
-                      {/* Delete */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-danger hover:bg-danger/10"
-                        title="ลบ"
-                        onClick={() => setPendingDelete(m)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-
-                    {/* Action buttons — tablet (md-lg): only show key actions */}
-                    <div className="hidden md:flex lg:hidden shrink-0 items-center gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        disabled={isFirst}
-                        title="เลื่อนขึ้น"
-                        onClick={() => moveUp(m.id)}
-                      >
-                        <ArrowUp className={cn("h-3.5 w-3.5", isFirst && "opacity-30")} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        disabled={isLast}
-                        title="เลื่อนลง"
-                        onClick={() => moveDown(m.id)}
-                      >
-                        <ArrowDown className={cn("h-3.5 w-3.5", isLast && "opacity-30")} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title="แก้ไข"
-                        onClick={() => setEditing(m)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-danger hover:bg-danger/10"
-                        title="ลบ"
-                        onClick={() => setPendingDelete(m)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-
-                    {/* Action buttons — mobile: only show key actions */}
-                    <div className="flex md:hidden shrink-0 items-center gap-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7"
-                        title="แก้ไข"
-                        onClick={() => setEditing(m)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-danger hover:bg-danger/10"
-                        title="ลบ"
-                        onClick={() => setPendingDelete(m)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </li>
+                    onToggleVisible={() => handleInlineUpdate(m.id, { isVisible: !m.isVisible })}
+                    onToggleActive={() => handleInlineUpdate(m.id, { isActive: !m.isActive })}
+                    onMoveUp={() => moveUp(m.id)}
+                    onMoveDown={() => moveDown(m.id)}
+                    onIndent={() => indent(m.id)}
+                    onOutdent={() => outdent(m.id)}
+                    onAddChild={() => setCreatingChildOf(m)}
+                    onEdit={() => setEditing(m)}
+                    onDelete={() => setPendingDelete(m)}
+                  />
                 );
               })}
             </ul>
@@ -699,7 +406,7 @@ export default function MenuManagementPage() {
         title={`เพิ่มเมนูย่อยของ "${creatingChildOf?.nameTh ?? ""}"`}
         submitLabel="สร้างเมนูย่อย"
         mode="create"
-        initial={creatingChildOf ? { ...EMPTY_FORM, parentId: creatingChildOf.id, menuType: "MENU" } : null}
+        initial={creatingChildOf ? { ...EMPTY_MENU_FORM, parentId: creatingChildOf.id, menuType: "MENU" } : null}
         onSubmit={(data) => {
           createMenu.mutate(data, {
             onSuccess: () => setCreatingChildOf(null),
@@ -740,7 +447,7 @@ export default function MenuManagementPage() {
               จะลบ <strong>{pendingDelete.nameTh}</strong> ({pendingDelete.code}) และไม่สามารถกู้คืนได้
               {(childrenMap.get(pendingDelete.id)?.length ?? 0) > 0 && (
                 <span className="mt-2 block text-danger">
-                  ⚠️ เมนูนี้มีเมนูย่อย {childrenMap.get(pendingDelete.id)?.length} รายการ — ต้องลบเมนูย่อยก่อน
+                  <span aria-hidden="true">⚠️</span> เมนูนี้มีเมนูย่อย {childrenMap.get(pendingDelete.id)?.length} รายการ — ต้องลบเมนูย่อยก่อน
                 </span>
               )}
             </>
@@ -758,263 +465,4 @@ export default function MenuManagementPage() {
       />
     </>
   );
-}
-
-// ---------- Form Dialog ----------
-
-function MenuFormDialog({
-  open,
-  onOpenChange,
-  title,
-  submitLabel,
-  mode,
-  initial,
-  onSubmit,
-  isPending,
-  allMenus,
-}: {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  title: string;
-  submitLabel: string;
-  /** "create" → POST /menus; "update" → PATCH /menus/:id. The two endpoints
-   *  accept different field sets (see filter below). */
-  mode: "create" | "update";
-  initial?: MenuFormData | null;
-  onSubmit: (data: Partial<MenuItem>) => void;
-  isPending: boolean;
-  allMenus: MenuItem[];
-}) {
-  const [form, setForm] = React.useState<MenuFormData>(initial ?? EMPTY_FORM);
-
-  React.useEffect(() => {
-    if (open) setForm(initial ?? EMPTY_FORM);
-  }, [open, initial]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.code || !form.nameTh || !form.nameEn) return;
-
-    // Map frontend menuType → backend menuType (MENU → SUB).
-    // The backend's enum is MAIN | SUB; the frontend exposes MAIN | MENU | BUTTON
-    // so admins can pick a non-routing "action" type in the UI.
-    const backendMenuType =
-      form.menuType === "MENU" ? "SUB" : form.menuType;
-
-    // Strip fields the backend rejects for the current mode.
-    const payload: Partial<MenuItem> = {
-      code: form.code,
-      nameTh: form.nameTh,
-      nameEn: form.nameEn,
-      parentId: form.parentId,
-      menuType: backendMenuType as unknown as MenuItem["menuType"],
-      path: form.path || null,
-      icon: form.icon || null,
-      sortOrder: form.sortOrder,
-    };
-    if (mode === "update") {
-      payload.isVisible = form.isVisible;
-      payload.isActive = form.isActive;
-    }
-    onSubmit(payload);
-  };
-
-  const codeId = React.useId();
-  const sortOrderId = React.useId();
-  const nameThId = React.useId();
-  const nameEnId = React.useId();
-  const menuTypeId = React.useId();
-  const parentIdField = React.useId();
-  const pathId = React.useId();
-  const iconId = React.useId();
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>
-            กรอกข้อมูลเมนู — <code className="font-mono">nameEn</code> ต้องไม่ว่าง
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Code *" htmlFor={codeId}>
-              <Input
-                id={codeId}
-                value={form.code}
-                onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                placeholder="MENU_CODE"
-                required
-              />
-            </Field>
-            <Field label="Sort order" htmlFor={sortOrderId}>
-              <Input
-                id={sortOrderId}
-                type="number"
-                value={form.sortOrder}
-                onChange={(e) =>
-                  setForm({ ...form, sortOrder: Number(e.target.value) || 0 })
-                }
-              />
-            </Field>
-          </div>
-          <Field label="ชื่อ (ไทย) *" htmlFor={nameThId}>
-            <Input
-              id={nameThId}
-              value={form.nameTh}
-              onChange={(e) => setForm({ ...form, nameTh: e.target.value })}
-              placeholder="จัดการอะไหล่"
-              required
-            />
-          </Field>
-          <Field label="ชื่อ (English) *" htmlFor={nameEnId}>
-            <Input
-              id={nameEnId}
-              value={form.nameEn}
-              onChange={(e) => setForm({ ...form, nameEn: e.target.value })}
-              placeholder="Materials Management"
-              required
-            />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Menu type" htmlFor={menuTypeId}>
-              <Select
-                value={form.menuType}
-                onValueChange={(v) => setForm({ ...form, menuType: v as MenuFormData["menuType"] })}
-              >
-                <SelectTrigger id={menuTypeId} className="w-full">
-                  <SelectValue className="truncate" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="MAIN">MAIN — เมนูหลัก (top-level)</SelectItem>
-                  <SelectItem value="MENU">MENU — เมนูย่อย (child)</SelectItem>
-                  <SelectItem value="BUTTON">BUTTON — ปุ่ม action</SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Parent" htmlFor={parentIdField}>
-              <Select
-                value={form.parentId ?? "_root"}
-                onValueChange={(v) =>
-                  setForm({ ...form, parentId: v === "_root" ? null : v })
-                }
-              >
-                <SelectTrigger id={parentIdField} className="w-full">
-                  <SelectValue className="truncate" placeholder="เลือกเมนูหลัก..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="_root">(ไม่มี — top level)</SelectItem>
-                  {allMenus
-                    .filter((m) => m.menuType !== "MENU")
-                    .map((m) => (
-                      <SelectItem key={m.id} value={m.id}>
-                        {m.nameTh} ({m.code})
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Path" htmlFor={pathId}>
-              <Input
-                id={pathId}
-                value={form.path}
-                onChange={(e) => setForm({ ...form, path: e.target.value })}
-                placeholder="/example"
-              />
-            </Field>
-            <Field label="Icon" htmlFor={iconId}>
-              <IconPicker
-                id={iconId}
-                value={form.icon}
-                onChange={(v) => setForm({ ...form, icon: v })}
-                placeholder="เลือก icon..."
-              />
-            </Field>
-          </div>
-          <div className="flex flex-wrap items-center gap-4 pt-1">
-            <label className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={form.isVisible}
-                onCheckedChange={(v) => setForm({ ...form, isVisible: v })}
-              />
-              แสดงใน Sidebar
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={form.isActive}
-                onCheckedChange={(v) => setForm({ ...form, isActive: v })}
-              />
-              เปิดใช้งาน
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={form.openInNewTab}
-                onCheckedChange={(v) => setForm({ ...form, openInNewTab: v })}
-              />
-              เปิดแท็บใหม่
-            </label>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              ยกเลิก
-            </Button>
-            <Button type="submit" disabled={isPending}>
-              <Save className="h-4 w-4" />
-              {submitLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Field({
-  label,
-  htmlFor,
-  children,
-}: {
-  label: string;
-  htmlFor?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1">
-      <Label htmlFor={htmlFor} className="text-xs text-muted-foreground">
-        {label}
-      </Label>
-      {children}
-    </div>
-  );
-}
-
-// ---------- helpers ----------
-
-function menuToForm(m: MenuItem): MenuFormData {
-  // Normalize menuType: backend uses "SUB", frontend uses "MENU"
-  const rawType = m.menuType as unknown as string;
-  const menuType: MenuFormData["menuType"] =
-    rawType === "SUB" ? "MENU" : (rawType as MenuFormData["menuType"]);
-
-  // parentId: backend may use parent.id (list) or parentId (detail) — fallback
-  const parentId = m.parentId ?? m.parent?.id ?? null;
-
-  return {
-    code: m.code,
-    nameTh: m.nameTh,
-    nameEn: m.nameEn,
-    parentId,
-    menuType,
-    path: m.path ?? "",
-    icon: m.icon ?? "",
-    sortOrder: m.sortOrder,
-    isVisible: m.isVisible,
-    isActive: m.isActive,
-    openInNewTab: m.openInNewTab ?? false,
-    externalUrl: m.externalUrl ?? "",
-    description: m.description ?? "",
-  };
 }
